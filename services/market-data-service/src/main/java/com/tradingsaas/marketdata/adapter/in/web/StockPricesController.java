@@ -6,6 +6,7 @@ import com.tradingsaas.marketdata.adapter.in.web.dto.StockPriceResponse;
 import com.tradingsaas.marketdata.domain.model.StockPrice;
 import com.tradingsaas.marketdata.domain.model.TimeFrame;
 import com.tradingsaas.marketdata.domain.port.in.GetHistoricalPricesUseCase;
+import com.tradingsaas.marketdata.domain.port.in.GetLatestPriceUseCase;
 import java.time.LocalDate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -26,9 +27,13 @@ public class StockPricesController {
     private static final int MAX_PAGE_SIZE = 100;
 
     private final GetHistoricalPricesUseCase getHistoricalPricesUseCase;
+    private final GetLatestPriceUseCase getLatestPriceUseCase;
 
-    public StockPricesController(GetHistoricalPricesUseCase getHistoricalPricesUseCase) {
+    public StockPricesController(
+            GetHistoricalPricesUseCase getHistoricalPricesUseCase,
+            GetLatestPriceUseCase getLatestPriceUseCase) {
         this.getHistoricalPricesUseCase = getHistoricalPricesUseCase;
+        this.getLatestPriceUseCase = getLatestPriceUseCase;
     }
 
     @GetMapping("/{ticker}/history")
@@ -56,6 +61,16 @@ public class StockPricesController {
         }
 
         return ResponseEntity.ok(PagedResponse.from(result));
+    }
+
+    @GetMapping("/{ticker}/latest")
+    public ResponseEntity<StockPriceResponse> getLatest(
+            @PathVariable String ticker,
+            @RequestParam(defaultValue = "DAILY") TimeFrame timeframe) {
+
+        return getLatestPriceUseCase.getLatestPrice(ticker, timeframe)
+                .map(p -> ResponseEntity.ok(toResponse(p)))
+                .orElse(ResponseEntity.notFound().build());
     }
 
     private StockPriceResponse toResponse(StockPrice price) {

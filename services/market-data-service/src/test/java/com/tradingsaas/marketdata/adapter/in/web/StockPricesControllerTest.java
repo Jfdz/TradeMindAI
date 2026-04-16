@@ -14,6 +14,7 @@ import com.tradingsaas.marketdata.domain.model.StockPrice;
 import com.tradingsaas.marketdata.domain.model.Symbol;
 import com.tradingsaas.marketdata.domain.model.TimeFrame;
 import com.tradingsaas.marketdata.domain.port.in.GetHistoricalPricesUseCase;
+import com.tradingsaas.marketdata.domain.port.in.GetLatestPriceUseCase;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -27,7 +28,8 @@ import org.springframework.http.ResponseEntity;
 class StockPricesControllerTest {
 
     private final GetHistoricalPricesUseCase useCase = mock(GetHistoricalPricesUseCase.class);
-    private final StockPricesController controller = new StockPricesController(useCase);
+    private final GetLatestPriceUseCase getLatestPriceUseCase = mock(GetLatestPriceUseCase.class);
+    private final StockPricesController controller = new StockPricesController(useCase, getLatestPriceUseCase);
 
     private final LocalDate from = LocalDate.of(2026, 1, 1);
     private final LocalDate to = LocalDate.of(2026, 4, 16);
