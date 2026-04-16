@@ -11,42 +11,45 @@ Update after every completed PBI: record the last done task and the next in deve
 |---|---|---|
 | FEAT-04: Technical Indicators | SCRUM-204 | `Listo` |
 | FEAT-05: Market Data REST API | SCRUM-208 | `Listo` |
+| FEAT-06: AI Service Scaffold | SCRUM-213 | `Listo` |
 
 ---
 
 ## Last Completed Task
 
-**PBI:** `E1-F05-PBI-04` - Health check and Actuator
-**Feature:** FEAT-05: Market Data REST API
-**Epic:** EPIC-1: Foundation & Infrastructure
-**Sprint:** S2
-**Jira:** SCRUM-212 -> `Listo`
-**Branch:** `feature-E1-F05-PBI-04-health-actuator`
+**PBI:** `E2-F06-PBI-06` - Dockerfile for AI service
+**Feature:** FEAT-06: AI Service Scaffold
+**Epic:** EPIC-2: AI Engine
+**Sprint:** S3
+**Jira:** SCRUM-219 -> `Listo`
+**Branch:** `feature-E2-F06-PBI-01-python-project-setup`
 **Completed:** 2026-04-16
 
-### What was built (full FEAT-05)
+### What was built (full FEAT-06)
 
 | PBI | Jira | What was built | Status |
 |---|---|---|---|
-| E1-F05-PBI-01 | SCRUM-209 | `GET /api/v1/symbols` — SymbolRepository, SymbolsController, PagedResponse | Done |
-| E1-F05-PBI-02 | SCRUM-210 | `GET /api/v1/prices/{ticker}/history` — StockPriceJpaRepository, StockPriceRepositoryAdapter, StockPricesController | Done |
-| E1-F05-PBI-03 | SCRUM-211 | Redis cache — StockPriceCache port, RedisStockPriceCacheAdapter, `GET /api/v1/prices/{ticker}/latest` | Done |
-| E1-F05-PBI-04 | SCRUM-212 | Actuator health config for DB + Redis + RabbitMQ | Done |
+| E2-F06-PBI-01 | SCRUM-214 | `pyproject.toml`, `requirements.txt`, `requirements-dev.txt`, package structure | Listo |
+| E2-F06-PBI-02 | SCRUM-215 | `main.py` — `create_app()`, CORS, lifespan, `app.state.model_loaded` | Listo |
+| E2-F06-PBI-03 | SCRUM-216 | `config.py` — pydantic-settings: DATABASE_URL, RABBITMQ_URL, MODEL_PATH, ENABLE_GPU | Listo |
+| E2-F06-PBI-04 | SCRUM-217 | `GET /health` (200), `GET /ready` (200/503 by model_loaded flag) | Listo |
+| E2-F06-PBI-05 | SCRUM-218 | Alembic setup — `model_versions`, `training_runs`, `predictions` in `ai_engine` schema | Listo |
+| E2-F06-PBI-06 | SCRUM-219 | Multi-stage Dockerfile (python:3.11-slim), non-root, HEALTHCHECK on `/health` | Listo |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E2-F06-PBI-01` - Python project setup
-**Feature:** FEAT-06: AI Service Scaffold
+**PBI:** `E2-F07-PBI-01` - Abstract BasePredictor class
+**Feature:** FEAT-07: CNN Model Implementation
 **Epic:** EPIC-2: AI Engine
 **Sprint:** S3
 **Jira:** TBD -> `To Do`
 
 ### Acceptance criteria
 
-- `pyproject.toml`, `requirements.txt`, `requirements-dev.txt`, package structure
-- `pip install -e .` installs all dependencies and package is importable
+- Abstract interface with `preprocess()`, `predict()`, `load_model()` methods
+- Inheriting class must implement all 3 methods
 
 ---
 
