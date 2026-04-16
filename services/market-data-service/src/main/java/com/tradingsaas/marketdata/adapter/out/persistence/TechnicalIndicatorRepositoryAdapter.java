@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 @Component
 public class TechnicalIndicatorRepositoryAdapter implements TechnicalIndicatorRepository {
@@ -60,5 +61,14 @@ public class TechnicalIndicatorRepositoryAdapter implements TechnicalIndicatorRe
         return jpaRepository
                 .findBySymbolTickerAndDateAndType(symbol.ticker(), date, type)
                 .map(mapper::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TechnicalIndicator> findLatestByTicker(String ticker, List<TechnicalIndicatorType> types) {
+        List<TechnicalIndicatorEntity> entities = CollectionUtils.isEmpty(types)
+                ? jpaRepository.findLatestByTicker(ticker)
+                : jpaRepository.findLatestByTickerAndTypes(ticker, types);
+        return entities.stream().map(mapper::toDomain).toList();
     }
 }

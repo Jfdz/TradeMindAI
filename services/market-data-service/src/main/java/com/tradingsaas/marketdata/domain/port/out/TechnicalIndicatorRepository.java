@@ -19,4 +19,6 @@ public interface TechnicalIndicatorRepository {
     List<TechnicalIndicator> findBySymbolAndDateRange(Symbol symbol, LocalDate from, LocalDate to);
 
     Optional<TechnicalIndicator> findBySymbolAndDateAndType(Symbol symbol, LocalDate date, TechnicalIndicatorType type);
+
+    List<TechnicalIndicator> findLatestByTicker(String ticker, List<TechnicalIndicatorType> types);
 }
