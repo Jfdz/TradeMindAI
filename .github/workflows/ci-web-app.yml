@@ -1,0 +1,56 @@
+name: CI - web-app
+
+on:
+  push:
+    branches: [main, "feature/**"]
+    paths:
+      - "services/web-app/**"
+      - ".github/workflows/ci-web-app.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "services/web-app/**"
+      - ".github/workflows/ci-web-app.yml"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/web-app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: services/web-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run unit tests
+        run: npm test -- --watchAll=false --coverage
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8082
+          NEXT_PUBLIC_APP_NAME: TradeMindAI
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8082
+          NEXT_PUBLIC_APP_NAME: TradeMindAI
+          NEXTAUTH_SECRET: test-nextauth-secret-for-ci
+          NEXTAUTH_URL: http://localhost:3000
+
+      - name: Build Docker image
+        run: docker build -t web-app:${{ github.sha }} .

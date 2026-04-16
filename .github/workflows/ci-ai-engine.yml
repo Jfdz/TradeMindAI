@@ -1,0 +1,63 @@
+name: CI - ai-engine
+
+on:
+  push:
+    branches: [main, "feature/**"]
+    paths:
+      - "services/ai-engine/**"
+      - ".github/workflows/ci-ai-engine.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "services/ai-engine/**"
+      - ".github/workflows/ci-ai-engine.yml"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/ai-engine
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: trading_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: trading_saas_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Lint (ruff)
+        run: ruff check src/ tests/
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+        env:
+          DATABASE_URL: postgresql://trading_user:test_password@localhost:5432/trading_saas_test
+          RABBITMQ_URL: amqp://guest:guest@localhost:5672/
+          MODEL_PATH: ./models/
+          ENABLE_GPU: "false"
+
+      - name: Build Docker image
+        run: docker build -t ai-engine:${{ github.sha }} .
