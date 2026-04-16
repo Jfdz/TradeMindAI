@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from ai_engine.adapters.in_.health import router as health_router
+from ai_engine.adapters.in_.training import router as training_router
 
 
 @asynccontextmanager
@@ -30,6 +31,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health_router)
+    app.include_router(training_router)
 
     return app
 
