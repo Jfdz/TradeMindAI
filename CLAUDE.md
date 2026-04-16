@@ -7,37 +7,39 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Last Completed Task
 
-**PBI:** `E1-F04-PBI-02` - Indicator persistence
+**PBI:** `E1-F04-PBI-03` - Indicator REST API
 **Feature:** FEAT-04: Technical Indicators
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S2
-**Jira:** SCRUM-205 -> `Listo`
-**Branch:** `feature-E1-F04-PBI-02-indicator-persistence`
+**Jira:** SCRUM-206 -> `Listo`
+**Branch:** `feature-E1-F04-PBI-03-indicator-rest-api`
 **Completed:** 2026-04-16
 
 ### What was built
 
 | Task | Path | Status |
 |---|---|---|
-| T1: TechnicalIndicatorRepository (port) | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/port/out/TechnicalIndicatorRepository.java` | Done |
-| T2: TechnicalIndicatorJpaRepository | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/out/persistence/TechnicalIndicatorJpaRepository.java` | Done |
-| T3: TechnicalIndicatorRepositoryAdapter | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/out/persistence/TechnicalIndicatorRepositoryAdapter.java` | Done |
-| T4: TechnicalIndicatorRepositoryAdapterTest | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/adapter/out/persistence/TechnicalIndicatorRepositoryAdapterTest.java` | Done |
+| T1: GetIndicatorsUseCase (port in) | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/port/in/GetIndicatorsUseCase.java` | Done |
+| T2: GetIndicatorsUseCaseImpl | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/application/usecase/GetIndicatorsUseCaseImpl.java` | Done |
+| T3: IndicatorsController | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/in/web/IndicatorsController.java` | Done |
+| T4: IndicatorValueResponse / IndicatorsResponse DTOs | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/in/web/dto/` | Done |
+| T5: GetIndicatorsUseCaseImplTest | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/application/usecase/GetIndicatorsUseCaseImplTest.java` | Done |
+| T6: IndicatorsControllerTest | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/adapter/in/web/IndicatorsControllerTest.java` | Done |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E1-F04-PBI-03` - Indicator REST API
-**Feature:** FEAT-04: Technical Indicators
+**PBI:** `E1-F05-PBI-01` - Symbols endpoint
+**Feature:** FEAT-05: Market Data REST API
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S2
-**Jira:** SCRUM-206 -> `To Do`
+**Jira:** SCRUM-207 -> `To Do`
 
 ### Acceptance criteria
 
-- `GET /api/v1/indicators/{ticker}?types=RSI,MACD,SMA_20,SMA_50`
-- Returns latest indicator values with correct format
+- `GET /api/v1/symbols` — paginated list of all tracked symbols (public)
+- Returns ticker, name, exchange per symbol
 
 ---
 
