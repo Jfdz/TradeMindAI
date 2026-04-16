@@ -122,6 +122,8 @@ docker-compose.override.yml
 *.sqlite
 *.sqlite3
 models/
+!**/src/**/models/
+!**/src/**/models/**
 weights/
 checkpoints/
 *.pt
