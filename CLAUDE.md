@@ -7,40 +7,37 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Last Completed Task
 
-**PBI:** `E1-F02-PBI-02` - Domain models
+**PBI:** `E1-F02-PBI-04` - Flyway migrations
 **Feature:** FEAT-02: Market Data Service - Spring Boot Scaffold
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S1
-**Jira:** SCRUM-194 -> `Listo`
-**Branch:** `feature-E1-F02-PBI-02-domain-models`
+**Jira:** SCRUM-196 -> `Listo`
+**Branch:** `feature-E1-F02-PBI-04-flyway-migrations`
 **Completed:** 2026-04-16
 
 ### What was built
 
 | Task | Path | Status |
 |---|---|---|
-| T1: Symbol | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/model/Symbol.java` | Done |
-| T2: TimeFrame | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/model/TimeFrame.java` | Done |
-| T3: OHLCV | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/model/OHLCV.java` | Done |
-| T4: TechnicalIndicatorType | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/model/TechnicalIndicatorType.java` | Done |
-| T5: StockPrice | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/model/StockPrice.java` | Done |
-| T6: TechnicalIndicator | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/model/TechnicalIndicator.java` | Done |
-| T7: Domain model tests | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/domain/model/MarketDataDomainModelTest.java` | Done |
+| T1: V1 symbols migration | `services/market-data-service/src/main/resources/db/migration/V1__create_symbols_table.sql` | Done |
+| T2: V2 stock_prices migration | `services/market-data-service/src/main/resources/db/migration/V2__create_stock_prices_table.sql` | Done |
+| T3: V3 technical_indicators migration | `services/market-data-service/src/main/resources/db/migration/V3__create_technical_indicators_table.sql` | Done |
+| T4: Flyway migration test | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/config/FlywayMigrationTest.java` | Done |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E1-F02-PBI-03` - Port interfaces
+**PBI:** `E1-F02-PBI-05` - JPA entities and mappers
 **Feature:** FEAT-02: Market Data Service - Spring Boot Scaffold
 **Epic:** EPIC-1: Foundation & Infrastructure
-**Sprint:** S1
-**Jira:** SCRUM-195 -> `In Development`
+**Sprint:** S2
+**Jira:** SCRUM-197 -> `In Development`
 
 ### Acceptance criteria
 
-- `MarketDataProvider`, `StockPriceRepository`, `MarketDataEventPublisher` in `domain/port/`
-- Port interfaces reference only domain types
+- JPA entities in `adapter/out/persistence/`
+- MapStruct mappers convert domain models both ways
 
 ---
 
