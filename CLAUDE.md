@@ -7,11 +7,11 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Last Completed Task
 
-**PBI:** `E1-F03-PBI-02` - Data ingestion use case
+**PBI:** `E1-F03-PBI-03` - Scheduled ingestion job
 **Feature:** FEAT-03: Market Data Ingestion Pipeline
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S2
-**Jira:** SCRUM-201 -> `Listo`
+**Jira:** SCRUM-202 -> `Listo`
 **Branch:** `feature-E1-F03-PBI-02-data-ingestion-usecase`
 **Completed:** 2026-04-16
 
@@ -19,24 +19,26 @@ Update after every completed PBI: record the last done task and the next in deve
 
 | Task | Path | Status |
 |---|---|---|
-| T1: FetchMarketDataUseCase | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/application/usecase/FetchMarketDataUseCase.java` | Done |
-| T2: FetchMarketDataUseCaseImpl | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/application/usecase/FetchMarketDataUseCaseImpl.java` | Done |
-| T3: Use case unit test | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/application/usecase/FetchMarketDataUseCaseImplTest.java` | Done |
+| T1: ScheduledMarketDataIngestionJob | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/application/usecase/ScheduledMarketDataIngestionJob.java` | Done |
+| T2: MarketDataIngestionProperties | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/config/MarketDataIngestionProperties.java` | Done |
+| T3: MarketDataIngestionConfig | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/config/MarketDataIngestionConfig.java` | Done |
+| T4: application.yml ingestion properties | `services/market-data-service/src/main/resources/application.yml` | Done |
+| T5: Scheduler unit test | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/application/usecase/ScheduledMarketDataIngestionJobTest.java` | Done |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E1-F03-PBI-03` - Scheduled ingestion job
+**PBI:** `E1-F03-PBI-04` - RabbitMQ event publisher
 **Feature:** FEAT-03: Market Data Ingestion Pipeline
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S2
-**Jira:** SCRUM-202 -> `In Development`
+**Jira:** SCRUM-203 -> `To Do`
 
 ### Acceptance criteria
 
-- `@Scheduled` cron job triggers ingestion for all active symbols on weekdays at 6pm EST
-- When the market is closed, the latest data is fetched for all active symbols
+- Publish `market-data.prices.updated` with symbol and date range
+- RabbitMQ receives the JSON message with the correct routing key
 
 ---
 
