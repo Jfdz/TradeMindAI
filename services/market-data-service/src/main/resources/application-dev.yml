@@ -1,0 +1,9 @@
+spring:
+  jpa:
+    show-sql: true
+
+logging:
+  level:
+    com.tradingsaas: DEBUG
+    org.springframework.web: DEBUG
+    org.flywaydb: INFO

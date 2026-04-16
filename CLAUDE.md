@@ -7,36 +7,38 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Last Completed Task
 
-**PBI:** `E1-F01-PBI-05` — Environment variable documentation
-**Feature:** FEAT-01: Monorepo & Infrastructure Setup
+**PBI:** `E1-F02-PBI-01` — Spring Boot project scaffold
+**Feature:** FEAT-02: Market Data Service - Spring Boot Scaffold
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S1
-**Jira:** SCRUM-191 → `Listo`
-**Branch:** `feature/E1-F01-PBI-05-env-docs`
+**Jira:** SCRUM-193 → `Listo`
+**Branch:** `feature/E1-F02-PBI-01-spring-boot-scaffold`
 **Completed:** 2026-04-16
 
 ### What was built
 
-`.env.example` verified and extended: added `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, and all
-`JIRA_*` variables used by the sync/status scripts. Every variable has a comment description.
+| Task | Path | Status |
+|---|---|---|
+| T1: pom.xml | `services/market-data-service/pom.xml` | Done |
+| T2: Main application class | `...marketdata/MarketDataApplication.java` | Done |
+| T3: Package structure | `domain/model`, `domain/port/in`, `domain/port/out`, `domain/service`, `application/usecase`, `adapter/in/web/dto`, `adapter/out/persistence`, `adapter/out/external`, `adapter/out/messaging`, `config` | Done |
+| T4: application.yml | `application.yml`, `application-dev.yml`, `application-prod.yml` | Done |
+| T5: Dockerfile | `services/market-data-service/Dockerfile` | Done |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E1-F02-PBI-01` — Spring Boot project scaffold
+**PBI:** `E1-F02-PBI-02` — Domain models
 **Feature:** FEAT-02: Market Data Service - Spring Boot Scaffold
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S1
-**Jira:** SCRUM-192 → `In Development`
+**Jira:** SCRUM-194 → `In Development`
 
 ### Acceptance criteria
 
-- `mvn compile` succeeds with Java 21
-- Spring Boot 3.3 parent pom with all deps (JPA, Flyway, AMQP, Redis, Actuator, ta4j, MapStruct)
-- Clean Architecture package structure
-- `application.yml` + dev/prod profiles, service on port 8081
-- Multi-stage Dockerfile
+- `Symbol`, `StockPrice`, `OHLCV`, `TechnicalIndicator`, `TimeFrame` entities and value objects
+- Zero Spring/JPA annotations on domain models
 
 ---
 
@@ -49,7 +51,7 @@ Update after every completed PBI: record the last done task and the next in deve
 | E1-F01-PBI-03 | Docker Compose for local dev | Done |
 | E1-F01-PBI-04 | Database schema initialization | Done |
 | E1-F01-PBI-05 | Environment variable documentation | Done |
-| E1-F02-PBI-01 | Spring Boot project scaffold | In Development |
-| E1-F02-PBI-02 | Domain models | To Do |
+| E1-F02-PBI-01 | Spring Boot project scaffold | Done |
+| E1-F02-PBI-02 | Domain models | In Development |
 | E1-F02-PBI-03 | Port interfaces | To Do |
 | E1-F02-PBI-04 | Flyway migrations | To Do |
