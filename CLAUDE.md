@@ -7,38 +7,38 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Last Completed Task
 
-**PBI:** `E1-F03-PBI-03` - Scheduled ingestion job
+**PBI:** `E1-F03-PBI-04` - RabbitMQ event publisher
 **Feature:** FEAT-03: Market Data Ingestion Pipeline
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S2
-**Jira:** SCRUM-202 -> `Listo`
-**Branch:** `feature-E1-F03-PBI-02-data-ingestion-usecase`
+**Jira:** SCRUM-203 -> `Listo`
+**Branch:** `feature-E1-F03-PBI-04-rabbitmq-event-publisher`
 **Completed:** 2026-04-16
 
 ### What was built
 
 | Task | Path | Status |
 |---|---|---|
-| T1: ScheduledMarketDataIngestionJob | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/application/usecase/ScheduledMarketDataIngestionJob.java` | Done |
-| T2: MarketDataIngestionProperties | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/config/MarketDataIngestionProperties.java` | Done |
-| T3: MarketDataIngestionConfig | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/config/MarketDataIngestionConfig.java` | Done |
-| T4: application.yml ingestion properties | `services/market-data-service/src/main/resources/application.yml` | Done |
-| T5: Scheduler unit test | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/application/usecase/ScheduledMarketDataIngestionJobTest.java` | Done |
+| T1: MarketDataPricesUpdatedEvent | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/out/messaging/MarketDataPricesUpdatedEvent.java` | Done |
+| T2: RabbitMqMarketDataEventPublisher | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/out/messaging/RabbitMqMarketDataEventPublisher.java` | Done |
+| T3: MarketDataMessagingProperties | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/config/MarketDataMessagingProperties.java` | Done |
+| T4: application.yml routing key | `services/market-data-service/src/main/resources/application.yml` | Done |
+| T5: Publisher unit test | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/adapter/out/messaging/RabbitMqMarketDataEventPublisherTest.java` | Done |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E1-F03-PBI-04` - RabbitMQ event publisher
+**PBI:** `E1-F03-PBI-05` - JPA entities and mappers for ingestion output
 **Feature:** FEAT-03: Market Data Ingestion Pipeline
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S2
-**Jira:** SCRUM-203 -> `To Do`
+**Jira:** SCRUM-204 -> `To Do`
 
 ### Acceptance criteria
 
-- Publish `market-data.prices.updated` with symbol and date range
-- RabbitMQ receives the JSON message with the correct routing key
+- Market data ingestion output is persisted and mapped cleanly from domain to JPA
+- No business logic leaks into persistence adapters
 
 ---
 
