@@ -7,35 +7,36 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Last Completed Task
 
-**PBI:** `E1-F03-PBI-01` - Yahoo Finance adapter
+**PBI:** `E1-F03-PBI-02` - Data ingestion use case
 **Feature:** FEAT-03: Market Data Ingestion Pipeline
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S2
-**Jira:** SCRUM-200 -> `Listo`
-**Branch:** `feature-E1-F03-PBI-01-yahoo-finance-adapter`
+**Jira:** SCRUM-201 -> `Listo`
+**Branch:** `feature-E1-F03-PBI-02-data-ingestion-usecase`
 **Completed:** 2026-04-16
 
 ### What was built
 
 | Task | Path | Status |
 |---|---|---|
-| T1: YahooFinanceAdapter | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/out/external/YahooFinanceAdapter.java` | Done |
-| T2: WireMock adapter test | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/adapter/out/external/YahooFinanceAdapterTest.java` | Done |
+| T1: FetchMarketDataUseCase | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/application/usecase/FetchMarketDataUseCase.java` | Done |
+| T2: FetchMarketDataUseCaseImpl | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/application/usecase/FetchMarketDataUseCaseImpl.java` | Done |
+| T3: Use case unit test | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/application/usecase/FetchMarketDataUseCaseImplTest.java` | Done |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E1-F03-PBI-02` - Data ingestion use case
+**PBI:** `E1-F03-PBI-03` - Scheduled ingestion job
 **Feature:** FEAT-03: Market Data Ingestion Pipeline
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S2
-**Jira:** SCRUM-201 -> `In Development`
+**Jira:** SCRUM-202 -> `In Development`
 
 ### Acceptance criteria
 
-- `FetchMarketDataUseCaseImpl` orchestrates Yahoo fetch, persistence, and event publishing
-- OHLCV data lands in PostgreSQL and `market-data.prices.updated` is published
+- `@Scheduled` cron job triggers ingestion for all active symbols on weekdays at 6pm EST
+- When the market is closed, the latest data is fetched for all active symbols
 
 ---
 
