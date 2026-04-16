@@ -17,27 +17,25 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Last Completed Task
 
-**PBI:** `E2-F06-PBI-01` - Python project setup
+**PBI:** `E2-F06-PBI-02` - FastAPI application entry point
 **Feature:** FEAT-06: AI Service Scaffold
 **Epic:** EPIC-2: AI Engine
 **Sprint:** S3
-**Jira:** SCRUM-214 -> `In Development`
+**Jira:** SCRUM-215 -> `In Development`
 **Branch:** `feature-E2-F06-PBI-01-python-project-setup`
 **Completed:** 2026-04-16
 
 ### What was built
 
-- `pyproject.toml` with `setuptools.build_meta`, runtime + dev optional dependencies
-- `requirements.txt` and `requirements-dev.txt`
-- Package structure: `src/ai_engine/{core,adapters}` with Clean Architecture sub-packages
-- `tests/{unit,integration}` test scaffolding
-- `pip install -e .` verified — `ai_engine` importable
+- `src/ai_engine/main.py` — `create_app()` factory, CORS middleware, lifespan context manager
+- `app.state.model_loaded` flag initialised in lifespan (model wiring deferred to E2-F07)
+- Import verified: `from ai_engine.main import app` → `AI Engine 0.1.0`
 
 ---
 
 ## Next In Development
 
-**PBI:** `E2-F06-PBI-02` - FastAPI application entry point
+**PBI:** `E2-F06-PBI-03` - Configuration via pydantic-settings
 **Feature:** FEAT-06: AI Service Scaffold
 **Epic:** EPIC-2: AI Engine
 **Sprint:** S3
@@ -45,8 +43,8 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ### Acceptance criteria
 
-- `main.py` with app factory, CORS, lifespan events (model loading)
-- `uvicorn ai_engine.main:app` starts and serves on port 8000
+- `config.py` with DB URL, RabbitMQ URL, model paths, all from env vars
+- All settings parsed and validated via pydantic-settings
 
 ---
 
