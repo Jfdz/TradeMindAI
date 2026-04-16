@@ -14,43 +14,44 @@ Update after every completed PBI: record the last done task and the next in deve
 | FEAT-06: AI Service Scaffold | SCRUM-213 | `Listo` |
 | FEAT-07: CNN Model Implementation | SCRUM-220 | `Listo` |
 | FEAT-08: Training Pipeline | SCRUM-227 | `Listo` |
+| FEAT-09: Prediction API & Messaging | SCRUM-233 | `Listo` |
 
 ---
 
 ## Last Completed Task
 
-**PBI:** `E2-F08-PBI-05` - Training REST endpoint
-**Feature:** FEAT-08: Training Pipeline
+**PBI:** `E2-F09-PBI-05` - Model management endpoints
+**Feature:** FEAT-09: Prediction API & Messaging
 **Epic:** EPIC-2: AI Engine
 **Sprint:** S4
-**Jira:** SCRUM-232 -> `Listo`
-**Branch:** `feature-E2-F08-training-pipeline`
+**Jira:** SCRUM-238 -> `Listo`
+**Branch:** `feature-E2-F09-prediction-api`
 **Completed:** 2026-04-16
 
-### What was built (full FEAT-08)
+### What was built (full FEAT-09)
 
 | PBI | Jira | What was built | Status |
 |---|---|---|---|
-| E2-F08-PBI-01 | SCRUM-228 | `core/domain/data_loader.py` — temporal 70/15/15 split, no shuffle on val/test | Listo |
-| E2-F08-PBI-02 | SCRUM-229 | `core/use_cases/trainer.py` — CrossEntropyLoss (weighted), AdamW, ReduceLROnPlateau, early stopping (patience=10) | Listo |
-| E2-F08-PBI-03 | SCRUM-230 | `core/use_cases/evaluator.py` — accuracy, precision/recall/F1 per class, confusion matrix | Listo |
-| E2-F08-PBI-04 | SCRUM-231 | `core/use_cases/model_registry.py` — save/load state_dict + metadata.json, activate version | Listo |
-| E2-F08-PBI-05 | SCRUM-232 | `adapters/in_/training.py` — `POST /api/v1/models/train` returns 202+run_id, `GET /api/v1/models/train/{run_id}` | Listo |
+| E2-F09-PBI-01 | SCRUM-234 | `core/use_cases/prediction_service.py` + `adapters/in_/prediction.py` — `POST /api/v1/predict` | Listo |
+| E2-F09-PBI-02 | SCRUM-235 | `POST /api/v1/predict/batch` — up to 50 tickers, single forward pass | Listo |
+| E2-F09-PBI-03 | SCRUM-236 | `adapters/out/rabbitmq_consumer.py` — `PredictionRequestConsumer` on `ai-engine.prediction.requests` | Listo |
+| E2-F09-PBI-04 | SCRUM-237 | `MarketDataEventConsumer` on `ai-engine.market-data.prices`, triggers predictions on `market-data.prices.updated` | Listo |
+| E2-F09-PBI-05 | SCRUM-238 | `adapters/in_/models.py` — `GET /api/v1/models`, `GET /api/v1/models/active`, `POST /api/v1/models/{id}/activate` | Listo |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E2-F09-PBI-01` - Single prediction endpoint
-**Feature:** FEAT-09: Prediction API & Messaging
-**Epic:** EPIC-2: AI Engine
+**PBI:** `E3-F10-PBI-01` - User domain model
+**Feature:** FEAT-10: Authentication System
+**Epic:** EPIC-3: Trading Core
 **Sprint:** S4
 **Jira:** TBD -> `To Do`
 
 ### Acceptance criteria
 
-- `POST /api/v1/predict` with ticker returns `{direction, confidence, predicted_change_pct}`
-- Active model must be loaded; returns 503 if not ready
+- `User`, `Subscription`, `SubscriptionPlan` enum (FREE/BASIC/PREMIUM)
+- Zero framework annotations on domain models; validation in constructors
 
 ---
 
