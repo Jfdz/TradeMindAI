@@ -5,41 +5,50 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ---
 
+## Feature Status
+
+| Feature | Jira | Status |
+|---|---|---|
+| FEAT-04: Technical Indicators | SCRUM-203 | `Listo` |
+| FEAT-05: Market Data REST API | SCRUM-204 | `In Development` |
+
+---
+
 ## Last Completed Task
 
-**PBI:** `E1-F04-PBI-03` - Indicator REST API
-**Feature:** FEAT-04: Technical Indicators
+**PBI:** `E1-F05-PBI-01` - Symbols endpoint
+**Feature:** FEAT-05: Market Data REST API
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S2
-**Jira:** SCRUM-206 -> `Listo`
-**Branch:** `feature-E1-F04-PBI-03-indicator-rest-api`
+**Jira:** SCRUM-207 -> `Listo`
+**Branch:** `feature-E1-F05-PBI-01-symbols-endpoint`
 **Completed:** 2026-04-16
 
 ### What was built
 
 | Task | Path | Status |
 |---|---|---|
-| T1: GetIndicatorsUseCase (port in) | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/port/in/GetIndicatorsUseCase.java` | Done |
-| T2: GetIndicatorsUseCaseImpl | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/application/usecase/GetIndicatorsUseCaseImpl.java` | Done |
-| T3: IndicatorsController | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/in/web/IndicatorsController.java` | Done |
-| T4: IndicatorValueResponse / IndicatorsResponse DTOs | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/in/web/dto/` | Done |
-| T5: GetIndicatorsUseCaseImplTest | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/application/usecase/GetIndicatorsUseCaseImplTest.java` | Done |
-| T6: IndicatorsControllerTest | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/adapter/in/web/IndicatorsControllerTest.java` | Done |
+| T1: SymbolRepository (port out) | `domain/port/out/SymbolRepository.java` | Done |
+| T2: SymbolJpaRepository + SymbolRepositoryAdapter | `adapter/out/persistence/` | Done |
+| T3: GetSymbolsUseCase + Impl | `domain/port/in/` + `application/usecase/` | Done |
+| T4: SymbolResponse + PagedResponse DTOs | `adapter/in/web/dto/` | Done |
+| T5: SymbolsController | `adapter/in/web/SymbolsController.java` | Done |
+| T6: GetSymbolsUseCaseImplTest + SymbolsControllerTest | `src/test/` | Done |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E1-F05-PBI-01` - Symbols endpoint
+**PBI:** `E1-F05-PBI-02` - Historical prices endpoint
 **Feature:** FEAT-05: Market Data REST API
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S2
-**Jira:** SCRUM-207 -> `To Do`
+**Jira:** SCRUM-208 -> `In Development`
 
 ### Acceptance criteria
 
-- `GET /api/v1/symbols` — paginated list of all tracked symbols (public)
-- Returns ticker, name, exchange per symbol
+- `GET /api/v1/prices/{ticker}/history?from=&to=&timeframe=DAILY`
+- Returns paginated OHLCV data sorted by date DESC
 
 ---
 
