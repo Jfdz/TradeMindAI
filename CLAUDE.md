@@ -9,46 +9,44 @@ Update after every completed PBI: record the last done task and the next in deve
 
 | Feature | Jira | Status |
 |---|---|---|
-| FEAT-04: Technical Indicators | SCRUM-203 | `Listo` |
-| FEAT-05: Market Data REST API | SCRUM-204 | `In Development` |
+| FEAT-04: Technical Indicators | SCRUM-204 | `Listo` |
+| FEAT-05: Market Data REST API | SCRUM-208 | `Listo` |
 
 ---
 
 ## Last Completed Task
 
-**PBI:** `E1-F05-PBI-01` - Symbols endpoint
+**PBI:** `E1-F05-PBI-04` - Health check and Actuator
 **Feature:** FEAT-05: Market Data REST API
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S2
-**Jira:** SCRUM-207 -> `Listo`
-**Branch:** `feature-E1-F05-PBI-01-symbols-endpoint`
+**Jira:** SCRUM-212 -> `Listo`
+**Branch:** `feature-E1-F05-PBI-04-health-actuator`
 **Completed:** 2026-04-16
 
-### What was built
+### What was built (full FEAT-05)
 
-| Task | Path | Status |
-|---|---|---|
-| T1: SymbolRepository (port out) | `domain/port/out/SymbolRepository.java` | Done |
-| T2: SymbolJpaRepository + SymbolRepositoryAdapter | `adapter/out/persistence/` | Done |
-| T3: GetSymbolsUseCase + Impl | `domain/port/in/` + `application/usecase/` | Done |
-| T4: SymbolResponse + PagedResponse DTOs | `adapter/in/web/dto/` | Done |
-| T5: SymbolsController | `adapter/in/web/SymbolsController.java` | Done |
-| T6: GetSymbolsUseCaseImplTest + SymbolsControllerTest | `src/test/` | Done |
+| PBI | Jira | What was built | Status |
+|---|---|---|---|
+| E1-F05-PBI-01 | SCRUM-209 | `GET /api/v1/symbols` — SymbolRepository, SymbolsController, PagedResponse | Done |
+| E1-F05-PBI-02 | SCRUM-210 | `GET /api/v1/prices/{ticker}/history` — StockPriceJpaRepository, StockPriceRepositoryAdapter, StockPricesController | Done |
+| E1-F05-PBI-03 | SCRUM-211 | Redis cache — StockPriceCache port, RedisStockPriceCacheAdapter, `GET /api/v1/prices/{ticker}/latest` | Done |
+| E1-F05-PBI-04 | SCRUM-212 | Actuator health config for DB + Redis + RabbitMQ | Done |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E1-F05-PBI-02` - Historical prices endpoint
-**Feature:** FEAT-05: Market Data REST API
-**Epic:** EPIC-1: Foundation & Infrastructure
-**Sprint:** S2
-**Jira:** SCRUM-208 -> `In Development`
+**PBI:** `E2-F06-PBI-01` - Python project setup
+**Feature:** FEAT-06: AI Service Scaffold
+**Epic:** EPIC-2: AI Engine
+**Sprint:** S3
+**Jira:** TBD -> `To Do`
 
 ### Acceptance criteria
 
-- `GET /api/v1/prices/{ticker}/history?from=&to=&timeframe=DAILY`
-- Returns paginated OHLCV data sorted by date DESC
+- `pyproject.toml`, `requirements.txt`, `requirements-dev.txt`, package structure
+- `pip install -e .` installs all dependencies and package is importable
 
 ---
 
