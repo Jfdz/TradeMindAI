@@ -3,6 +3,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from ai_engine.adapters.in_.health import router as health_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -26,6 +28,8 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    app.include_router(health_router)
 
     return app
 

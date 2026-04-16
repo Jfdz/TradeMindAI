@@ -17,25 +17,27 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Last Completed Task
 
-**PBI:** `E2-F06-PBI-02` - FastAPI application entry point
+**PBI:** `E2-F06-PBI-04` - Health and readiness endpoints
 **Feature:** FEAT-06: AI Service Scaffold
 **Epic:** EPIC-2: AI Engine
 **Sprint:** S3
-**Jira:** SCRUM-215 -> `In Development`
+**Jira:** SCRUM-217 -> `In Development`
 **Branch:** `feature-E2-F06-PBI-01-python-project-setup`
 **Completed:** 2026-04-16
 
-### What was built
+### What was built (PBI-02 → PBI-04)
 
-- `src/ai_engine/main.py` — `create_app()` factory, CORS middleware, lifespan context manager
-- `app.state.model_loaded` flag initialised in lifespan (model wiring deferred to E2-F07)
-- Import verified: `from ai_engine.main import app` → `AI Engine 0.1.0`
+| PBI | Jira | What was built | Status |
+|---|---|---|---|
+| E2-F06-PBI-02 | SCRUM-215 | `main.py` — `create_app()`, CORS, lifespan, `app.state.model_loaded` | Listo |
+| E2-F06-PBI-03 | SCRUM-216 | `config.py` — pydantic-settings: DATABASE_URL, RABBITMQ_URL, MODEL_PATH, ENABLE_GPU | Listo |
+| E2-F06-PBI-04 | SCRUM-217 | `GET /health` (200), `GET /ready` (200 if model loaded, 503 otherwise) | In Development |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E2-F06-PBI-03` - Configuration via pydantic-settings
+**PBI:** `E2-F06-PBI-05` - Alembic setup + migrations
 **Feature:** FEAT-06: AI Service Scaffold
 **Epic:** EPIC-2: AI Engine
 **Sprint:** S3
@@ -43,8 +45,8 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ### Acceptance criteria
 
-- `config.py` with DB URL, RabbitMQ URL, model paths, all from env vars
-- All settings parsed and validated via pydantic-settings
+- `ai_engine` schema: `model_versions`, `training_runs`, `predictions` tables
+- `alembic upgrade head` creates all 3 tables
 
 ---
 
