@@ -7,11 +7,11 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Last Completed Task
 
-**PBI:** `E1-F03-PBI-01` â€” Yahoo Finance adapter
-**Feature:** FEAT-03: Market Data Ingestion Pipeline
+**PBI:** `E1-F02-PBI-02` - Domain models
+**Feature:** FEAT-02: Market Data Service - Spring Boot Scaffold
 **Epic:** EPIC-1: Foundation & Infrastructure
-**Sprint:** S2
-**Jira:** SCRUM-197 â†’ `In Development`
+**Sprint:** S1
+**Jira:** SCRUM-194 -> `Listo`
 **Branch:** `feature-E1-F02-PBI-02-domain-models`
 **Completed:** 2026-04-16
 
@@ -19,25 +19,28 @@ Update after every completed PBI: record the last done task and the next in deve
 
 | Task | Path | Status |
 |---|---|---|
-| T1: YahooFinanceAdapter | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/out/external/YahooFinanceAdapter.java` | Done |
-| T2: WebClientConfig | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/config/WebClientConfig.java` | Done |
-| T3: Yahoo base URL config | `services/market-data-service/src/main/resources/application.yml` | Done |
-| T4: WireMock adapter tests | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/adapter/out/external/YahooFinanceAdapterTest.java` | Done |
+| T1: Symbol | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/model/Symbol.java` | Done |
+| T2: TimeFrame | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/model/TimeFrame.java` | Done |
+| T3: OHLCV | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/model/OHLCV.java` | Done |
+| T4: TechnicalIndicatorType | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/model/TechnicalIndicatorType.java` | Done |
+| T5: StockPrice | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/model/StockPrice.java` | Done |
+| T6: TechnicalIndicator | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/model/TechnicalIndicator.java` | Done |
+| T7: Domain model tests | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/domain/model/MarketDataDomainModelTest.java` | Done |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E1-F03-PBI-02` â€” Data ingestion use case
-**Feature:** FEAT-03: Market Data Ingestion Pipeline
+**PBI:** `E1-F02-PBI-03` - Port interfaces
+**Feature:** FEAT-02: Market Data Service - Spring Boot Scaffold
 **Epic:** EPIC-1: Foundation & Infrastructure
-**Sprint:** S2
-**Jira:** SCRUM-198 â†’ `To Do`
+**Sprint:** S1
+**Jira:** SCRUM-195 -> `In Development`
 
 ### Acceptance criteria
 
-- `FetchMarketDataUseCaseImpl` orchestrates Yahoo fetch, persistence, and event publishing
-- OHLCV data lands in PostgreSQL and `market-data.prices.updated` is published
+- `MarketDataProvider`, `StockPriceRepository`, `MarketDataEventPublisher` in `domain/port/`
+- Port interfaces reference only domain types
 
 ---
 
