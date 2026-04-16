@@ -87,6 +87,41 @@ market-data:
   symbols: ${STOCK_SYMBOLS:AAPL,MSFT,GOOGL,TSLA,AMZN,NVDA,META,AMD}
   ingestion:
     batch-size: ${DATA_INGESTION_BATCH_SIZE:50}
+    weekday-cron: ${DATA_INGESTION_CRON:0 0 18 ? * MON-FRI}
+    zone: ${DATA_INGESTION_ZONE:America/New_York}
+    tracked-symbols:
+      - ticker: AAPL
+        name: Apple Inc.
+        exchange: NASDAQ
+        active: true
+      - ticker: MSFT
+        name: Microsoft Corporation
+        exchange: NASDAQ
+        active: true
+      - ticker: GOOGL
+        name: Alphabet Inc.
+        exchange: NASDAQ
+        active: true
+      - ticker: TSLA
+        name: Tesla, Inc.
+        exchange: NASDAQ
+        active: true
+      - ticker: AMZN
+        name: Amazon.com, Inc.
+        exchange: NASDAQ
+        active: true
+      - ticker: NVDA
+        name: NVIDIA Corporation
+        exchange: NASDAQ
+        active: true
+      - ticker: META
+        name: Meta Platforms, Inc.
+        exchange: NASDAQ
+        active: true
+      - ticker: AMD
+        name: Advanced Micro Devices, Inc.
+        exchange: NASDAQ
+        active: true
 
 resilience4j:
   circuitbreaker:
