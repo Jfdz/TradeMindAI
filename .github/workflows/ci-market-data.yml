@@ -46,17 +46,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check if project is bootstrapped
+        id: check
+        run: |
+          if [ -f pom.xml ]; then
+            echo "bootstrapped=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "bootstrapped=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::pom.xml not found — skipping build/test (scaffold only)"
+          fi
+
       - name: Set up Java 21
+        if: steps.check.outputs.bootstrapped == 'true'
         uses: actions/setup-java@v4
         with:
           java-version: "21"
           distribution: temurin
-          cache: maven
 
       - name: Build
+        if: steps.check.outputs.bootstrapped == 'true'
         run: mvn compile -q
 
       - name: Run tests
+        if: steps.check.outputs.bootstrapped == 'true'
         run: mvn test
         env:
           SPRING_PROFILES_ACTIVE: test
@@ -69,4 +81,5 @@ jobs:
           REDIS_PORT: 6379
 
       - name: Build Docker image
+        if: steps.check.outputs.bootstrapped == 'true'
         run: docker build -t market-data-service:${{ github.sha }} .

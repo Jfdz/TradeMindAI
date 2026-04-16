@@ -37,21 +37,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check if project is bootstrapped
+        id: check
+        run: |
+          if [ -f requirements.txt ] || [ -f pyproject.toml ]; then
+            echo "bootstrapped=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "bootstrapped=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::requirements.txt/pyproject.toml not found — skipping build/test (scaffold only)"
+          fi
+
       - name: Set up Python 3.11
+        if: steps.check.outputs.bootstrapped == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: pip
 
       - name: Install dependencies
+        if: steps.check.outputs.bootstrapped == 'true'
         run: |
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
 
       - name: Lint (ruff)
+        if: steps.check.outputs.bootstrapped == 'true'
         run: ruff check src/ tests/
 
       - name: Run tests
+        if: steps.check.outputs.bootstrapped == 'true'
         run: pytest tests/ -v --tb=short
         env:
           DATABASE_URL: postgresql://trading_user:test_password@localhost:5432/trading_saas_test
@@ -60,4 +73,5 @@ jobs:
           ENABLE_GPU: "false"
 
       - name: Build Docker image
+        if: steps.check.outputs.bootstrapped == 'true'
         run: docker build -t ai-engine:${{ github.sha }} .
