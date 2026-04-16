@@ -7,38 +7,36 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Last Completed Task
 
-**PBI:** `E1-F03-PBI-04` - RabbitMQ event publisher
-**Feature:** FEAT-03: Market Data Ingestion Pipeline
+**PBI:** `E1-F04-PBI-01` - Indicator calculator service
+**Feature:** FEAT-04: Technical Indicators
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S2
-**Jira:** SCRUM-203 -> `Listo`
-**Branch:** `feature-E1-F03-PBI-04-rabbitmq-event-publisher`
+**Jira:** SCRUM-204 -> `Listo`
+**Branch:** `feature-E1-F04-PBI-01-indicator-calculator`
 **Completed:** 2026-04-16
 
 ### What was built
 
 | Task | Path | Status |
 |---|---|---|
-| T1: MarketDataPricesUpdatedEvent | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/out/messaging/MarketDataPricesUpdatedEvent.java` | Done |
-| T2: RabbitMqMarketDataEventPublisher | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/out/messaging/RabbitMqMarketDataEventPublisher.java` | Done |
-| T3: MarketDataMessagingProperties | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/config/MarketDataMessagingProperties.java` | Done |
-| T4: application.yml routing key | `services/market-data-service/src/main/resources/application.yml` | Done |
-| T5: Publisher unit test | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/adapter/out/messaging/RabbitMqMarketDataEventPublisherTest.java` | Done |
+| T1: TechnicalIndicatorCalculator | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/service/TechnicalIndicatorCalculator.java` | Done |
+| T2: Ta4jTechnicalIndicatorCalculator | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/service/Ta4jTechnicalIndicatorCalculator.java` | Done |
+| T3: Indicator calculator unit test | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/domain/service/TechnicalIndicatorCalculatorTest.java` | Done |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E1-F03-PBI-05` - JPA entities and mappers for ingestion output
-**Feature:** FEAT-03: Market Data Ingestion Pipeline
+**PBI:** `E1-F04-PBI-02` - Indicator persistence
+**Feature:** FEAT-04: Technical Indicators
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S2
-**Jira:** SCRUM-204 -> `To Do`
+**Jira:** SCRUM-205 -> `To Do`
 
 ### Acceptance criteria
 
-- Market data ingestion output is persisted and mapped cleanly from domain to JPA
-- No business logic leaks into persistence adapters
+- Store calculated indicators in `market_data.technical_indicators`
+- Retrievable by symbol + date + type
 
 ---
 
