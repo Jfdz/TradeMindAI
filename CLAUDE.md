@@ -11,42 +11,45 @@ Update after every completed PBI: record the last done task and the next in deve
 |---|---|---|
 | FEAT-04: Technical Indicators | SCRUM-204 | `Listo` |
 | FEAT-05: Market Data REST API | SCRUM-208 | `Listo` |
-| FEAT-06: AI Service Scaffold | SCRUM-213 | `In Development` |
+| FEAT-06: AI Service Scaffold | SCRUM-213 | `Listo` |
 
 ---
 
 ## Last Completed Task
 
-**PBI:** `E2-F06-PBI-04` - Health and readiness endpoints
+**PBI:** `E2-F06-PBI-06` - Dockerfile for AI service
 **Feature:** FEAT-06: AI Service Scaffold
 **Epic:** EPIC-2: AI Engine
 **Sprint:** S3
-**Jira:** SCRUM-217 -> `In Development`
+**Jira:** SCRUM-219 -> `Listo`
 **Branch:** `feature-E2-F06-PBI-01-python-project-setup`
 **Completed:** 2026-04-16
 
-### What was built (PBI-02 → PBI-04)
+### What was built (full FEAT-06)
 
 | PBI | Jira | What was built | Status |
 |---|---|---|---|
+| E2-F06-PBI-01 | SCRUM-214 | `pyproject.toml`, `requirements.txt`, `requirements-dev.txt`, package structure | Listo |
 | E2-F06-PBI-02 | SCRUM-215 | `main.py` — `create_app()`, CORS, lifespan, `app.state.model_loaded` | Listo |
 | E2-F06-PBI-03 | SCRUM-216 | `config.py` — pydantic-settings: DATABASE_URL, RABBITMQ_URL, MODEL_PATH, ENABLE_GPU | Listo |
-| E2-F06-PBI-04 | SCRUM-217 | `GET /health` (200), `GET /ready` (200 if model loaded, 503 otherwise) | In Development |
+| E2-F06-PBI-04 | SCRUM-217 | `GET /health` (200), `GET /ready` (200/503 by model_loaded flag) | Listo |
+| E2-F06-PBI-05 | SCRUM-218 | Alembic setup — `model_versions`, `training_runs`, `predictions` in `ai_engine` schema | Listo |
+| E2-F06-PBI-06 | SCRUM-219 | Multi-stage Dockerfile (python:3.11-slim), non-root, HEALTHCHECK on `/health` | Listo |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E2-F06-PBI-05` - Alembic setup + migrations
-**Feature:** FEAT-06: AI Service Scaffold
+**PBI:** `E2-F07-PBI-01` - Abstract BasePredictor class
+**Feature:** FEAT-07: CNN Model Implementation
 **Epic:** EPIC-2: AI Engine
 **Sprint:** S3
 **Jira:** TBD -> `To Do`
 
 ### Acceptance criteria
 
-- `ai_engine` schema: `model_versions`, `training_runs`, `predictions` tables
-- `alembic upgrade head` creates all 3 tables
+- Abstract interface with `preprocess()`, `predict()`, `load_model()` methods
+- Inheriting class must implement all 3 methods
 
 ---
 
