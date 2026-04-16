@@ -7,38 +7,37 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Last Completed Task
 
-**PBI:** `E1-F02-PBI-01` — Spring Boot project scaffold
-**Feature:** FEAT-02: Market Data Service - Spring Boot Scaffold
+**PBI:** `E1-F03-PBI-01` â€” Yahoo Finance adapter
+**Feature:** FEAT-03: Market Data Ingestion Pipeline
 **Epic:** EPIC-1: Foundation & Infrastructure
-**Sprint:** S1
-**Jira:** SCRUM-193 → `Listo`
-**Branch:** `feature/E1-F02-PBI-01-spring-boot-scaffold`
+**Sprint:** S2
+**Jira:** SCRUM-197 â†’ `In Development`
+**Branch:** `feature-E1-F02-PBI-02-domain-models`
 **Completed:** 2026-04-16
 
 ### What was built
 
 | Task | Path | Status |
 |---|---|---|
-| T1: pom.xml | `services/market-data-service/pom.xml` | Done |
-| T2: Main application class | `...marketdata/MarketDataApplication.java` | Done |
-| T3: Package structure | `domain/model`, `domain/port/in`, `domain/port/out`, `domain/service`, `application/usecase`, `adapter/in/web/dto`, `adapter/out/persistence`, `adapter/out/external`, `adapter/out/messaging`, `config` | Done |
-| T4: application.yml | `application.yml`, `application-dev.yml`, `application-prod.yml` | Done |
-| T5: Dockerfile | `services/market-data-service/Dockerfile` | Done |
+| T1: YahooFinanceAdapter | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/out/external/YahooFinanceAdapter.java` | Done |
+| T2: WebClientConfig | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/config/WebClientConfig.java` | Done |
+| T3: Yahoo base URL config | `services/market-data-service/src/main/resources/application.yml` | Done |
+| T4: WireMock adapter tests | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/adapter/out/external/YahooFinanceAdapterTest.java` | Done |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E1-F02-PBI-02` — Domain models
-**Feature:** FEAT-02: Market Data Service - Spring Boot Scaffold
+**PBI:** `E1-F03-PBI-02` â€” Data ingestion use case
+**Feature:** FEAT-03: Market Data Ingestion Pipeline
 **Epic:** EPIC-1: Foundation & Infrastructure
-**Sprint:** S1
-**Jira:** SCRUM-194 → `In Development`
+**Sprint:** S2
+**Jira:** SCRUM-198 â†’ `To Do`
 
 ### Acceptance criteria
 
-- `Symbol`, `StockPrice`, `OHLCV`, `TechnicalIndicator`, `TimeFrame` entities and value objects
-- Zero Spring/JPA annotations on domain models
+- `FetchMarketDataUseCaseImpl` orchestrates Yahoo fetch, persistence, and event publishing
+- OHLCV data lands in PostgreSQL and `market-data.prices.updated` is published
 
 ---
 
@@ -55,3 +54,4 @@ Update after every completed PBI: record the last done task and the next in deve
 | E1-F02-PBI-02 | Domain models | In Development |
 | E1-F02-PBI-03 | Port interfaces | To Do |
 | E1-F02-PBI-04 | Flyway migrations | To Do |
+
