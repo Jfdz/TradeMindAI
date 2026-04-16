@@ -7,36 +7,37 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Last Completed Task
 
-**PBI:** `E1-F04-PBI-01` - Indicator calculator service
+**PBI:** `E1-F04-PBI-02` - Indicator persistence
 **Feature:** FEAT-04: Technical Indicators
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S2
-**Jira:** SCRUM-204 -> `Listo`
-**Branch:** `feature-E1-F04-PBI-01-indicator-calculator`
+**Jira:** SCRUM-205 -> `Listo`
+**Branch:** `feature-E1-F04-PBI-02-indicator-persistence`
 **Completed:** 2026-04-16
 
 ### What was built
 
 | Task | Path | Status |
 |---|---|---|
-| T1: TechnicalIndicatorCalculator | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/service/TechnicalIndicatorCalculator.java` | Done |
-| T2: Ta4jTechnicalIndicatorCalculator | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/service/Ta4jTechnicalIndicatorCalculator.java` | Done |
-| T3: Indicator calculator unit test | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/domain/service/TechnicalIndicatorCalculatorTest.java` | Done |
+| T1: TechnicalIndicatorRepository (port) | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/domain/port/out/TechnicalIndicatorRepository.java` | Done |
+| T2: TechnicalIndicatorJpaRepository | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/out/persistence/TechnicalIndicatorJpaRepository.java` | Done |
+| T3: TechnicalIndicatorRepositoryAdapter | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/out/persistence/TechnicalIndicatorRepositoryAdapter.java` | Done |
+| T4: TechnicalIndicatorRepositoryAdapterTest | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/adapter/out/persistence/TechnicalIndicatorRepositoryAdapterTest.java` | Done |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E1-F04-PBI-02` - Indicator persistence
+**PBI:** `E1-F04-PBI-03` - Indicator REST API
 **Feature:** FEAT-04: Technical Indicators
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S2
-**Jira:** SCRUM-205 -> `To Do`
+**Jira:** SCRUM-206 -> `To Do`
 
 ### Acceptance criteria
 
-- Store calculated indicators in `market_data.technical_indicators`
-- Retrievable by symbol + date + type
+- `GET /api/v1/indicators/{ticker}?types=RSI,MACD,SMA_20,SMA_50`
+- Returns latest indicator values with correct format
 
 ---
 
