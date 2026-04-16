@@ -11,33 +11,33 @@ Update after every completed PBI: record the last done task and the next in deve
 |---|---|---|
 | FEAT-04: Technical Indicators | SCRUM-204 | `Listo` |
 | FEAT-05: Market Data REST API | SCRUM-208 | `Listo` |
+| FEAT-06: AI Service Scaffold | SCRUM-213 | `In Development` |
 
 ---
 
 ## Last Completed Task
 
-**PBI:** `E1-F05-PBI-04` - Health check and Actuator
-**Feature:** FEAT-05: Market Data REST API
-**Epic:** EPIC-1: Foundation & Infrastructure
-**Sprint:** S2
-**Jira:** SCRUM-212 -> `Listo`
-**Branch:** `feature-E1-F05-PBI-04-health-actuator`
+**PBI:** `E2-F06-PBI-01` - Python project setup
+**Feature:** FEAT-06: AI Service Scaffold
+**Epic:** EPIC-2: AI Engine
+**Sprint:** S3
+**Jira:** SCRUM-214 -> `In Development`
+**Branch:** `feature-E2-F06-PBI-01-python-project-setup`
 **Completed:** 2026-04-16
 
-### What was built (full FEAT-05)
+### What was built
 
-| PBI | Jira | What was built | Status |
-|---|---|---|---|
-| E1-F05-PBI-01 | SCRUM-209 | `GET /api/v1/symbols` — SymbolRepository, SymbolsController, PagedResponse | Done |
-| E1-F05-PBI-02 | SCRUM-210 | `GET /api/v1/prices/{ticker}/history` — StockPriceJpaRepository, StockPriceRepositoryAdapter, StockPricesController | Done |
-| E1-F05-PBI-03 | SCRUM-211 | Redis cache — StockPriceCache port, RedisStockPriceCacheAdapter, `GET /api/v1/prices/{ticker}/latest` | Done |
-| E1-F05-PBI-04 | SCRUM-212 | Actuator health config for DB + Redis + RabbitMQ | Done |
+- `pyproject.toml` with `setuptools.build_meta`, runtime + dev optional dependencies
+- `requirements.txt` and `requirements-dev.txt`
+- Package structure: `src/ai_engine/{core,adapters}` with Clean Architecture sub-packages
+- `tests/{unit,integration}` test scaffolding
+- `pip install -e .` verified — `ai_engine` importable
 
 ---
 
 ## Next In Development
 
-**PBI:** `E2-F06-PBI-01` - Python project setup
+**PBI:** `E2-F06-PBI-02` - FastAPI application entry point
 **Feature:** FEAT-06: AI Service Scaffold
 **Epic:** EPIC-2: AI Engine
 **Sprint:** S3
@@ -45,8 +45,8 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ### Acceptance criteria
 
-- `pyproject.toml`, `requirements.txt`, `requirements-dev.txt`, package structure
-- `pip install -e .` installs all dependencies and package is importable
+- `main.py` with app factory, CORS, lifespan events (model loading)
+- `uvicorn ai_engine.main:app` starts and serves on port 8000
 
 ---
 
