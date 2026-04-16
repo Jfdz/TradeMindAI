@@ -7,37 +7,40 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Last Completed Task
 
-**PBI:** `E1-F02-PBI-04` - Flyway migrations
+**PBI:** `E1-F02-PBI-05` - JPA entities and mappers
 **Feature:** FEAT-02: Market Data Service - Spring Boot Scaffold
 **Epic:** EPIC-1: Foundation & Infrastructure
-**Sprint:** S1
-**Jira:** SCRUM-196 -> `Listo`
-**Branch:** `feature-E1-F02-PBI-04-flyway-migrations`
+**Sprint:** S2
+**Jira:** SCRUM-197 -> `Listo`
+**Branch:** `feature-E1-F02-PBI-05-jpa-entities-mappers`
 **Completed:** 2026-04-16
 
 ### What was built
 
 | Task | Path | Status |
 |---|---|---|
-| T1: V1 symbols migration | `services/market-data-service/src/main/resources/db/migration/V1__create_symbols_table.sql` | Done |
-| T2: V2 stock_prices migration | `services/market-data-service/src/main/resources/db/migration/V2__create_stock_prices_table.sql` | Done |
-| T3: V3 technical_indicators migration | `services/market-data-service/src/main/resources/db/migration/V3__create_technical_indicators_table.sql` | Done |
-| T4: Flyway migration test | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/config/FlywayMigrationTest.java` | Done |
+| T1: SymbolEntity | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/out/persistence/entity/SymbolEntity.java` | Done |
+| T2: StockPriceEntity | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/out/persistence/entity/StockPriceEntity.java` | Done |
+| T3: TechnicalIndicatorEntity | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/out/persistence/entity/TechnicalIndicatorEntity.java` | Done |
+| T4: SymbolEntityMapper | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/out/persistence/mapper/SymbolEntityMapper.java` | Done |
+| T5: StockPriceEntityMapper | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/out/persistence/mapper/StockPriceEntityMapper.java` | Done |
+| T6: TechnicalIndicatorEntityMapper | `services/market-data-service/src/main/java/com/tradingsaas/marketdata/adapter/out/persistence/mapper/TechnicalIndicatorEntityMapper.java` | Done |
+| T7: Mapper tests | `services/market-data-service/src/test/java/com/tradingsaas/marketdata/adapter/out/persistence/mapper/MarketDataPersistenceMapperTest.java` | Done |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E1-F02-PBI-05` - JPA entities and mappers
+**PBI:** `E1-F02-PBI-06` - Spring configuration
 **Feature:** FEAT-02: Market Data Service - Spring Boot Scaffold
 **Epic:** EPIC-1: Foundation & Infrastructure
 **Sprint:** S2
-**Jira:** SCRUM-197 -> `In Development`
+**Jira:** SCRUM-198 -> `In Development`
 
 ### Acceptance criteria
 
-- JPA entities in `adapter/out/persistence/`
-- MapStruct mappers convert domain models both ways
+- `SecurityConfig`, `RedisConfig`, `RabbitMQConfig`, and app profiles for dev/prod
+- Service starts against local infra in dev profile
 
 ---
 
