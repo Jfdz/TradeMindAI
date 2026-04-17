@@ -1,0 +1,11 @@
+# Trivy vulnerability suppressions
+# Format: CVE-ID [expiry-date] [# reason]
+#
+# Rules:
+# - Every suppression MUST have a comment explaining the reason.
+# - Include an expiry date where possible (format: YYYY-MM-DD).
+# - Review and remove expired suppressions each sprint.
+# - Never suppress CRITICAL CVEs without explicit security team sign-off.
+#
+# Example (uncomment and adjust when needed):
+# CVE-2023-XXXXX 2026-12-31 # Not exploitable: only affects feature X which we don't use

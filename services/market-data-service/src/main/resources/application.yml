@@ -67,6 +67,12 @@ server:
     include-stacktrace: never
 
 management:
+  metrics:
+    tags:
+      service: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true
   endpoints:
     web:
       exposure:
@@ -85,12 +91,10 @@ management:
       enabled: true
     diskspace:
       enabled: false
-  metrics:
-    export:
-      prometheus:
-        enabled: true
 
 market-data:
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
   yahoo:
     base-url: https://query1.finance.yahoo.com
     timeout-seconds: 10

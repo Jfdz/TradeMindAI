@@ -1,20 +1,20 @@
-name: CI — ai-engine
+name: CI — trading-core-service
 
 on:
   push:
     branches: [main, develop]
     paths:
-      - 'services/ai-engine/**'
-      - '.github/workflows/ci-ai-engine.yml'
+      - 'services/trading-core-service/**'
+      - '.github/workflows/ci-trading-core-service.yml'
   pull_request:
     branches: [main, develop]
     paths:
-      - 'services/ai-engine/**'
-      - '.github/workflows/ci-ai-engine.yml'
+      - 'services/trading-core-service/**'
+      - '.github/workflows/ci-trading-core-service.yml'
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/ai-engine
+  IMAGE_NAME: ${{ github.repository }}/trading-core-service
 
 jobs:
   build-test:
@@ -22,13 +22,13 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: services/ai-engine
+        working-directory: services/trading-core-service
 
     services:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: ai_engine_test
+          POSTGRES_DB: trading_core_test
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
         options: >-
@@ -39,41 +39,45 @@ jobs:
         ports:
           - 5432:5432
 
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
         with:
-          python-version: '3.11'
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt -r requirements-dev.txt
+          java-version: '21'
+          distribution: temurin
+          cache: maven
 
       - name: Dependency scan
-        run: |
-          python -m pip install pip-audit
-          pip-audit
+        run: mvn -q org.owasp:dependency-check-maven:10.0.4:check -DfailBuildOnCVSS=7
 
-      - name: Run linting
-        run: |
-          pip install ruff
-          ruff check src/
-
-      - name: Run tests
-        run: pytest tests/ -v --tb=short
+      - name: Build and test
+        run: mvn clean verify -q
         env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/ai_engine_test
-          APP_ENV: test
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/trading_core_test
+          SPRING_DATASOURCE_USERNAME: test
+          SPRING_DATASOURCE_PASSWORD: test
+          SPRING_REDIS_HOST: localhost
+          SPRING_REDIS_PORT: 6379
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ai-engine-test-results
-          path: services/ai-engine/pytest-results.xml
+          name: trading-core-test-results
+          path: services/trading-core-service/target/surefire-reports/
 
   docker-build-push:
     name: Docker Build & Push
@@ -111,7 +115,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: services/ai-engine
+          context: services/trading-core-service
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -124,6 +128,6 @@ jobs:
     if: github.event_name == 'push'
     uses: ./.github/workflows/trivy-scan.yml
     with:
-      image-ref: ghcr.io/${{ github.repository }}/ai-engine:${{ github.sha }}
-      dockerfile: services/ai-engine/Dockerfile
-      context: services/ai-engine
+      image-ref: ghcr.io/${{ github.repository }}/trading-core-service:${{ github.sha }}
+      dockerfile: services/trading-core-service/Dockerfile
+      context: services/trading-core-service

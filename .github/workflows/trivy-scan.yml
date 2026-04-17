@@ -1,0 +1,83 @@
+name: Trivy Image Scan (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      image-ref:
+        description: Docker image tag to scan
+        required: true
+        type: string
+      dockerfile:
+        description: Path to Dockerfile relative to repo root
+        required: true
+        type: string
+      context:
+        description: Docker build context path
+        required: true
+        type: string
+    outputs:
+      result:
+        description: Scan result (success/failure)
+        value: ${{ jobs.trivy.outputs.result }}
+
+jobs:
+  trivy:
+    name: Trivy scan — ${{ inputs.image-ref }}
+    runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.set-result.outputs.result }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image for scanning
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile }}
+          push: false
+          load: true
+          tags: ${{ inputs.image-ref }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ inputs.image-ref }}
+          format: sarif
+          output: trivy-results.sarif
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          # Fail on CRITICAL or HIGH — MEDIUM/LOW are reported but non-blocking
+          severity: CRITICAL,HIGH
+          trivyignores: .trivyignore
+
+      - name: Upload Trivy SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy-${{ inputs.image-ref }}
+
+      - name: Run Trivy for human-readable table output
+        uses: aquasecurity/trivy-action@0.28.0
+        if: always()
+        with:
+          image-ref: ${{ inputs.image-ref }}
+          format: table
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH,MEDIUM
+          trivyignores: .trivyignore
+
+      - name: Set result output
+        id: set-result
+        if: always()
+        run: echo "result=${{ job.status }}" >> "$GITHUB_OUTPUT"

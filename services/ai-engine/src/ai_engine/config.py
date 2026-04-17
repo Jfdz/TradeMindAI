@@ -8,6 +8,10 @@ class Settings(BaseSettings):
     rabbitmq_url: str = "amqp://guest:guest@localhost"
     model_path: str = "./models/"
     enable_gpu: bool = False
+    cors_allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+
+    def parsed_cors_allowed_origins(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
 
 
 _settings: Settings | None = None

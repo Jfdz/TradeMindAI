@@ -1,0 +1,131 @@
+---
+# Default deny-all ingress for the namespace — every pod must be explicitly allowed
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: trading-saas
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+
+---
+# Ingress controller can reach web-app
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-web-app
+  namespace: trading-saas
+spec:
+  podSelector:
+    matchLabels:
+      app: web-app
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 3000
+
+---
+# Ingress controller can reach trading-core-service
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-trading-core
+  namespace: trading-saas
+spec:
+  podSelector:
+    matchLabels:
+      app: trading-core-service
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        - podSelector:
+            matchLabels:
+              app: web-app
+      ports:
+        - protocol: TCP
+          port: 8082
+
+---
+# Ingress controller can reach market-data-service; trading-core can also call it
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-market-data
+  namespace: trading-saas
+spec:
+  podSelector:
+    matchLabels:
+      app: market-data-service
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        - podSelector:
+            matchLabels:
+              app: trading-core-service
+      ports:
+        - protocol: TCP
+          port: 8081
+
+---
+# ai-engine: only reachable from trading-core-service; NOT from web-app
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trading-core-to-ai-engine
+  namespace: trading-saas
+spec:
+  podSelector:
+    matchLabels:
+      app: ai-engine
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: trading-core-service
+      ports:
+        - protocol: TCP
+          port: 8000
+
+---
+# Prometheus scraping — monitoring namespace may reach all pods on their HTTP port
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-scrape
+  namespace: trading-saas
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8081
+        - protocol: TCP
+          port: 8082
+        - protocol: TCP
+          port: 8000
+        - protocol: TCP
+          port: 3000
