@@ -5,6 +5,14 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ---
 
+## Environment Notes
+
+- Maven launcher: `C:\Users\fakdu\tools\apache-maven-3.9.10\bin\mvn.cmd`
+- JDK 21 home: `C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot`
+- Use `JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot` when running Maven in this shell.
+
+---
+
 ## Feature Status
 
 | Feature | Jira | Status |
@@ -22,17 +30,18 @@ Update after every completed PBI: record the last done task and the next in deve
 | FEAT-14: Frontend Scaffold & Auth | SCRUM-264 | `Listo` |
 | FEAT-15: Landing & Marketing Pages | SCRUM-271 | `Listo` |
 | FEAT-16: Dashboard Core | SCRUM-274 | `Listo` |
-| FEAT-17: Charts & Visualization | SCRUM-281 | `In Development` |
+| FEAT-17: Charts & Visualization | SCRUM-281 | `Listo` |
+| FEAT-18: Backtesting Engine Core | SCRUM-285 | `Listo` |
 
 ---
 
 ## Current Sprint 6 Snapshot
 
-**Last completed PBI:** `E4-F17-PBI-02` - Performance line chart
-**Jira:** `SCRUM-283` -> `Listo`
-**Next PBI:** `E4-F17-PBI-03` - Dark mode support
-**Jira:** `SCRUM-284` -> `In Development`
-**Branch:** `feature-E4-F17-charts-visualization`
+**Last completed PBI:** `E5-F18-PBI-08` - Flyway migration for backtests
+**Jira:** `SCRUM-293` -> `Listo`
+**Next PBI:** `E5-F19-PBI-01` - Backtest configuration form
+**Jira:** `SCRUM-294` -> `In Development`
+**Branch:** `feature-E5-F18-backtesting-engine-core`
 
 ---
 
