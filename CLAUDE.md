@@ -15,43 +15,54 @@ Update after every completed PBI: record the last done task and the next in deve
 | FEAT-07: CNN Model Implementation | SCRUM-220 | `Listo` |
 | FEAT-08: Training Pipeline | SCRUM-227 | `Listo` |
 | FEAT-09: Prediction API & Messaging | SCRUM-233 | `Listo` |
+| FEAT-10: Authentication System | SCRUM-239 | `In Progress` |
 
 ---
 
 ## Last Completed Task
 
-**PBI:** `E2-F09-PBI-05` - Model management endpoints
-**Feature:** FEAT-09: Prediction API & Messaging
-**Epic:** EPIC-2: AI Engine
+**PBI:** `E3-F10-PBI-02` - Flyway migrations for users
+**Feature:** FEAT-10: Authentication System
+**Epic:** EPIC-3: Trading Core
 **Sprint:** S4
-**Jira:** SCRUM-238 -> `Listo`
-**Branch:** `feature-E2-F09-prediction-api`
-**Completed:** 2026-04-16
+**Jira:** SCRUM-240 -> `Listo`
+**Branch:** `feature-E3-F10-authentication-system`
+**Completed:** 2026-04-17
 
-### What was built (full FEAT-09)
+### What was built (FEAT-10 scaffold + PBI-01/02)
 
 | PBI | Jira | What was built | Status |
 |---|---|---|---|
-| E2-F09-PBI-01 | SCRUM-234 | `core/use_cases/prediction_service.py` + `adapters/in_/prediction.py` — `POST /api/v1/predict` | Listo |
-| E2-F09-PBI-02 | SCRUM-235 | `POST /api/v1/predict/batch` — up to 50 tickers, single forward pass | Listo |
-| E2-F09-PBI-03 | SCRUM-236 | `adapters/out/rabbitmq_consumer.py` — `PredictionRequestConsumer` on `ai-engine.prediction.requests` | Listo |
-| E2-F09-PBI-04 | SCRUM-237 | `MarketDataEventConsumer` on `ai-engine.market-data.prices`, triggers predictions on `market-data.prices.updated` | Listo |
-| E2-F09-PBI-05 | SCRUM-238 | `adapters/in_/models.py` — `GET /api/v1/models`, `GET /api/v1/models/active`, `POST /api/v1/models/{id}/activate` | Listo |
+| E3-F10-PBI-01 | SCRUM-239 | `domain/model/User.java`, `Subscription.java`, `SubscriptionPlan.java` — zero framework annotations, constructor validation | Listo |
+| E3-F10-PBI-02 | SCRUM-240 | `V1__create_users_table.sql`, `V2__create_subscriptions_table.sql` in `trading_core` schema | Listo |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E3-F10-PBI-01` - User domain model
+**PBI:** `E3-F10-PBI-03` - User registration
 **Feature:** FEAT-10: Authentication System
 **Epic:** EPIC-3: Trading Core
-**Sprint:** S4
-**Jira:** TBD -> `To Do`
+**Sprint:** S5
+**Jira:** SCRUM-241 -> `In Development`
 
 ### Acceptance criteria
 
-- `User`, `Subscription`, `SubscriptionPlan` enum (FREE/BASIC/PREMIUM)
-- Zero framework annotations on domain models; validation in constructors
+- `POST /api/v1/auth/register` with email, password, firstName, lastName
+- BCrypt(12) hashed password, FREE subscription auto-created, returns 201
+
+### FEAT-10 PBI Tracker
+
+| PBI | Jira | Title | Status |
+|---|---|---|---|
+| E3-F10-PBI-01 | SCRUM-239 | User domain model | Listo |
+| E3-F10-PBI-02 | SCRUM-240 | Flyway migrations for users | Listo |
+| E3-F10-PBI-03 | SCRUM-241 | User registration | In Development |
+| E3-F10-PBI-04 | SCRUM-242 | JWT login | To Do |
+| E3-F10-PBI-05 | SCRUM-243 | JWT authentication filter | To Do |
+| E3-F10-PBI-06 | SCRUM-244 | Token refresh | To Do |
+| E3-F10-PBI-07 | SCRUM-245 | Logout with Redis blacklist | To Do |
+| E3-F10-PBI-08 | SCRUM-246 | Security configuration | To Do |
 
 ---
 

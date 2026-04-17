@@ -1,0 +1,15 @@
+spring:
+  jpa:
+    show-sql: false
+
+logging:
+  level:
+    root: WARN
+    com.tradingsaas: INFO
+  pattern:
+    console: '{"timestamp":"%d{yyyy-MM-dd HH:mm:ss.SSS}","level":"%level","logger":"%logger{36}","message":"%msg"}%n'
+
+server:
+  tomcat:
+    max-threads: 200
+    min-spare-threads: 10
