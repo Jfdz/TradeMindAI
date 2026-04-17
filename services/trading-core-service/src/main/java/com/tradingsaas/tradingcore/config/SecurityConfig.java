@@ -2,6 +2,8 @@ package com.tradingsaas.tradingcore.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tradingsaas.tradingcore.adapter.in.web.JwtAuthenticationFilter;
+import com.tradingsaas.tradingcore.adapter.in.web.RateLimitFilter;
+import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,10 +25,14 @@ class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
     private final ObjectMapper objectMapper;
+    private final LettuceBasedProxyManager<String> rateLimitProxyManager;
 
-    SecurityConfig(JwtAuthenticationFilter jwtFilter, ObjectMapper objectMapper) {
+    SecurityConfig(JwtAuthenticationFilter jwtFilter,
+                   ObjectMapper objectMapper,
+                   LettuceBasedProxyManager<String> rateLimitProxyManager) {
         this.jwtFilter = jwtFilter;
         this.objectMapper = objectMapper;
+        this.rateLimitProxyManager = rateLimitProxyManager;
     }
 
     @Bean
@@ -36,6 +42,8 @@ class SecurityConfig {
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        RateLimitFilter rateLimitFilter = new RateLimitFilter(rateLimitProxyManager);
+
         http
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -58,7 +66,8 @@ class SecurityConfig {
                 // Everything else requires authentication
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
