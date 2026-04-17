@@ -1,0 +1,102 @@
+spring:
+  application:
+    name: trading-core-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:trading_saas}
+    username: ${POSTGRES_USER:trading_user}
+    password: ${POSTGRES_PASSWORD:dev_password_change_in_prod}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: trading_core
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    schemas: trading_core
+    baseline-on-migrate: false
+    out-of-order: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: ${RABBITMQ_VHOST:/}
+    listener:
+      simple:
+        acknowledge-mode: manual
+        prefetch: 10
+
+server:
+  port: 8082
+  compression:
+    enabled: true
+  error:
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  health:
+    db:
+      enabled: true
+    redis:
+      enabled: true
+    rabbit:
+      enabled: true
+    diskspace:
+      enabled: false
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+trading-core:
+  jwt:
+    secret: ${JWT_SECRET:changeme-use-a-256-bit-secret-in-production}
+    access-token-expiry: ${JWT_ACCESS_TOKEN_EXPIRY:900}
+    refresh-token-expiry: ${JWT_REFRESH_TOKEN_EXPIRY:604800}
+  redis:
+    token-blacklist-prefix: trading-core:blacklist:
+  ai-engine:
+    service-url: ${AI_ENGINE_SERVICE_URL:http://localhost:8000}
+    timeout: ${AI_ENGINE_TIMEOUT:5s}

@@ -15,43 +15,56 @@ Update after every completed PBI: record the last done task and the next in deve
 | FEAT-07: CNN Model Implementation | SCRUM-220 | `Listo` |
 | FEAT-08: Training Pipeline | SCRUM-227 | `Listo` |
 | FEAT-09: Prediction API & Messaging | SCRUM-233 | `Listo` |
+| FEAT-10: Authentication System | SCRUM-240 | `Listo` |
+| FEAT-11: Subscription & Rate Limiting | SCRUM-249 | `Listo` |
+| FEAT-12: Signal Generation Engine | SCRUM-252 | `In Development` |
+| FEAT-13: Strategy & Risk Management | SCRUM-259 | `To Do` |
+
+---
+
+## Current Sprint 6 Snapshot
+
+**Last completed PBI:** `E3-F12-PBI-06` - Signal REST endpoints
+**Jira:** `SCRUM-258` -> `Listo`
+**Next PBI:** `E3-F13-PBI-01` - Strategy domain model
+**Jira:** `SCRUM-259` -> `To Do`
+**Branch:** `feature-E3-F12-signal-generation-engine`
 
 ---
 
 ## Last Completed Task
 
-**PBI:** `E2-F09-PBI-05` - Model management endpoints
-**Feature:** FEAT-09: Prediction API & Messaging
-**Epic:** EPIC-2: AI Engine
-**Sprint:** S4
-**Jira:** SCRUM-238 -> `Listo`
-**Branch:** `feature-E2-F09-prediction-api`
-**Completed:** 2026-04-16
+**PBI:** `E3-F11-PBI-03` - Rate limiting with bucket4j + Redis
+**Feature:** FEAT-11: Subscription & Rate Limiting
+**Epic:** EPIC-3: Trading Core
+**Sprint:** S5
+**Jira:** SCRUM-251 -> `Listo`
+**Branch:** `feature-E3-F10-authentication-system`
+**Completed:** 2026-04-17
 
-### What was built (full FEAT-09)
+### What was built (full FEAT-11)
 
 | PBI | Jira | What was built | Status |
 |---|---|---|---|
-| E2-F09-PBI-01 | SCRUM-234 | `core/use_cases/prediction_service.py` + `adapters/in_/prediction.py` — `POST /api/v1/predict` | Listo |
-| E2-F09-PBI-02 | SCRUM-235 | `POST /api/v1/predict/batch` — up to 50 tickers, single forward pass | Listo |
-| E2-F09-PBI-03 | SCRUM-236 | `adapters/out/rabbitmq_consumer.py` — `PredictionRequestConsumer` on `ai-engine.prediction.requests` | Listo |
-| E2-F09-PBI-04 | SCRUM-237 | `MarketDataEventConsumer` on `ai-engine.market-data.prices`, triggers predictions on `market-data.prices.updated` | Listo |
-| E2-F09-PBI-05 | SCRUM-238 | `adapters/in_/models.py` — `GET /api/v1/models`, `GET /api/v1/models/active`, `POST /api/v1/models/{id}/activate` | Listo |
+| E3-F11-PBI-01 | SCRUM-249 | `GET /api/v1/subscriptions/plans` — public endpoint returns FREE/BASIC/PREMIUM details | Listo |
+| E3-F11-PBI-02 | SCRUM-250 | `@RequiresSubscription(plan)` annotation + `RequiresSubscriptionAspect` — 403 "Upgrade required" | Listo |
+| E3-F11-PBI-03 | SCRUM-251 | `RateLimitFilter` with `LettuceBasedProxyManager` — FREE=5/day, BASIC=50/day, PREMIUM=unlimited, X-RateLimit-* headers | Listo |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E3-F10-PBI-01` - User domain model
-**Feature:** FEAT-10: Authentication System
+**PBI:** `E3-F12-PBI-01` - Signal domain model
+**Feature:** FEAT-12: Signal Generation Engine
 **Epic:** EPIC-3: Trading Core
-**Sprint:** S4
-**Jira:** TBD -> `To Do`
+**Sprint:** S6
+**Jira:** SCRUM-252 -> `In Development`
 
 ### Acceptance criteria
 
-- `User`, `Subscription`, `SubscriptionPlan` enum (FREE/BASIC/PREMIUM)
-- Zero framework annotations on domain models; validation in constructors
+- `TradingSignal` entity, `SignalType` enum, `Confidence` value object, `Timeframe` enum
+- Validation enforces confidence in `[0,1]`
+- Signal type is limited to `BUY`, `SELL`, or `HOLD`
 
 ---
 
@@ -68,4 +81,3 @@ Update after every completed PBI: record the last done task and the next in deve
 | E1-F02-PBI-02 | Domain models | In Development |
 | E1-F02-PBI-03 | Port interfaces | To Do |
 | E1-F02-PBI-04 | Flyway migrations | To Do |
-

@@ -1,0 +1,98 @@
+package com.tradingsaas.tradingcore.config;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tradingsaas.tradingcore.adapter.in.web.JwtAuthenticationFilter;
+import com.tradingsaas.tradingcore.adapter.in.web.RateLimitFilter;
+import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.MediaType;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import java.io.IOException;
+import java.time.Instant;
+import java.util.Map;
+
+@Configuration
+class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtFilter;
+    private final ObjectMapper objectMapper;
+    private final LettuceBasedProxyManager<String> rateLimitProxyManager;
+
+    SecurityConfig(JwtAuthenticationFilter jwtFilter,
+                   ObjectMapper objectMapper,
+                   LettuceBasedProxyManager<String> rateLimitProxyManager) {
+        this.jwtFilter = jwtFilter;
+        this.objectMapper = objectMapper;
+        this.rateLimitProxyManager = rateLimitProxyManager;
+    }
+
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(12);
+    }
+
+    @Bean
+    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        RateLimitFilter rateLimitFilter = new RateLimitFilter(rateLimitProxyManager);
+
+        http
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, e) ->
+                    writeUnauthorized(response, request.getRequestURI()))
+                .accessDeniedHandler((request, response, e) ->
+                    writeForbidden(response, request.getRequestURI()))
+            )
+            .authorizeHttpRequests(auth -> auth
+                // Public endpoints
+                .requestMatchers("GET",  "/actuator/health").permitAll()
+                .requestMatchers("GET",  "/api/v1/symbols").permitAll()
+                .requestMatchers("GET",  "/api/v1/prices/**").permitAll()
+                .requestMatchers("POST", "/api/v1/auth/**").permitAll()
+                .requestMatchers("GET",  "/api/v1/subscriptions/plans").permitAll()
+                // Admin-only endpoints
+                .requestMatchers("POST", "/api/v1/ingestion/**").hasRole("ADMIN")
+                .requestMatchers("POST", "/api/v1/models/**").hasRole("ADMIN")
+                // Everything else requires authentication
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    private void writeUnauthorized(HttpServletResponse response, String path) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.getWriter().write(objectMapper.writeValueAsString(Map.of(
+            "status", 401,
+            "error", "Unauthorized",
+            "message", "Authentication required",
+            "timestamp", Instant.now().toString(),
+            "path", path
+        )));
+    }
+
+    private void writeForbidden(HttpServletResponse response, String path) throws IOException {
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.getWriter().write(objectMapper.writeValueAsString(Map.of(
+            "status", 403,
+            "error", "Forbidden",
+            "message", "Insufficient permissions",
+            "timestamp", Instant.now().toString(),
+            "path", path
+        )));
+    }
+}
