@@ -32,16 +32,22 @@ Update after every completed PBI: record the last done task and the next in deve
 | FEAT-16: Dashboard Core | SCRUM-274 | `Listo` |
 | FEAT-17: Charts & Visualization | SCRUM-281 | `Listo` |
 | FEAT-18: Backtesting Engine Core | SCRUM-285 | `Listo` |
+| FEAT-19: Backtest Configuration Form | SCRUM-290 | `Listo` |
+| FEAT-20: Docker & Container Optimization | SCRUM-298 | `In Development` |
+| FEAT-21: Kubernetes Deployment | SCRUM-301 | `To Do` |
+| FEAT-22: CI/CD Pipelines | SCRUM-307 | `To Do` |
+| FEAT-23: Observability | SCRUM-311 | `To Do` |
+| FEAT-24: Security Hardening | SCRUM-316 | `To Do` |
 
 ---
 
-## Current Sprint 6 Snapshot
+## Current Sprint 8 Snapshot
 
 **Last completed PBI:** `E5-F19-PBI-03` - Strategy vs benchmark chart
 **Jira:** `SCRUM-297` -> `Listo`
 **Next PBI:** `E6-F20-PBI-01` - Production Docker Compose
 **Jira:** `SCRUM-299` -> `In Development`
-**Branch:** `feature-E5-F19-backtest-configuration-form`
+**Branch:** `feature-E6-F20-docker-optimization`
 
 ---
 
@@ -67,30 +73,40 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Next In Development
 
-**PBI:** `E3-F12-PBI-01` - Signal domain model
-**Feature:** FEAT-12: Signal Generation Engine
-**Epic:** EPIC-3: Trading Core
-**Sprint:** S6
-**Jira:** SCRUM-252 -> `In Development`
+**PBI:** `E6-F20-PBI-01` - Production Docker Compose
+**Feature:** FEAT-20: Docker & Container Optimization
+**Epic:** EPIC-6: Production & DevOps
+**Sprint:** S8
+**Jira:** SCRUM-299 -> `In Development`
 
 ### Acceptance criteria
 
-- `TradingSignal` entity, `SignalType` enum, `Confidence` value object, `Timeframe` enum
-- Validation enforces confidence in `[0,1]`
-- Signal type is limited to `BUY`, `SELL`, or `HOLD`
+- `docker-compose.prod.yml` with resource limits (CPU/memory) for all 4 services
+- Restart policies set (`restart: unless-stopped`)
+- Read-only filesystems with tmpfs for writable dirs where possible
+- `docker compose -f docker-compose.prod.yml up` → all services start and pass health checks
 
 ---
 
-## Backlog Queue (Sprint 1)
+## Backlog Queue (Sprint 8)
 
 | PBI | Title | Status |
 |---|---|---|
-| E1-F01-PBI-01 | Initialize monorepo structure | Done |
-| E1-F01-PBI-02 | Create .gitignore and Makefile | Done |
-| E1-F01-PBI-03 | Docker Compose for local dev | Done |
-| E1-F01-PBI-04 | Database schema initialization | Done |
-| E1-F01-PBI-05 | Environment variable documentation | Done |
-| E1-F02-PBI-01 | Spring Boot project scaffold | Done |
-| E1-F02-PBI-02 | Domain models | In Development |
-| E1-F02-PBI-03 | Port interfaces | To Do |
-| E1-F02-PBI-04 | Flyway migrations | To Do |
+| E6-F20-PBI-01 | Production Docker Compose | In Development |
+| E6-F20-PBI-02 | Docker image scanning | To Do |
+| E6-F21-PBI-01 | K8s Deployments for all services | To Do |
+| E6-F21-PBI-02 | HPA for auto-scaling | To Do |
+| E6-F21-PBI-03 | Ingress + TLS | To Do |
+| E6-F21-PBI-04 | NetworkPolicies | To Do |
+| E6-F21-PBI-05 | ConfigMaps and Secrets | To Do |
+| E6-F22-PBI-01 | GitHub Actions per service | To Do |
+| E6-F22-PBI-02 | Staging deploy pipeline | To Do |
+| E6-F22-PBI-03 | Production deploy pipeline | To Do |
+| E6-F23-PBI-01 | Structured JSON logging | To Do |
+| E6-F23-PBI-02 | Prometheus metrics | To Do |
+| E6-F23-PBI-03 | Grafana dashboards | To Do |
+| E6-F23-PBI-04 | Distributed tracing | To Do |
+| E6-F24-PBI-01 | OWASP dependency check in CI | To Do |
+| E6-F24-PBI-02 | Security headers | To Do |
+| E6-F24-PBI-03 | CORS configuration | To Do |
+| E6-F24-PBI-04 | Load testing with k6 | To Do |
