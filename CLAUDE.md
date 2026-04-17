@@ -37,11 +37,11 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Current Sprint 6 Snapshot
 
-**Last completed PBI:** `E5-F18-PBI-08` - Flyway migration for backtests
-**Jira:** `SCRUM-293` -> `Listo`
-**Next PBI:** `E5-F19-PBI-01` - Backtest configuration form
-**Jira:** `SCRUM-294` -> `In Development`
-**Branch:** `feature-E5-F18-backtesting-engine-core`
+**Last completed PBI:** `E5-F19-PBI-03` - Strategy vs benchmark chart
+**Jira:** `SCRUM-297` -> `Listo`
+**Next PBI:** `E6-F20-PBI-01` - Production Docker Compose
+**Jira:** `SCRUM-299` -> `In Development`
+**Branch:** `feature-E5-F19-backtest-configuration-form`
 
 ---
 
