@@ -1,3 +1,6 @@
+import { Button } from "@/components/ui/button";
+import { SignalsPreview } from "@/components/signals-preview";
+
 const highlights = [
   {
     title: "Signals that matter",
@@ -52,22 +55,16 @@ export default function Home() {
               </p>
 
               <div className="mt-10 flex flex-wrap gap-4">
-                <a
-                  className="rounded-full bg-gold-400 px-6 py-3 text-sm font-semibold text-ink-950 transition hover:bg-gold-300"
-                  href="#highlights"
-                >
-                  Explore scaffold
-                </a>
-                <a
-                  className="rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/10"
-                  href="#metrics"
-                >
-                  View metrics
-                </a>
+                <Button asChild>
+                  <a href="#highlights">Explore scaffold</a>
+                </Button>
+                <Button asChild variant="outline">
+                  <a href="#metrics">View metrics</a>
+                </Button>
               </div>
             </div>
 
-              <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-glow backdrop-blur">
+            <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-glow backdrop-blur">
               <div className="grid gap-4 sm:grid-cols-3" id="metrics">
                 {metrics.map((metric) => (
                   <div key={metric.label} className="rounded-2xl border border-white/10 bg-ink-800/70 p-4">
@@ -99,6 +96,8 @@ export default function Home() {
               </article>
             ))}
           </section>
+
+          <SignalsPreview />
         </div>
       </div>
     </main>
