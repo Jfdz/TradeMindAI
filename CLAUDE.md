@@ -28,7 +28,7 @@ Update after every completed PBI: record the last done task and the next in deve
 **Jira:** `SCRUM-258` -> `Listo`
 **Next PBI:** `E3-F13-PBI-01` - Strategy domain model
 **Jira:** `SCRUM-259` -> `To Do`
-**Branch:** `feature-E3-F12-signal-generation-engine`
+**Branch:** `develop`
 
 ---
 
