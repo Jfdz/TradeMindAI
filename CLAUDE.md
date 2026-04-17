@@ -17,8 +17,9 @@ Update after every completed PBI: record the last done task and the next in deve
 | FEAT-09: Prediction API & Messaging | SCRUM-233 | `Listo` |
 | FEAT-10: Authentication System | SCRUM-240 | `Listo` |
 | FEAT-11: Subscription & Rate Limiting | SCRUM-249 | `Listo` |
-| FEAT-12: Signal Generation Engine | SCRUM-252 | `In Development` |
+| FEAT-12: Signal Generation Engine | SCRUM-252 | `Listo` |
 | FEAT-13: Strategy & Risk Management | SCRUM-259 | `Listo` |
+| FEAT-14: Frontend Scaffold & Auth | SCRUM-264 | `In Development` |
 
 ---
 
@@ -28,7 +29,7 @@ Update after every completed PBI: record the last done task and the next in deve
 **Jira:** `SCRUM-263` -> `Listo`
 **Next PBI:** `E4-F14-PBI-01` - Next.js project scaffold
 **Jira:** `SCRUM-265` -> `Por hacer`
-**Branch:** `develop`
+**Branch:** `feature-E4-F14-nextjs-scaffold`
 
 ---
 
