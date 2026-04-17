@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.Map;
 
@@ -50,6 +51,7 @@ class SecurityConfig {
                 .requestMatchers("GET",  "/api/v1/symbols").permitAll()
                 .requestMatchers("GET",  "/api/v1/prices/**").permitAll()
                 .requestMatchers("POST", "/api/v1/auth/**").permitAll()
+                .requestMatchers("GET",  "/api/v1/subscriptions/plans").permitAll()
                 // Admin-only endpoints
                 .requestMatchers("POST", "/api/v1/ingestion/**").hasRole("ADMIN")
                 .requestMatchers("POST", "/api/v1/models/**").hasRole("ADMIN")
@@ -61,7 +63,7 @@ class SecurityConfig {
         return http.build();
     }
 
-    private void writeUnauthorized(HttpServletResponse response, String path) throws java.io.IOException {
+    private void writeUnauthorized(HttpServletResponse response, String path) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.getWriter().write(objectMapper.writeValueAsString(Map.of(
@@ -73,7 +75,7 @@ class SecurityConfig {
         )));
     }
 
-    private void writeForbidden(HttpServletResponse response, String path) throws java.io.IOException {
+    private void writeForbidden(HttpServletResponse response, String path) throws IOException {
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.getWriter().write(objectMapper.writeValueAsString(Map.of(
