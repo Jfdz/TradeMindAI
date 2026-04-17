@@ -30,7 +30,7 @@ Update after every completed PBI: record the last done task and the next in deve
 **Jira:** `SCRUM-273` -> `Listo`
 **Next PBI:** `E4-F16-PBI-01` - Dashboard layout
 **Jira:** `SCRUM-275` -> `Por hacer`
-**Branch:** `feature-E4-F15-marketing-pages`
+**Branch:** `develop`
 
 ---
 
