@@ -1,11 +1,9 @@
 from dataclasses import dataclass
 
-import numpy as np
 import torch
 
 from ai_engine.core.domain.feature_engineering import compute_features
 from ai_engine.core.domain.normalizer import MinMaxNormalizer
-from ai_engine.core.domain.sequence_builder import build_sequences
 from ai_engine.core.models.cnn import StockCNN
 from ai_engine.core.use_cases.model_registry import ModelRegistry
 
@@ -84,10 +82,10 @@ class PredictionService:
         features = compute_features(ohlcv_df)
         if len(features) < _WINDOW:
             raise ValueError(f"Need at least {_WINDOW} rows after feature computation.")
-        X = features.to_numpy()
-        X_scaled = self._normalizer.fit_transform(X)
+        x = features.to_numpy()
+        x_scaled = self._normalizer.fit_transform(x)
         # Take the most recent window
-        seq = X_scaled[-_WINDOW:].T  # shape: (n_features, window)
+        seq = x_scaled[-_WINDOW:].T  # shape: (n_features, window)
         return torch.tensor(seq, dtype=torch.float32).unsqueeze(0)  # (1, n_features, window)
 
     def _infer(self, ticker: str, sequence: torch.Tensor, model: StockCNN) -> PredictionResult:

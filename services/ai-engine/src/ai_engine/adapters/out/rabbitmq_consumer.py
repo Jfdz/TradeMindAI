@@ -1,12 +1,11 @@
 """RabbitMQ consumers for prediction requests and market-data events."""
 
-import asyncio
 import json
 import logging
 from typing import Callable
 
 import aio_pika
-from aio_pika import IncomingMessage, Message, ExchangeType
+from aio_pika import ExchangeType, IncomingMessage, Message
 
 logger = logging.getLogger(__name__)
 
@@ -36,16 +35,27 @@ class PredictionRequestConsumer:
         await channel.set_qos(prefetch_count=10)
 
         # Dead-letter exchange for failed messages
-        dlx = await channel.declare_exchange("dlx.prediction.requests", ExchangeType.DIRECT, durable=True)
+        dlx = await channel.declare_exchange(
+            "dlx.prediction.requests",
+            ExchangeType.DIRECT,
+            durable=True,
+        )
         dlq = await channel.declare_queue("dlq.prediction.requests", durable=True)
         await dlq.bind(dlx, routing_key="dead")
 
         queue = await channel.declare_queue(
             PREDICTION_REQUEST_QUEUE,
             durable=True,
-            arguments={"x-dead-letter-exchange": "dlx.prediction.requests", "x-dead-letter-routing-key": "dead"},
+            arguments={
+                "x-dead-letter-exchange": "dlx.prediction.requests",
+                "x-dead-letter-routing-key": "dead",
+            },
         )
-        result_exchange = await channel.declare_exchange(PREDICTION_RESULT_EXCHANGE, ExchangeType.FANOUT, durable=True)
+        result_exchange = await channel.declare_exchange(
+            PREDICTION_RESULT_EXCHANGE,
+            ExchangeType.FANOUT,
+            durable=True,
+        )
 
         async def on_message(msg: IncomingMessage) -> None:
             async with msg.process(requeue=False):
@@ -54,7 +64,10 @@ class PredictionRequestConsumer:
                     tickers: list[str] = body.get("tickers", [])
                     predictions = self._predict_fn(tickers)
                     payload = json.dumps({"tickers": tickers, "predictions": predictions}).encode()
-                    await result_exchange.publish(Message(body=payload, content_type="application/json"), routing_key="")
+                    await result_exchange.publish(
+                        Message(body=payload, content_type="application/json"),
+                        routing_key="",
+                    )
                 except Exception:
                     logger.exception("Failed to process prediction request")
                     raise
@@ -85,14 +98,21 @@ class MarketDataEventConsumer:
         channel = await self._connection.channel()
         await channel.set_qos(prefetch_count=20)
 
-        dlx = await channel.declare_exchange("dlx.market-data.prices", ExchangeType.DIRECT, durable=True)
+        dlx = await channel.declare_exchange(
+            "dlx.market-data.prices",
+            ExchangeType.DIRECT,
+            durable=True,
+        )
         dlq = await channel.declare_queue("dlq.market-data.prices", durable=True)
         await dlq.bind(dlx, routing_key="dead")
 
         queue = await channel.declare_queue(
             MARKET_DATA_QUEUE,
             durable=True,
-            arguments={"x-dead-letter-exchange": "dlx.market-data.prices", "x-dead-letter-routing-key": "dead"},
+            arguments={
+                "x-dead-letter-exchange": "dlx.market-data.prices",
+                "x-dead-letter-routing-key": "dead",
+            },
         )
 
         async def on_message(msg: IncomingMessage) -> None:

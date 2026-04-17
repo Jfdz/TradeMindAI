@@ -12,5 +12,8 @@ async def health():
 @router.get("/ready")
 async def ready(request: Request):
     if not request.app.state.model_loaded:
-        return JSONResponse(status_code=503, content={"status": "not ready", "reason": "model not loaded"})
+        return JSONResponse(
+            status_code=503,
+            content={"status": "not ready", "reason": "model not loaded"},
+        )
     return {"status": "ready"}

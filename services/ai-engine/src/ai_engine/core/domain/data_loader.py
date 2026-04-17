@@ -40,12 +40,12 @@ def make_data_loaders(
     train_end = int(n * train_ratio)
     val_end = train_end + int(n * val_ratio)
 
-    X = torch.tensor(sequences, dtype=torch.float32)
+    x = torch.tensor(sequences, dtype=torch.float32)
     y = torch.tensor(labels, dtype=torch.long)
 
-    def _loader(X_slice, y_slice, shuffle: bool) -> DataLoader:
+    def _loader(x_slice, y_slice, shuffle: bool) -> DataLoader:
         return DataLoader(
-            TensorDataset(X_slice, y_slice),
+            TensorDataset(x_slice, y_slice),
             batch_size=batch_size,
             shuffle=shuffle,
             num_workers=num_workers,
@@ -53,9 +53,9 @@ def make_data_loaders(
         )
 
     return SplitDataLoaders(
-        train=_loader(X[:train_end], y[:train_end], shuffle=True),
-        val=_loader(X[train_end:val_end], y[train_end:val_end], shuffle=False),
-        test=_loader(X[val_end:], y[val_end:], shuffle=False),
+        train=_loader(x[:train_end], y[:train_end], shuffle=True),
+        val=_loader(x[train_end:val_end], y[train_end:val_end], shuffle=False),
+        test=_loader(x[val_end:], y[val_end:], shuffle=False),
         train_size=train_end,
         val_size=val_end - train_end,
         test_size=n - val_end,

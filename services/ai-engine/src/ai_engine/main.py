@@ -14,6 +14,14 @@ from ai_engine.adapters.in_.training import router as training_router
 
 logger = logging.getLogger(__name__)
 
+_SECURITY_HSTS = "max-age=31536000; includeSubDomains; preload"
+_SECURITY_CSP = (
+    "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; "
+    "object-src 'none'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; "
+    "script-src 'self' 'unsafe-inline'; connect-src 'self' https: ws: wss: "
+    "http://localhost:* http://127.0.0.1:*"
+)
+
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
@@ -21,13 +29,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "same-origin")
-        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
-        response.headers.setdefault(
-            "Content-Security-Policy",
-            "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'; "
-            "img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; "
-            "connect-src 'self' https: ws: wss: http://localhost:* http://127.0.0.1:*",
-        )
+        response.headers.setdefault("Strict-Transport-Security", _SECURITY_HSTS)
+        response.headers.setdefault("Content-Security-Policy", _SECURITY_CSP)
         return response
 
 
@@ -57,11 +60,11 @@ def _start_consumers(app: FastAPI) -> None:
     before .env is provided); consumers can be started later via admin endpoint.
     """
     try:
-        from ai_engine.config import get_settings
         from ai_engine.adapters.out.rabbitmq_consumer import (
             MarketDataEventConsumer,
             PredictionRequestConsumer,
         )
+        from ai_engine.config import get_settings
 
         settings = get_settings()
 
