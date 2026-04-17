@@ -3,6 +3,7 @@ package com.tradingsaas.tradingcore.adapter.in.web;
 import com.tradingsaas.tradingcore.domain.exception.EmailAlreadyExistsException;
 import com.tradingsaas.tradingcore.domain.exception.InsufficientSubscriptionException;
 import com.tradingsaas.tradingcore.domain.exception.InvalidCredentialsException;
+import com.tradingsaas.tradingcore.domain.exception.StrategyNotFoundException;
 import com.tradingsaas.tradingcore.domain.exception.TokenBlacklistedException;
 import com.tradingsaas.tradingcore.adapter.in.web.SignalController.SignalNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -68,6 +69,13 @@ class GlobalExceptionHandler {
     @ExceptionHandler(SignalNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     ErrorResponse handleSignalNotFound(SignalNotFoundException ex, HttpServletRequest req) {
+        return new ErrorResponse(404, "Not Found", ex.getMessage(), List.of(),
+                Instant.now(), req.getRequestURI());
+    }
+
+    @ExceptionHandler(StrategyNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    ErrorResponse handleStrategyNotFound(StrategyNotFoundException ex, HttpServletRequest req) {
         return new ErrorResponse(404, "Not Found", ex.getMessage(), List.of(),
                 Instant.now(), req.getRequestURI());
     }
