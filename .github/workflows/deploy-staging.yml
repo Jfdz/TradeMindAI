@@ -1,0 +1,111 @@
+name: Deploy — Staging
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  check-images:
+    name: Verify CI images are ready
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.set-sha.outputs.sha }}
+    steps:
+      - name: Set SHA
+        id: set-sha
+        run: echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+  deploy-staging:
+    name: Deploy to staging
+    needs: check-images
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.trading-saas.example.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.29.0
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.STAGING_KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Update image tags in staging overlay
+        run: |
+          SHA=${{ github.sha }}
+          REGISTRY=ghcr.io/${{ github.repository }}
+          cd infrastructure/k8s/overlays/staging
+          # Patch each deployment with the new image SHA
+          kubectl set image deployment/market-data-service \
+            market-data-service=${REGISTRY}/market-data-service:${SHA} \
+            -n trading-saas --dry-run=client -o yaml > market-data-patch.yml
+          kubectl set image deployment/trading-core-service \
+            trading-core-service=${REGISTRY}/trading-core-service:${SHA} \
+            -n trading-saas --dry-run=client -o yaml > trading-core-patch.yml
+          kubectl set image deployment/ai-engine \
+            ai-engine=${REGISTRY}/ai-engine:${SHA} \
+            -n trading-saas --dry-run=client -o yaml > ai-engine-patch.yml
+          kubectl set image deployment/web-app \
+            web-app=${REGISTRY}/web-app:${SHA} \
+            -n trading-saas --dry-run=client -o yaml > web-app-patch.yml
+
+      - name: Apply namespace and base manifests
+        run: |
+          kubectl apply -f infrastructure/k8s/namespaces/trading-saas.yml
+          kubectl apply -k infrastructure/k8s/base/
+
+      - name: Rolling deploy — market-data-service
+        run: |
+          kubectl set image deployment/market-data-service \
+            market-data-service=ghcr.io/${{ github.repository }}/market-data-service:${{ github.sha }} \
+            -n trading-saas
+          kubectl rollout status deployment/market-data-service -n trading-saas --timeout=5m
+
+      - name: Rolling deploy — trading-core-service
+        run: |
+          kubectl set image deployment/trading-core-service \
+            trading-core-service=ghcr.io/${{ github.repository }}/trading-core-service:${{ github.sha }} \
+            -n trading-saas
+          kubectl rollout status deployment/trading-core-service -n trading-saas --timeout=5m
+
+      - name: Rolling deploy — ai-engine
+        run: |
+          kubectl set image deployment/ai-engine \
+            ai-engine=ghcr.io/${{ github.repository }}/ai-engine:${{ github.sha }} \
+            -n trading-saas
+          kubectl rollout status deployment/ai-engine -n trading-saas --timeout=5m
+
+      - name: Rolling deploy — web-app
+        run: |
+          kubectl set image deployment/web-app \
+            web-app=ghcr.io/${{ github.repository }}/web-app:${{ github.sha }} \
+            -n trading-saas
+          kubectl rollout status deployment/web-app -n trading-saas --timeout=5m
+
+      - name: Smoke tests
+        run: |
+          echo "Waiting for ingress to stabilize..."
+          sleep 30
+          # Health checks against staging
+          curl -f https://staging.trading-saas.example.com/api/health || exit 1
+          curl -f https://api.staging.trading-saas.example.com/actuator/health || exit 1
+          echo "Smoke tests passed"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Staging deploy failed for SHA ${{ github.sha }}"
+          # Add Slack/Teams notification here if needed
