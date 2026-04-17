@@ -6,6 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 const navItems = [
   { href: "/dashboard", label: "Overview" },
@@ -20,10 +21,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
 
   return (
-    <div className="min-h-screen bg-[#08121f] text-slate-50">
+    <div className="min-h-screen bg-slate-50 text-slate-900 transition-colors dark:bg-[#08121f] dark:text-slate-50">
       <div className="grid min-h-screen lg:grid-cols-[280px_1fr]">
         <aside
-          className={`border-r border-white/10 bg-[#0d1728]/95 px-5 py-6 backdrop-blur transition-transform lg:translate-x-0 ${
+          className={`border-r border-slate-200 bg-white/95 px-5 py-6 text-slate-900 backdrop-blur transition-transform lg:translate-x-0 dark:border-white/10 dark:bg-[#0d1728]/95 dark:text-slate-50 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           } fixed inset-y-0 left-0 z-40 w-[280px] lg:static`}
         >
@@ -45,7 +46,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             {navItems.map((item) => (
               <Link
                 key={item.href}
-                className="flex items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200 transition hover:border-gold-300/30 hover:bg-gold-300/10 hover:text-white"
+                className="flex items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 transition hover:border-gold-300/30 hover:bg-gold-300/10 hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:border-gold-300/30 dark:hover:bg-gold-300/10 dark:hover:text-white"
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
               >
@@ -70,10 +71,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         ) : null}
 
         <div className="relative flex min-h-screen flex-col">
-          <header className="flex items-center justify-between border-b border-white/10 bg-[#08121f]/90 px-6 py-4 backdrop-blur lg:px-10">
+          <header className="flex items-center justify-between border-b border-slate-200 bg-white/90 px-6 py-4 backdrop-blur dark:border-white/10 dark:bg-[#08121f]/90 lg:px-10">
             <div className="flex items-center gap-3">
               <button
-                className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-200 lg:hidden"
+                className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-700 lg:hidden dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
                 onClick={() => setSidebarOpen(true)}
                 type="button"
               >
@@ -81,12 +82,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               </button>
               <div>
                 <p className="text-xs uppercase tracking-[0.35em] text-gold-300/80">Dashboard core</p>
-                <h2 className="mt-1 text-lg font-semibold text-white">Welcome back</h2>
+                <h2 className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">Welcome back</h2>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200">
+              <ThemeToggle />
+              <div className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
                 {session?.user?.email ?? "user@tradermind.ai"}
               </div>
               <Button

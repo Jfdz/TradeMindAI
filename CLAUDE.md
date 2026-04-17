@@ -22,16 +22,17 @@ Update after every completed PBI: record the last done task and the next in deve
 | FEAT-14: Frontend Scaffold & Auth | SCRUM-264 | `Listo` |
 | FEAT-15: Landing & Marketing Pages | SCRUM-271 | `Listo` |
 | FEAT-16: Dashboard Core | SCRUM-274 | `Listo` |
+| FEAT-17: Charts & Visualization | SCRUM-281 | `In Development` |
 
 ---
 
 ## Current Sprint 6 Snapshot
 
-**Last completed PBI:** `E4-F16-PBI-06` - Settings page
-**Jira:** `SCRUM-280` -> `Listo`
-**Next PBI:** `E4-F17-PBI-01` - Candlestick chart component
-**Jira:** `SCRUM-281` -> `Por hacer`
-**Branch:** `feature-E4-F16-dashboard-core`
+**Last completed PBI:** `E4-F17-PBI-02` - Performance line chart
+**Jira:** `SCRUM-283` -> `Listo`
+**Next PBI:** `E4-F17-PBI-03` - Dark mode support
+**Jira:** `SCRUM-284` -> `In Development`
+**Branch:** `feature-E4-F17-charts-visualization`
 
 ---
 

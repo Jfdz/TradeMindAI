@@ -1,3 +1,4 @@
+import { PerformanceLineChart } from "@/components/charts/PerformanceLineChart";
 import {
   calculateAllocation,
   calculateCostBasis,
@@ -8,6 +9,7 @@ import {
   portfolioPositions,
   realizedPnl,
 } from "@/lib/dashboard/portfolio";
+import { equityCurve } from "@/lib/dashboard/performance";
 
 const portfolioValue = portfolioPositions.reduce((sum, position) => sum + calculatePositionValue(position), 0);
 const costBasis = portfolioPositions.reduce((sum, position) => sum + calculateCostBasis(position), 0);
@@ -51,6 +53,28 @@ export default function PortfolioPage() {
           </p>
           <p className="mt-3 text-sm text-slate-300">Combined unrealized and realized results</p>
         </article>
+      </section>
+
+      <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-glow">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-gold-300/80">Performance</p>
+            <h2 className="mt-3 text-2xl font-semibold text-white">Portfolio equity curve</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
+              The equity line tracks the account value across the last ten sessions, giving a quick read on trend,
+              drawdown, and recovery behavior before deeper analysis.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-ink-800/70 px-5 py-4">
+            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Latest equity</p>
+            <p className="mt-2 text-2xl font-semibold text-white">{formatMoney(equityCurve[equityCurve.length - 1].value)}</p>
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-3xl border border-white/10 bg-ink-800/70 p-4">
+          <PerformanceLineChart points={equityCurve} />
+        </div>
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
