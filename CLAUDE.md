@@ -17,6 +17,18 @@ Update after every completed PBI: record the last done task and the next in deve
 | FEAT-09: Prediction API & Messaging | SCRUM-233 | `Listo` |
 | FEAT-10: Authentication System | SCRUM-240 | `Listo` |
 | FEAT-11: Subscription & Rate Limiting | SCRUM-249 | `Listo` |
+| FEAT-12: Signal Generation Engine | SCRUM-252 | `In Development` |
+| FEAT-13: Strategy & Risk Management | SCRUM-259 | `To Do` |
+
+---
+
+## Current Sprint 6 Snapshot
+
+**Last completed PBI:** `E3-F12-PBI-06` - Signal REST endpoints
+**Jira:** `SCRUM-258` -> `Listo`
+**Next PBI:** `E3-F13-PBI-01` - Strategy domain model
+**Jira:** `SCRUM-259` -> `To Do`
+**Branch:** `feature-E3-F12-signal-generation-engine`
 
 ---
 
@@ -42,17 +54,17 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Next In Development
 
-**PBI:** `E4-F14-PBI-01` - Next.js project scaffold
-**Feature:** FEAT-14: Frontend Scaffold & Auth
-**Epic:** EPIC-4: Frontend Dashboard
-**Sprint:** S5
-**Jira:** SCRUM-265 -> `To Do`
+**PBI:** `E3-F12-PBI-01` - Signal domain model
+**Feature:** FEAT-12: Signal Generation Engine
+**Epic:** EPIC-3: Trading Core
+**Sprint:** S6
+**Jira:** SCRUM-252 -> `In Development`
 
 ### Acceptance criteria
 
-- `create-next-app` with App Router, TypeScript, Tailwind, ESLint
-- `npm run dev` serves at :3000
-- Project structure: `src/app/`, `src/components/`, `src/lib/`, `src/hooks/`, `src/types/`
+- `TradingSignal` entity, `SignalType` enum, `Confidence` value object, `Timeframe` enum
+- Validation enforces confidence in `[0,1]`
+- Signal type is limited to `BUY`, `SELL`, or `HOLD`
 
 ---
 

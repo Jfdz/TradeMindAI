@@ -97,3 +97,6 @@ trading-core:
     refresh-token-expiry: ${JWT_REFRESH_TOKEN_EXPIRY:604800}
   redis:
     token-blacklist-prefix: trading-core:blacklist:
+  ai-engine:
+    service-url: ${AI_ENGINE_SERVICE_URL:http://localhost:8000}
+    timeout: ${AI_ENGINE_TIMEOUT:5s}

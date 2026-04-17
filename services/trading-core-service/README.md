@@ -39,6 +39,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev
 | `JWT_SECRET` | JWT signing key (min 32 chars) | — |
 | `REDIS_HOST` | Redis host | `localhost` |
 | `AI_ENGINE_SERVICE_URL` | AI engine URL | `http://localhost:8000` |
+| `AI_ENGINE_TIMEOUT` | AI prediction request timeout | `5s` |
 
 ## API Endpoints
 
