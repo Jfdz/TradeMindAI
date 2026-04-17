@@ -36,15 +36,15 @@ Update after every completed PBI: record the last done task and the next in deve
 | FEAT-20: Docker & Container Optimization | SCRUM-298 | `In Development` |
 | FEAT-21: Kubernetes Deployment | SCRUM-301 | `To Do` |
 | FEAT-22: CI/CD Pipelines | SCRUM-307 | `To Do` |
-| FEAT-23: Observability | SCRUM-311 | `To Do` |
-| FEAT-24: Security Hardening | SCRUM-316 | `To Do` |
+| FEAT-23: Observability | SCRUM-311 | `Listo` |
+| FEAT-24: Security Hardening | SCRUM-316 | `Listo` |
 
 ---
 
 ## Current Sprint 8 Snapshot
 
-**Last completed PBI:** `E5-F19-PBI-03` - Strategy vs benchmark chart
-**Jira:** `SCRUM-297` -> `Listo`
+**Last completed PBI:** `E6-F24-PBI-04` - Load testing with k6
+**Jira:** `SCRUM-316` -> `Listo`
 **Next PBI:** `E6-F20-PBI-01` - Production Docker Compose
 **Jira:** `SCRUM-299` -> `In Development`
 **Branch:** `feature-E6-F20-docker-optimization`
@@ -102,11 +102,11 @@ Update after every completed PBI: record the last done task and the next in deve
 | E6-F22-PBI-01 | GitHub Actions per service | To Do |
 | E6-F22-PBI-02 | Staging deploy pipeline | To Do |
 | E6-F22-PBI-03 | Production deploy pipeline | To Do |
-| E6-F23-PBI-01 | Structured JSON logging | To Do |
-| E6-F23-PBI-02 | Prometheus metrics | To Do |
-| E6-F23-PBI-03 | Grafana dashboards | To Do |
-| E6-F23-PBI-04 | Distributed tracing | To Do |
-| E6-F24-PBI-01 | OWASP dependency check in CI | To Do |
-| E6-F24-PBI-02 | Security headers | To Do |
-| E6-F24-PBI-03 | CORS configuration | To Do |
-| E6-F24-PBI-04 | Load testing with k6 | To Do |
+| E6-F23-PBI-01 | Structured JSON logging | Listo |
+| E6-F23-PBI-02 | Prometheus metrics | Listo |
+| E6-F23-PBI-03 | Grafana dashboards | Listo |
+| E6-F23-PBI-04 | Distributed tracing | Listo |
+| E6-F24-PBI-01 | OWASP dependency check in CI | Listo |
+| E6-F24-PBI-02 | Security headers | Listo |
+| E6-F24-PBI-03 | CORS configuration | Listo |
+| E6-F24-PBI-04 | Load testing with k6 | Listo |

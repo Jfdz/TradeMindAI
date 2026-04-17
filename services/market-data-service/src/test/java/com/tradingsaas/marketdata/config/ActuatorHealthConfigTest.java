@@ -39,7 +39,7 @@ class ActuatorHealthConfigTest {
 
     @Test
     void actuatorHealthPathIsPermitted() {
-        SecurityConfig config = new SecurityConfig();
+        SecurityConfig config = new SecurityConfig(new String[] { "http://localhost:3000" });
         assertNotNull(config);
     }
 }

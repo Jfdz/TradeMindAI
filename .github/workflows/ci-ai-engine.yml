@@ -52,6 +52,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt -r requirements-dev.txt
 
+      - name: Dependency scan
+        run: |
+          python -m pip install pip-audit
+          pip-audit
+
       - name: Run linting
         run: |
           pip install ruff

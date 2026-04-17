@@ -60,6 +60,9 @@ jobs:
           distribution: temurin
           cache: maven
 
+      - name: Dependency scan
+        run: mvn -q org.owasp:dependency-check-maven:10.0.4:check -DfailBuildOnCVSS=7
+
       - name: Build and test
         run: mvn clean verify -q
         env:

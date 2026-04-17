@@ -1,0 +1,43 @@
+name: Load Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Trading core base URL"
+        required: true
+        default: "http://localhost:8082"
+      users:
+        description: "Concurrent virtual users"
+        required: false
+        default: "100"
+      duration:
+        description: "Test duration"
+        required: false
+        default: "1m"
+
+jobs:
+  k6:
+    name: k6 ${{ matrix.script }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        script:
+          - login-flow.js
+          - fetch-signals.js
+          - run-backtest.js
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run k6 scenario
+        run: |
+          docker run --rm \
+            -e BASE_URL="${{ inputs.base_url }}" \
+            -e USERS="${{ inputs.users }}" \
+            -e DURATION="${{ inputs.duration }}" \
+            -e PASSWORD="LoadTest123!" \
+            -v "${{ github.workspace }}/infrastructure/load-tests/k6:/scripts:ro" \
+            grafana/k6:0.50.0 \
+            run "/scripts/${{ matrix.script }}"
