@@ -1,6 +1,7 @@
 package com.tradingsaas.tradingcore.adapter.in.web;
 
 import com.tradingsaas.tradingcore.domain.exception.EmailAlreadyExistsException;
+import com.tradingsaas.tradingcore.domain.exception.InsufficientSubscriptionException;
 import com.tradingsaas.tradingcore.domain.exception.InvalidCredentialsException;
 import com.tradingsaas.tradingcore.domain.exception.TokenBlacklistedException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -53,6 +54,13 @@ class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     ErrorResponse handleTokenBlacklisted(TokenBlacklistedException ex, HttpServletRequest req) {
         return new ErrorResponse(401, "Unauthorized", "Token has been revoked", List.of(),
+                Instant.now(), req.getRequestURI());
+    }
+
+    @ExceptionHandler(InsufficientSubscriptionException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    ErrorResponse handleInsufficientSubscription(InsufficientSubscriptionException ex, HttpServletRequest req) {
+        return new ErrorResponse(403, "Forbidden", ex.getMessage(), List.of(),
                 Instant.now(), req.getRequestURI());
     }
 
