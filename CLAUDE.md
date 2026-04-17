@@ -25,10 +25,10 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Current Sprint 6 Snapshot
 
-**Last completed PBI:** `E3-F13-PBI-04` - Flyway migrations for strategies
-**Jira:** `SCRUM-263` -> `Listo`
-**Next PBI:** `E4-F14-PBI-01` - Next.js project scaffold
-**Jira:** `SCRUM-265` -> `Por hacer`
+**Last completed PBI:** `E4-F14-PBI-01` - Next.js project scaffold
+**Jira:** `SCRUM-265` -> `Listo`
+**Next PBI:** `E4-F14-PBI-02` - shadcn/ui setup
+**Jira:** `SCRUM-266` -> `Por hacer`
 **Branch:** `feature-E4-F14-nextjs-scaffold`
 
 ---
