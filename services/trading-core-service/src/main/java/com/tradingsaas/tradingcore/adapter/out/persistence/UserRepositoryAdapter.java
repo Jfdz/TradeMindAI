@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 class UserRepositoryAdapter implements UserRepository {
@@ -24,6 +25,12 @@ class UserRepositoryAdapter implements UserRepository {
         this.userJpaRepository = userJpaRepository;
         this.subscriptionJpaRepository = subscriptionJpaRepository;
         this.mapper = mapper;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<User> findById(UUID id) {
+        return userJpaRepository.findById(id).map(mapper::toDomain);
     }
 
     @Override
