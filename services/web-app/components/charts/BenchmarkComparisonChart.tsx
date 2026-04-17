@@ -5,13 +5,13 @@ import { LineSeries, createChart, type LineData, type Time } from "lightweight-c
 
 import type { EquityPoint } from "@/lib/dashboard/performance";
 
-type PerformanceLineChartProps = {
-  points: EquityPoint[];
+type BenchmarkComparisonChartProps = {
+  strategyPoints: EquityPoint[];
+  benchmarkPoints: EquityPoint[];
   height?: number;
-  color?: string;
 };
 
-export function PerformanceLineChart({ points, height = 320, color = "#facc15" }: PerformanceLineChartProps) {
+export function BenchmarkComparisonChart({ strategyPoints, benchmarkPoints, height = 320 }: BenchmarkComparisonChartProps) {
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -42,12 +42,17 @@ export function PerformanceLineChart({ points, height = 320, color = "#facc15" }
       },
     });
 
-    const series = chart.addSeries(LineSeries, {
-      color,
+    const strategySeries = chart.addSeries(LineSeries, {
+      color: "#facc15",
+      lineWidth: 3,
+    });
+    const benchmarkSeries = chart.addSeries(LineSeries, {
+      color: "#60a5fa",
       lineWidth: 3,
     });
 
-    series.setData(points as LineData<Time>[]);
+    strategySeries.setData(strategyPoints as LineData<Time>[]);
+    benchmarkSeries.setData(benchmarkPoints as LineData<Time>[]);
     chart.timeScale().fitContent();
 
     const resizeObserver = new ResizeObserver(() => {
@@ -61,7 +66,7 @@ export function PerformanceLineChart({ points, height = 320, color = "#facc15" }
       resizeObserver.disconnect();
       chart.remove();
     };
-  }, [color, height, points]);
+  }, [benchmarkPoints, height, strategyPoints]);
 
   return <div ref={chartRef} className="w-full" style={{ height }} />;
 }
