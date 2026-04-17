@@ -15,6 +15,7 @@ COPY src/ ./src/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./alembic.ini
 COPY pyproject.toml ./pyproject.toml
+# Reuse the dependencies installed in the build stage and avoid re-resolving torch.
 RUN pip install --no-cache-dir --no-deps -e .
 USER appuser
 EXPOSE 8000
