@@ -29,7 +29,7 @@ Update after every completed PBI: record the last done task and the next in deve
 **Jira:** `SCRUM-270` -> `Listo`
 **Next PBI:** `E4-F15-PBI-01` - Landing page (SSR)
 **Jira:** `SCRUM-272` -> `Por hacer`
-**Branch:** `feature-E4-F14-nextjs-scaffold`
+**Branch:** `develop`
 
 ---
 
