@@ -1,6 +1,14 @@
 import { BacktestResults } from "@/components/dashboard/backtest-results";
 
-export default function BacktestResultsPage({ params }: { params: { backtestId: string } }) {
+type BacktestResultsPageProps = {
+  params: Promise<{
+    backtestId: string;
+  }>;
+};
+
+export default async function BacktestResultsPage({ params }: BacktestResultsPageProps) {
+  const { backtestId } = await params;
+
   return (
     <div className="space-y-8">
       <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-glow">
@@ -12,7 +20,7 @@ export default function BacktestResultsPage({ params }: { params: { backtestId: 
         </p>
       </section>
 
-      <BacktestResults backtestId={params.backtestId} />
+      <BacktestResults backtestId={backtestId} />
     </div>
   );
 }

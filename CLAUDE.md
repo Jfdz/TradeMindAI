@@ -33,58 +33,59 @@ Update after every completed PBI: record the last done task and the next in deve
 | FEAT-17: Charts & Visualization | SCRUM-281 | `Listo` |
 | FEAT-18: Backtesting Engine Core | SCRUM-285 | `Listo` |
 | FEAT-19: Backtest Configuration Form | SCRUM-290 | `Listo` |
-| FEAT-20: Docker & Container Optimization | SCRUM-298 | `In Development` |
-| FEAT-21: Kubernetes Deployment | SCRUM-301 | `To Do` |
-| FEAT-22: CI/CD Pipelines | SCRUM-307 | `To Do` |
-| FEAT-23: Observability | SCRUM-311 | `To Do` |
-| FEAT-24: Security Hardening | SCRUM-316 | `To Do` |
+| FEAT-20: Docker & Container Optimization | SCRUM-298 | `Listo` |
+| FEAT-21: Kubernetes Deployment | SCRUM-301 | `Listo` |
+| FEAT-22: CI/CD Pipelines | SCRUM-307 | `In Development` |
+| FEAT-23: Observability | SCRUM-311 | `Listo` |
+| FEAT-24: Security Hardening | SCRUM-316 | `Listo` |
 
 ---
 
 ## Current Sprint 8 Snapshot
 
-**Last completed PBI:** `E5-F19-PBI-03` - Strategy vs benchmark chart
-**Jira:** `SCRUM-297` -> `Listo`
-**Next PBI:** `E6-F20-PBI-01` - Production Docker Compose
-**Jira:** `SCRUM-299` -> `In Development`
-**Branch:** `feature-E6-F20-docker-optimization`
+**Last completed PBI:** `E6-F21-PBI-05` - ConfigMaps and Secrets
+**Jira:** `SCRUM-305` -> `Listo`
+**Next PBI:** `E6-F22-PBI-01` - GitHub Actions per service
+**Jira:** `SCRUM-308` -> `In Development`
+**Branch:** `feature-E6-F22-cicd-pipelines`
 
 ---
 
 ## Last Completed Task
 
-**PBI:** `E3-F11-PBI-03` - Rate limiting with bucket4j + Redis
-**Feature:** FEAT-11: Subscription & Rate Limiting
-**Epic:** EPIC-3: Trading Core
-**Sprint:** S5
-**Jira:** SCRUM-251 -> `Listo`
-**Branch:** `feature-E3-F10-authentication-system`
-**Completed:** 2026-04-17
+**PBI:** `E6-F21-PBI-01..05` - Full Kubernetes Deployment (FEAT-21)
+**Feature:** FEAT-21: Kubernetes Deployment
+**Epic:** EPIC-6: Production & DevOps
+**Sprint:** S8
+**Jira:** SCRUM-301 -> `Listo`
+**Branch:** `feature-E6-F21-kubernetes-deployment`
+**Completed:** 2026-04-21
 
-### What was built (full FEAT-11)
+### What was built (full FEAT-21)
 
 | PBI | Jira | What was built | Status |
 |---|---|---|---|
-| E3-F11-PBI-01 | SCRUM-249 | `GET /api/v1/subscriptions/plans` — public endpoint returns FREE/BASIC/PREMIUM details | Listo |
-| E3-F11-PBI-02 | SCRUM-250 | `@RequiresSubscription(plan)` annotation + `RequiresSubscriptionAspect` — 403 "Upgrade required" | Listo |
-| E3-F11-PBI-03 | SCRUM-251 | `RateLimitFilter` with `LettuceBasedProxyManager` — FREE=5/day, BASIC=50/day, PREMIUM=unlimited, X-RateLimit-* headers | Listo |
+| E6-F21-PBI-01 | SCRUM-302 | Deployment + Service for all 4 services with liveness/readiness probes, resource limits, non-root securityContext | Listo |
+| E6-F21-PBI-02 | SCRUM-303 | HPA for trading-core and ai-engine — CPU 70%, min 2, max 10, scale-up/down behavior tuned | Listo |
+| E6-F21-PBI-03 | SCRUM-304 | Ingress with TLS, path-based routing to microservices, cert-manager ClusterIssuer for Let's Encrypt | Listo |
+| E6-F21-PBI-04 | SCRUM-305 | NetworkPolicies — default deny-all, explicit allowlist per service, web-app blocked from ai-engine | Listo |
+| E6-F21-PBI-05 | SCRUM-306 | ConfigMaps per service, secrets-template.yml with REPLACE_ME placeholders, kustomization.yml | Listo |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E6-F20-PBI-01` - Production Docker Compose
-**Feature:** FEAT-20: Docker & Container Optimization
+**PBI:** `E6-F22-PBI-01` - GitHub Actions per service
+**Feature:** FEAT-22: CI/CD Pipelines
 **Epic:** EPIC-6: Production & DevOps
 **Sprint:** S8
-**Jira:** SCRUM-299 -> `In Development`
+**Jira:** SCRUM-308 -> `In Development`
 
 ### Acceptance criteria
 
-- `docker-compose.prod.yml` with resource limits (CPU/memory) for all 4 services
-- Restart policies set (`restart: unless-stopped`)
-- Read-only filesystems with tmpfs for writable dirs where possible
-- `docker compose -f docker-compose.prod.yml up` → all services start and pass health checks
+- Path-triggered workflows: build → test → Docker → push per service
+- Given PR changes `services/ai-engine/` — When CI runs — Then only ai-engine pipeline triggers
+- Each pipeline: build image, run tests, push to registry on merge to main/develop
 
 ---
 
@@ -92,21 +93,21 @@ Update after every completed PBI: record the last done task and the next in deve
 
 | PBI | Title | Status |
 |---|---|---|
-| E6-F20-PBI-01 | Production Docker Compose | In Development |
-| E6-F20-PBI-02 | Docker image scanning | To Do |
-| E6-F21-PBI-01 | K8s Deployments for all services | To Do |
-| E6-F21-PBI-02 | HPA for auto-scaling | To Do |
-| E6-F21-PBI-03 | Ingress + TLS | To Do |
-| E6-F21-PBI-04 | NetworkPolicies | To Do |
-| E6-F21-PBI-05 | ConfigMaps and Secrets | To Do |
-| E6-F22-PBI-01 | GitHub Actions per service | To Do |
+| E6-F20-PBI-01 | Production Docker Compose | Listo |
+| E6-F20-PBI-02 | Docker image scanning | Listo |
+| E6-F21-PBI-01 | K8s Deployments for all services | Listo |
+| E6-F21-PBI-02 | HPA for auto-scaling | Listo |
+| E6-F21-PBI-03 | Ingress + TLS | Listo |
+| E6-F21-PBI-04 | NetworkPolicies | Listo |
+| E6-F21-PBI-05 | ConfigMaps and Secrets | Listo |
+| E6-F22-PBI-01 | GitHub Actions per service | In Development |
 | E6-F22-PBI-02 | Staging deploy pipeline | To Do |
 | E6-F22-PBI-03 | Production deploy pipeline | To Do |
-| E6-F23-PBI-01 | Structured JSON logging | To Do |
-| E6-F23-PBI-02 | Prometheus metrics | To Do |
-| E6-F23-PBI-03 | Grafana dashboards | To Do |
-| E6-F23-PBI-04 | Distributed tracing | To Do |
-| E6-F24-PBI-01 | OWASP dependency check in CI | To Do |
-| E6-F24-PBI-02 | Security headers | To Do |
-| E6-F24-PBI-03 | CORS configuration | To Do |
-| E6-F24-PBI-04 | Load testing with k6 | To Do |
+| E6-F23-PBI-01 | Structured JSON logging | Listo |
+| E6-F23-PBI-02 | Prometheus metrics | Listo |
+| E6-F23-PBI-03 | Grafana dashboards | Listo |
+| E6-F23-PBI-04 | Distributed tracing | Listo |
+| E6-F24-PBI-01 | OWASP dependency check in CI | Listo |
+| E6-F24-PBI-02 | Security headers | Listo |
+| E6-F24-PBI-03 | CORS configuration | Listo |
+| E6-F24-PBI-04 | Load testing with k6 | Listo |

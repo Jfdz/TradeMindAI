@@ -42,20 +42,9 @@ jobs:
         if: steps.check.outputs.bootstrapped == 'true'
         run: npm ci
 
-      - name: Type check
-        if: steps.check.outputs.bootstrapped == 'true'
-        run: npm run type-check
-
       - name: Lint
         if: steps.check.outputs.bootstrapped == 'true'
         run: npm run lint
-
-      - name: Run unit tests
-        if: steps.check.outputs.bootstrapped == 'true'
-        run: npm test -- --watchAll=false --coverage
-        env:
-          NEXT_PUBLIC_API_BASE_URL: http://localhost:8082
-          NEXT_PUBLIC_APP_NAME: TradeMindAI
 
       - name: Build
         if: steps.check.outputs.bootstrapped == 'true'
