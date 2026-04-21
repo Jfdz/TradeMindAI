@@ -62,7 +62,7 @@ export default function PricingPage() {
         <div className="relative mx-auto max-w-7xl px-6 py-8 lg:px-10">
           <header className="flex items-center justify-between border-b border-white/10 pb-5">
             <div>
-              <p className="text-xs uppercase tracking-[0.45em] text-gold-300/80">TradeMindAI</p>
+              <p className="text-xs uppercase tracking-[0.45em] text-amber-600 dark:text-gold-300/80">TradeMindAI</p>
               <h1 className="mt-2 text-lg font-semibold tracking-wide text-white">Pricing</h1>
             </div>
             <nav className="flex items-center gap-3 text-sm text-slate-300">
@@ -77,7 +77,7 @@ export default function PricingPage() {
 
           <div className="py-16">
             <div className="max-w-3xl">
-              <p className="inline-flex rounded-full border border-gold-300/30 bg-gold-300/10 px-4 py-1 text-xs font-medium uppercase tracking-[0.35em] text-gold-300">
+              <p className="inline-flex rounded-full border border-gold-300/30 bg-gold-300/10 px-4 py-1 text-xs font-medium uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300">
                 FEAT-15 PBI-02
               </p>
               <h2 className="mt-6 text-5xl font-semibold leading-tight text-white sm:text-6xl">
@@ -141,7 +141,7 @@ export default function PricingPage() {
             <section className="mt-12 rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-glow backdrop-blur">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.35em] text-gold-300/80">Feature matrix</p>
+                  <p className="text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300/80">Feature matrix</p>
                   <h3 className="mt-2 text-2xl font-semibold text-white">Everything at a glance</h3>
                 </div>
                 <Button asChild variant="outline">

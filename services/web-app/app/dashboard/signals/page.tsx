@@ -57,29 +57,29 @@ export default function SignalsPage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-glow">
+      <section className="rounded-[2rem] border border-slate-200 bg-slate-100 p-6 shadow-glow dark:border-white/10 dark:bg-white/5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-gold-300/80">Signals</p>
-            <h1 className="mt-3 text-3xl font-semibold text-white">Filter and review trading signals</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
+            <p className="text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300/80">Signals</p>
+            <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">Filter and review trading signals</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
               Review the latest model output, narrow the list with symbol and type filters, and sort by recency,
               confidence, or price before opening the full signal detail page.
             </p>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-ink-800/70 px-5 py-4 text-sm text-slate-200">
-            <p className="text-xs uppercase tracking-[0.35em] text-gold-300/80">Visible</p>
-            <p className="mt-2 text-2xl font-semibold text-white">{filteredSignals.length}</p>
-            <p className="mt-1 text-xs uppercase tracking-[0.3em] text-slate-400">of {signalRecords.length} signals</p>
+          <div className="rounded-3xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-700 dark:border-white/10 dark:bg-ink-800/70 dark:text-slate-200">
+            <p className="text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300/80">Visible</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{filteredSignals.length}</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">of {signalRecords.length} signals</p>
           </div>
         </div>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_auto_auto]">
           <label className="block">
-            <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-400">Search</span>
+            <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Search</span>
             <input
-              className="w-full rounded-2xl border border-white/10 bg-ink-800/80 px-4 py-3 text-sm text-white outline-none ring-0 placeholder:text-slate-500 focus:border-gold-300/40"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-gold-300/40 dark:border-white/10 dark:bg-ink-800/80 dark:text-white dark:placeholder:text-slate-500"
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Symbol, type, or timeframe"
               value={search}
@@ -87,9 +87,9 @@ export default function SignalsPage() {
           </label>
 
           <label className="block min-w-40">
-            <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-400">Type</span>
+            <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Type</span>
             <select
-              className="w-full rounded-2xl border border-white/10 bg-ink-800/80 px-4 py-3 text-sm text-white outline-none focus:border-gold-300/40"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-gold-300/40 dark:border-white/10 dark:bg-ink-800/80 dark:text-white"
               onChange={(event) => setSelectedType(event.target.value as (typeof signalTypes)[number])}
               value={selectedType}
             >
@@ -102,9 +102,9 @@ export default function SignalsPage() {
           </label>
 
           <label className="block min-w-44">
-            <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-400">Sort by</span>
+            <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Sort by</span>
             <select
-              className="w-full rounded-2xl border border-white/10 bg-ink-800/80 px-4 py-3 text-sm text-white outline-none focus:border-gold-300/40"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-gold-300/40 dark:border-white/10 dark:bg-ink-800/80 dark:text-white"
               onChange={(event) => setSortBy(event.target.value)}
               value={sortBy}
             >
@@ -116,11 +116,11 @@ export default function SignalsPage() {
         </div>
       </section>
 
-      <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-glow">
-        <div className="overflow-hidden rounded-3xl border border-white/10">
-          <table className="min-w-full divide-y divide-white/10">
-            <thead className="bg-white/5">
-              <tr className="text-left text-xs uppercase tracking-[0.3em] text-slate-400">
+      <section className="rounded-[2rem] border border-slate-200 bg-slate-100 p-6 shadow-glow dark:border-white/10 dark:bg-white/5">
+        <div className="overflow-hidden rounded-3xl border border-slate-200 dark:border-white/10">
+          <table className="min-w-full divide-y divide-slate-200 dark:divide-white/10">
+            <thead className="bg-slate-100 dark:bg-white/5">
+              <tr className="text-left text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
                 <th className="px-5 py-4">Symbol</th>
                 <th className="px-5 py-4">Type</th>
                 <th className="px-5 py-4">Confidence</th>
@@ -130,10 +130,10 @@ export default function SignalsPage() {
                 <th className="px-5 py-4">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/10 bg-ink-800/50">
+            <tbody className="divide-y divide-slate-200 bg-white dark:divide-white/10 dark:bg-ink-800/50">
               {pagedSignals.map((signal) => (
-                <tr key={signal.id} className="text-sm text-slate-200 transition hover:bg-white/5">
-                  <td className="px-5 py-4 font-semibold text-white">{signal.symbol}</td>
+                <tr key={signal.id} className="text-sm text-slate-700 transition hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-white/5">
+                  <td className="px-5 py-4 font-semibold text-slate-900 dark:text-white">{signal.symbol}</td>
                   <td className="px-5 py-4">{signal.type}</td>
                   <td className="px-5 py-4">{formatConfidence(signal.confidence)}</td>
                   <td className="px-5 py-4">{formatPrice(signal.price)}</td>
@@ -141,7 +141,7 @@ export default function SignalsPage() {
                   <td className="px-5 py-4">{signal.timeframe}</td>
                   <td className="px-5 py-4">
                     <Link
-                      className="rounded-full border border-gold-300/20 bg-gold-300/10 px-4 py-2 text-xs uppercase tracking-[0.3em] text-gold-300 transition hover:border-gold-300/40 hover:bg-gold-300/20"
+                      className="rounded-full border border-gold-300/20 bg-gold-300/10 px-4 py-2 text-xs uppercase tracking-[0.3em] text-amber-600 dark:text-gold-300 transition hover:border-gold-300/40 hover:bg-gold-300/20"
                       href={`/dashboard/signals/${signal.id}`}
                     >
                       Open
@@ -151,7 +151,7 @@ export default function SignalsPage() {
               ))}
               {pagedSignals.length === 0 ? (
                 <tr>
-                  <td className="px-5 py-10 text-center text-sm text-slate-400" colSpan={7}>
+                  <td className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400" colSpan={7}>
                     No signals match the current filters.
                   </td>
                 </tr>
@@ -161,24 +161,24 @@ export default function SignalsPage() {
         </div>
 
         <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-slate-300">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
             Showing {pagedSignals.length} of {filteredSignals.length} matching signals.
           </p>
 
           <div className="flex items-center gap-3">
             <button
-              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-200 disabled:opacity-40"
+              className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-700 disabled:opacity-40 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
               disabled={currentPage === 1}
               onClick={() => setPage((value) => Math.max(1, value - 1))}
               type="button"
             >
               Previous
             </button>
-            <span className="text-sm text-slate-300">
+            <span className="text-sm text-slate-600 dark:text-slate-300">
               Page {currentPage} of {pageCount}
             </span>
             <button
-              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-200 disabled:opacity-40"
+              className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-700 disabled:opacity-40 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
               disabled={currentPage === pageCount}
               onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
               type="button"
