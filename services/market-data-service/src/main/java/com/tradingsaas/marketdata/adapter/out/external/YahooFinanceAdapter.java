@@ -15,8 +15,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+@Component
 public class YahooFinanceAdapter implements MarketDataProvider {
 
     private final WebClient webClient;

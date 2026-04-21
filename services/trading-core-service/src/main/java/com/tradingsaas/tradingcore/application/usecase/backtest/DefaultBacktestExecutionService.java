@@ -19,6 +19,7 @@ class DefaultBacktestExecutionService implements BacktestExecutionService {
     private final Executor executor;
     private final Clock clock;
 
+    @org.springframework.beans.factory.annotation.Autowired
     DefaultBacktestExecutionService(BacktestJobStore jobStore, BacktestProcessor backtestProcessor) {
         this(jobStore, backtestProcessor, Executors.newCachedThreadPool(), Clock.systemUTC());
     }

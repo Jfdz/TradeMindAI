@@ -53,20 +53,21 @@ class UserRepositoryAdapter implements UserRepository {
                 user.getCreatedAt() != null ? user.getCreatedAt() : now,
                 now
         );
-        entity = userJpaRepository.save(entity);
+        final UserJpaEntity savedEntity = userJpaRepository.save(entity);
 
         if (user.getSubscription() != null) {
             var sub = user.getSubscription();
-            SubscriptionJpaEntity subEntity = new SubscriptionJpaEntity(
-                    sub.getId(),
-                    entity,
-                    sub.getPlan(),
-                    sub.getCreatedAt() != null ? sub.getCreatedAt() : now,
-                    sub.getExpiresAt()
-            );
-            subscriptionJpaRepository.save(subEntity);
-            entity.setSubscription(subEntity);
+            SubscriptionJpaEntity subEntity = subscriptionJpaRepository.findById(sub.getId())
+                    .orElseGet(() -> new SubscriptionJpaEntity(
+                            sub.getId(),
+                            savedEntity,
+                            sub.getPlan(),
+                            sub.getCreatedAt() != null ? sub.getCreatedAt() : now,
+                            sub.getExpiresAt()));
+            subEntity = subscriptionJpaRepository.save(subEntity);
+            savedEntity.setSubscription(subEntity);
         }
+        entity = savedEntity;
 
         return mapper.toDomain(entity);
     }

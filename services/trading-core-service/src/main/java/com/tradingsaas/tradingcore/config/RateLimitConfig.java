@@ -20,8 +20,13 @@ class RateLimitConfig {
     @Bean
     LettuceBasedProxyManager<String> rateLimitProxyManager(
             @Value("${spring.data.redis.host:localhost}") String host,
-            @Value("${spring.data.redis.port:6379}") int port) {
-        RedisURI uri = RedisURI.builder().withHost(host).withPort(port).build();
+            @Value("${spring.data.redis.port:6379}") int port,
+            @Value("${spring.data.redis.password:}") String password) {
+        RedisURI.Builder uriBuilder = RedisURI.builder().withHost(host).withPort(port);
+        if (password != null && !password.isBlank()) {
+            uriBuilder.withPassword(password.toCharArray());
+        }
+        RedisURI uri = uriBuilder.build();
         RedisClient client = RedisClient.create(uri);
         StatefulRedisConnection<String, byte[]> conn = client.connect(
                 RedisCodec.of(StringCodec.UTF8, ByteArrayCodec.INSTANCE));
