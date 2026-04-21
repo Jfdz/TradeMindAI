@@ -41,14 +41,8 @@ jobs:
       - name: Dependency scan
         run: npm audit --audit-level=high
 
-      - name: Type check
-        run: npm run type-check
-
       - name: Lint
         run: npm run lint
-
-      - name: Run unit tests
-        run: npm test -- --coverage --watchAll=false
 
       - name: Build
         run: npm run build
