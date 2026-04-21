@@ -81,6 +81,9 @@ spec:
                 secretKeyRef:
                   name: jwt-secret
                   key: secret
+          envFrom:
+            - configMapRef:
+                name: trading-core-service-config
           resources:
             requests:
               cpu: 250m

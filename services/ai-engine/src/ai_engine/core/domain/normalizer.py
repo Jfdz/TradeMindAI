@@ -8,27 +8,27 @@ class MinMaxNormalizer:
         self._min: np.ndarray | None = None
         self._max: np.ndarray | None = None
 
-    def fit(self, X: np.ndarray) -> "MinMaxNormalizer":
-        """Compute min/max from X with shape (n_samples, n_features)."""
-        self._min = X.min(axis=0)
-        self._max = X.max(axis=0)
+    def fit(self, x: np.ndarray) -> "MinMaxNormalizer":
+        """Compute min/max from x with shape (n_samples, n_features)."""
+        self._min = x.min(axis=0)
+        self._max = x.max(axis=0)
         return self
 
-    def transform(self, X: np.ndarray) -> np.ndarray:
-        """Scale X to [0, 1]. Features with zero range are left as 0."""
+    def transform(self, x: np.ndarray) -> np.ndarray:
+        """Scale x to [0, 1]. Features with zero range are left as 0."""
         self._check_fitted()
         rng = self._max - self._min
         rng = np.where(rng == 0, 1, rng)
-        return (X - self._min) / rng
+        return (x - self._min) / rng
 
-    def fit_transform(self, X: np.ndarray) -> np.ndarray:
-        return self.fit(X).transform(X)
+    def fit_transform(self, x: np.ndarray) -> np.ndarray:
+        return self.fit(x).transform(x)
 
-    def inverse_transform(self, X: np.ndarray) -> np.ndarray:
+    def inverse_transform(self, x: np.ndarray) -> np.ndarray:
         self._check_fitted()
         rng = self._max - self._min
         rng = np.where(rng == 0, 1, rng)
-        return X * rng + self._min
+        return x * rng + self._min
 
     def _check_fitted(self) -> None:
         if self._min is None:

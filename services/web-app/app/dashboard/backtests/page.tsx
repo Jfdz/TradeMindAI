@@ -11,9 +11,9 @@ export default function BacktestsPage() {
     <div className="space-y-8">
       <section className="grid gap-4 md:grid-cols-3">
         {highlights.map((item) => (
-          <article key={item.label} className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-glow">
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">{item.label}</p>
-            <p className="mt-3 text-lg font-semibold text-white">{item.value}</p>
+          <article key={item.label} className="rounded-3xl border border-slate-200 bg-slate-100 p-5 shadow-glow dark:border-white/10 dark:bg-white/5">
+            <p className="text-xs uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400">{item.label}</p>
+            <p className="mt-3 text-lg font-semibold text-slate-900 dark:text-white">{item.value}</p>
           </article>
         ))}
       </section>

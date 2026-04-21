@@ -2,6 +2,7 @@ package com.tradingsaas.tradingcore.adapter.in.web;
 
 import com.tradingsaas.tradingcore.application.usecase.backtest.BacktestExecutionService;
 import com.tradingsaas.tradingcore.domain.model.backtest.BacktestJob;
+import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort;
 import com.tradingsaas.tradingcore.domain.model.backtest.BacktestRequest;
 import com.tradingsaas.tradingcore.domain.model.backtest.BacktestResult;
 import com.tradingsaas.tradingcore.domain.model.backtest.BacktestTrade;
@@ -29,9 +30,16 @@ import org.springframework.web.bind.annotation.RestController;
 class BacktestController {
 
     private final BacktestExecutionService backtestExecutionService;
+    private final HistoricalMarketDataPort historicalMarketDataPort;
 
-    BacktestController(BacktestExecutionService backtestExecutionService) {
+    BacktestController(BacktestExecutionService backtestExecutionService, HistoricalMarketDataPort historicalMarketDataPort) {
         this.backtestExecutionService = backtestExecutionService;
+        this.historicalMarketDataPort = historicalMarketDataPort;
+    }
+
+    @GetMapping("/symbols/{symbol}/available")
+    boolean checkSymbolAvailability(@PathVariable String symbol) {
+        return historicalMarketDataPort.hasData(symbol);
     }
 
     @PostMapping

@@ -8,7 +8,7 @@ export function ThemeToggle() {
 
   return (
     <button
-      className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-200 transition hover:border-gold-300/30 hover:bg-gold-300/10 hover:text-white dark:text-slate-100"
+      className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-700 transition hover:border-gold-300/30 hover:bg-gold-300/10 hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:text-white"
       onClick={toggleTheme}
       type="button"
     >

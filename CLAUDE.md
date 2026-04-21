@@ -33,9 +33,9 @@ Update after every completed PBI: record the last done task and the next in deve
 | FEAT-17: Charts & Visualization | SCRUM-281 | `Listo` |
 | FEAT-18: Backtesting Engine Core | SCRUM-285 | `Listo` |
 | FEAT-19: Backtest Configuration Form | SCRUM-290 | `Listo` |
-| FEAT-20: Docker & Container Optimization | SCRUM-298 | `Listo` |
-| FEAT-21: Kubernetes Deployment | SCRUM-301 | `Listo` |
-| FEAT-22: CI/CD Pipelines | SCRUM-307 | `In Development` |
+| FEAT-20: Docker & Container Optimization | SCRUM-298 | `In Development` |
+| FEAT-21: Kubernetes Deployment | SCRUM-301 | `To Do` |
+| FEAT-22: CI/CD Pipelines | SCRUM-307 | `To Do` |
 | FEAT-23: Observability | SCRUM-311 | `Listo` |
 | FEAT-24: Security Hardening | SCRUM-316 | `Listo` |
 
@@ -43,11 +43,11 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Current Sprint 8 Snapshot
 
-**Last completed PBI:** `E6-F21-PBI-05` - ConfigMaps and Secrets
-**Jira:** `SCRUM-305` -> `Listo`
-**Next PBI:** `E6-F22-PBI-01` - GitHub Actions per service
-**Jira:** `SCRUM-308` -> `In Development`
-**Branch:** `feature-E6-F22-cicd-pipelines`
+**Last completed PBI:** `E6-F24-PBI-04` - Load testing with k6
+**Jira:** `SCRUM-316` -> `Listo`
+**Next PBI:** `E6-F20-PBI-01` - Production Docker Compose
+**Jira:** `SCRUM-299` -> `In Development`
+**Branch:** `feature-E6-F20-docker-optimization`
 
 ---
 

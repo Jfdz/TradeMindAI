@@ -6,7 +6,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
-@Mapper(uses = SymbolEntityMapper.class, unmappedTargetPolicy = ReportingPolicy.ERROR)
+@Mapper(componentModel = "spring", uses = SymbolEntityMapper.class, unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface TechnicalIndicatorEntityMapper {
 
     @Mapping(target = "id", ignore = true)

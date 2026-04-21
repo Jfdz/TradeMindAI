@@ -5,7 +5,7 @@ import com.tradingsaas.marketdata.domain.model.Symbol;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 
-@Mapper(unmappedTargetPolicy = ReportingPolicy.ERROR)
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface SymbolEntityMapper {
 
     Symbol toDomain(SymbolEntity entity);

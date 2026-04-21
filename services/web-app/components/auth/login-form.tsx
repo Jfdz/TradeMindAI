@@ -57,34 +57,34 @@ export function LoginForm() {
   return (
     <form className="space-y-5" onSubmit={onSubmit}>
       <div>
-        <label className="mb-2 block text-sm font-medium text-slate-200" htmlFor="email">
+        <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200" htmlFor="email">
           Email
         </label>
         <input
           id="email"
           type="email"
           autoComplete="email"
-          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none ring-0 transition placeholder:text-slate-500 focus:border-gold-300/60"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 transition placeholder:text-slate-400 focus:border-gold-300/60 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
           {...register("email")}
         />
-        {errors.email ? <p className="mt-2 text-sm text-rose-300">{errors.email.message}</p> : null}
+        {errors.email ? <p className="mt-2 text-sm text-rose-500 dark:text-rose-300">{errors.email.message}</p> : null}
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-medium text-slate-200" htmlFor="password">
+        <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200" htmlFor="password">
           Password
         </label>
         <input
           id="password"
           type="password"
           autoComplete="current-password"
-          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none ring-0 transition placeholder:text-slate-500 focus:border-gold-300/60"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 transition placeholder:text-slate-400 focus:border-gold-300/60 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
           {...register("password")}
         />
-        {errors.password ? <p className="mt-2 text-sm text-rose-300">{errors.password.message}</p> : null}
+        {errors.password ? <p className="mt-2 text-sm text-rose-500 dark:text-rose-300">{errors.password.message}</p> : null}
       </div>
 
-      {serverError ? <p className="text-sm text-rose-300">{serverError}</p> : null}
+      {serverError ? <p className="text-sm text-rose-500 dark:text-rose-300">{serverError}</p> : null}
 
       <Button className="w-full" type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Signing in..." : "Sign in"}

@@ -1,19 +1,24 @@
-name: CI - ai-engine
+name: CI — ai-engine
 
 on:
   push:
-    branches: [main, "feature/**"]
+    branches: [main, develop]
     paths:
-      - "services/ai-engine/**"
-      - ".github/workflows/ci-ai-engine.yml"
+      - 'services/ai-engine/**'
+      - '.github/workflows/ci-ai-engine.yml'
   pull_request:
-    branches: [main]
+    branches: [main, develop]
     paths:
-      - "services/ai-engine/**"
-      - ".github/workflows/ci-ai-engine.yml"
+      - 'services/ai-engine/**'
+      - '.github/workflows/ci-ai-engine.yml'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/ai-engine
 
 jobs:
-  build-and-test:
+  build-test:
+    name: Build & Test
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -23,55 +28,102 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: trading_user
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: trading_saas_test
-        ports:
-          - 5432:5432
+          POSTGRES_DB: ai_engine_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+        ports:
+          - 5432:5432
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Check if project is bootstrapped
-        id: check
-        run: |
-          if [ -f requirements.txt ] || [ -f pyproject.toml ]; then
-            echo "bootstrapped=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "bootstrapped=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::requirements.txt/pyproject.toml not found — skipping build/test (scaffold only)"
-          fi
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up Python 3.11
-        if: steps.check.outputs.bootstrapped == 'true'
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
+          cache: pip
 
       - name: Install dependencies
-        if: steps.check.outputs.bootstrapped == 'true'
-        run: |
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
+        run: pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Lint (ruff)
-        if: steps.check.outputs.bootstrapped == 'true'
-        run: ruff check src/ tests/
+      - name: Dependency scan
+        run: |
+          python -m pip install pip-audit
+          pip-audit
+
+      - name: Run linting
+        run: |
+          pip install ruff
+          ruff check src/
 
       - name: Run tests
-        if: steps.check.outputs.bootstrapped == 'true'
         run: pytest tests/ -v --tb=short
         env:
-          DATABASE_URL: postgresql://trading_user:test_password@localhost:5432/trading_saas_test
-          RABBITMQ_URL: amqp://guest:guest@localhost:5672/
-          MODEL_PATH: ./models/
-          ENABLE_GPU: "false"
+          DATABASE_URL: postgresql://test:test@localhost:5432/ai_engine_test
+          APP_ENV: test
 
-      - name: Build Docker image
-        if: steps.check.outputs.bootstrapped == 'true'
-        run: docker build -t ai-engine:${{ github.sha }} .
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-engine-test-results
+          path: services/ai-engine/pytest-results.xml
+
+  docker-build-push:
+    name: Docker Build & Push
+    needs: build-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: services/ai-engine
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  security-scan:
+    name: Security Scan
+    needs: docker-build-push
+    if: github.event_name == 'push'
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      image-ref: ghcr.io/${{ github.repository }}/ai-engine:${{ github.sha }}
+      dockerfile: services/ai-engine/Dockerfile
+      context: services/ai-engine

@@ -93,9 +93,9 @@ class Trainer:
 
         ctx = torch.enable_grad() if train else torch.no_grad()
         with ctx:
-            for X, y in loader:
-                X, y = X.to(self.device), y.to(self.device)
-                logits = self.model(X)
+            for x, y in loader:
+                x, y = x.to(self.device), y.to(self.device)
+                logits = self.model(x)
                 loss = self.criterion(logits, y)
 
                 if train:

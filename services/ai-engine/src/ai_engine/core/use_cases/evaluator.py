@@ -32,9 +32,9 @@ class Evaluator:
         all_labels: list[int] = []
 
         with torch.no_grad():
-            for X, y in loader:
-                X = X.to(self.device)
-                preds = self.model(X).argmax(dim=1).cpu().tolist()
+            for x, y in loader:
+                x = x.to(self.device)
+                preds = self.model(x).argmax(dim=1).cpu().tolist()
                 all_preds.extend(preds)
                 all_labels.extend(y.tolist())
 

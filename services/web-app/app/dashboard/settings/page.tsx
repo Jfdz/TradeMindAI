@@ -32,37 +32,37 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8">
       <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <article className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-glow">
-          <p className="text-xs uppercase tracking-[0.35em] text-gold-300/80">Profile</p>
-          <h1 className="mt-3 text-3xl font-semibold text-white">Update your workspace details</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
+        <article className="rounded-[2rem] border border-slate-200 bg-slate-100 p-6 shadow-glow dark:border-white/10 dark:bg-white/5">
+          <p className="text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300/80">Profile</p>
+          <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">Update your workspace details</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
             Keep the dashboard identity aligned with the active account and settings that matter for the trading
             workflow.
           </p>
 
           <form className="mt-8 grid gap-5" onSubmit={handleSubmit}>
             <label className="block">
-              <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-400">Display name</span>
+              <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Display name</span>
               <input
-                className="w-full rounded-2xl border border-white/10 bg-ink-800/80 px-4 py-3 text-sm text-white outline-none focus:border-gold-300/40"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-gold-300/40 dark:border-white/10 dark:bg-ink-800/80 dark:text-white"
                 onChange={(event) => setName(event.target.value)}
                 value={name}
               />
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-400">Email</span>
+              <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Email</span>
               <input
-                className="w-full rounded-2xl border border-white/10 bg-ink-800/80 px-4 py-3 text-sm text-slate-400 outline-none"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-400 outline-none dark:border-white/10 dark:bg-ink-800/80"
                 disabled
                 value={email}
               />
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-400">Timezone</span>
+              <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Timezone</span>
               <select
-                className="w-full rounded-2xl border border-white/10 bg-ink-800/80 px-4 py-3 text-sm text-white outline-none focus:border-gold-300/40"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-gold-300/40 dark:border-white/10 dark:bg-ink-800/80 dark:text-white"
                 onChange={(event) => setTimezone(event.target.value)}
                 value={timezone}
               >
@@ -75,27 +75,27 @@ export default function SettingsPage() {
 
             <div className="flex flex-wrap items-center gap-3">
               <Button type="submit">Save changes</Button>
-              <p className="text-sm text-slate-300">{status}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">{status}</p>
             </div>
           </form>
         </article>
 
-        <article className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-glow">
-          <p className="text-xs uppercase tracking-[0.35em] text-gold-300/80">Subscription</p>
-          <h2 className="mt-3 text-2xl font-semibold text-white">Current plan and upgrade path</h2>
+        <article className="rounded-[2rem] border border-slate-200 bg-slate-100 p-6 shadow-glow dark:border-white/10 dark:bg-white/5">
+          <p className="text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300/80">Subscription</p>
+          <h2 className="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">Current plan and upgrade path</h2>
 
           <div className="mt-6 rounded-3xl border border-gold-300/20 bg-gradient-to-br from-gold-300/10 to-mint-400/10 p-5">
-            <p className="text-xs uppercase tracking-[0.35em] text-gold-300/80">Current subscription</p>
-            <p className="mt-3 text-3xl font-semibold text-white">Premium</p>
-            <p className="mt-2 text-sm text-slate-200">Unlimited strategies, backtesting, and signal dashboards.</p>
-            <p className="mt-4 text-xs uppercase tracking-[0.3em] text-slate-400">Renews on May 1, 2026</p>
+            <p className="text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300/80">Current subscription</p>
+            <p className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">Premium</p>
+            <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">Unlimited strategies, backtesting, and signal dashboards.</p>
+            <p className="mt-4 text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Renews on May 1, 2026</p>
           </div>
 
           <div className="mt-6 space-y-3">
-            <div className="rounded-2xl border border-white/10 bg-ink-800/70 p-4 text-sm text-slate-200">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 dark:border-white/10 dark:bg-ink-800/70 dark:text-slate-200">
               Profile settings remain synchronized with the authenticated dashboard session.
             </div>
-            <div className="rounded-2xl border border-white/10 bg-ink-800/70 p-4 text-sm text-slate-200">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 dark:border-white/10 dark:bg-ink-800/70 dark:text-slate-200">
               Trading limits and subscription gates are enforced by the backend services.
             </div>
           </div>

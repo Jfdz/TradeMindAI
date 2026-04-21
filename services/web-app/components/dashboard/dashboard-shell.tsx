@@ -30,11 +30,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         >
           <div className="flex items-center justify-between pb-6">
             <div>
-              <p className="text-xs uppercase tracking-[0.45em] text-gold-300/80">TradeMindAI</p>
+              <p className="text-xs uppercase tracking-[0.45em] text-amber-600 dark:text-gold-300/80">TradeMindAI</p>
               <h1 className="mt-2 text-lg font-semibold">Dashboard</h1>
             </div>
             <button
-              className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs uppercase tracking-[0.3em] text-slate-300 lg:hidden"
+              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs uppercase tracking-[0.3em] text-slate-700 lg:hidden dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
               onClick={() => setSidebarOpen(false)}
               type="button"
             >
@@ -56,8 +56,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="mt-8 rounded-3xl border border-gold-300/20 bg-gradient-to-br from-gold-300/10 to-mint-400/10 p-4">
-            <p className="text-xs uppercase tracking-[0.35em] text-gold-300/80">Session</p>
-            <p className="mt-3 text-sm text-slate-200">{session?.user?.email ?? "Authenticated user"}</p>
+            <p className="text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300/80">Session</p>
+            <p className="mt-3 text-sm text-slate-700 dark:text-slate-200">{session?.user?.email ?? "Authenticated user"}</p>
           </div>
         </aside>
 
@@ -81,7 +81,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 Menu
               </button>
               <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-gold-300/80">Dashboard core</p>
+                <p className="text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300/80">Dashboard core</p>
                 <h2 className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">Welcome back</h2>
               </div>
             </div>

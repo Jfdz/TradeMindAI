@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -47,7 +48,9 @@ const backtestSchema = z
 type BacktestFormValues = z.infer<typeof backtestSchema>;
 
 const fieldClassName =
-  "w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none ring-0 transition placeholder:text-slate-500 focus:border-gold-300/60";
+  "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 transition placeholder:text-slate-400 focus:border-gold-300/60 dark:border-white/10 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500";
+
+const optionClassName = "bg-white text-slate-900 dark:bg-slate-800 dark:text-white";
 
 function getSymbolPrice(symbol: string) {
   return symbolOptions.find((option) => option.symbol === symbol)?.price ?? symbolOptions[0].price;
@@ -110,11 +113,11 @@ export function BacktestForm() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-      <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-glow">
+      <section className="rounded-[2rem] border border-slate-200 bg-slate-100 p-6 shadow-glow dark:border-white/10 dark:bg-white/5">
         <div className="flex flex-col gap-3">
-          <p className="text-xs uppercase tracking-[0.35em] text-gold-300/80">Backtest setup</p>
-          <h1 className="text-3xl font-semibold text-white">Configure and submit a backtest run</h1>
-          <p className="max-w-2xl text-sm leading-7 text-slate-300">
+          <p className="text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300/80">Backtest setup</p>
+          <h1 className="text-3xl font-semibold text-slate-900 dark:text-white">Configure and submit a backtest run</h1>
+          <p className="max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
             Pick a symbol, date range, strategy profile, and starting capital. The form validates the inputs locally,
             then posts the run to the backtesting service with a derived order size.
           </p>
@@ -123,79 +126,97 @@ export function BacktestForm() {
         <form className="mt-8 space-y-5" onSubmit={onSubmit}>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-400">Symbol</span>
-              <select className={fieldClassName} {...register("symbol")}>
+              <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Symbol</span>
+              <select
+                className={fieldClassName}
+                {...register("symbol")}
+                onChange={async (e) => {
+                  register("symbol").onChange(e);
+                  const selected = e.target.value;
+                  try {
+                    const available = await apiClient.checkSymbolAvailability(selected);
+                    if (!available) {
+                      toast.warning("No market data available", {
+                        description: `${selected} has no price data in the database for the selected date range. The backtest will fail.`,
+                        duration: 6000,
+                      });
+                    }
+                  } catch {
+                    // silently ignore availability check errors
+                  }
+                }}
+              >
                 {symbolOptions.map((option) => (
-                  <option key={option.symbol} value={option.symbol}>
+                  <option key={option.symbol} className={optionClassName} value={option.symbol}>
                     {option.symbol} - {option.label}
                   </option>
                 ))}
               </select>
-              {errors.symbol ? <p className="mt-2 text-sm text-rose-300">{errors.symbol.message}</p> : null}
+              {errors.symbol ? <p className="mt-2 text-sm text-rose-500 dark:text-rose-300">{errors.symbol.message}</p> : null}
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-400">Strategy</span>
+              <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Strategy</span>
               <select className={fieldClassName} {...register("strategyId")}>
                 {strategyOptions.map((strategy) => (
-                  <option key={strategy.id} value={strategy.id}>
+                  <option key={strategy.id} className={optionClassName} value={strategy.id}>
                     {strategy.name}
                   </option>
                 ))}
               </select>
-              {errors.strategyId ? <p className="mt-2 text-sm text-rose-300">{errors.strategyId.message}</p> : null}
+              {errors.strategyId ? <p className="mt-2 text-sm text-rose-500 dark:text-rose-300">{errors.strategyId.message}</p> : null}
             </label>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-400">From</span>
+              <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">From</span>
               <input type="date" className={fieldClassName} {...register("from")} />
-              {errors.from ? <p className="mt-2 text-sm text-rose-300">{errors.from.message}</p> : null}
+              {errors.from ? <p className="mt-2 text-sm text-rose-500 dark:text-rose-300">{errors.from.message}</p> : null}
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-400">To</span>
+              <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">To</span>
               <input type="date" className={fieldClassName} {...register("to")} />
-              {errors.to ? <p className="mt-2 text-sm text-rose-300">{errors.to.message}</p> : null}
+              {errors.to ? <p className="mt-2 text-sm text-rose-500 dark:text-rose-300">{errors.to.message}</p> : null}
             </label>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-[1fr_1fr]">
             <label className="block">
-              <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-400">Initial capital</span>
+              <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Initial capital</span>
               <input type="number" min="1" step="100" className={fieldClassName} {...register("initialCapital")} />
               {errors.initialCapital ? (
-                <p className="mt-2 text-sm text-rose-300">{errors.initialCapital.message}</p>
+                <p className="mt-2 text-sm text-rose-500 dark:text-rose-300">{errors.initialCapital.message}</p>
               ) : null}
             </label>
 
-            <div className="rounded-3xl border border-white/10 bg-ink-800/60 p-4">
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Derived order size</p>
-              <p className="mt-3 text-3xl font-semibold text-white">{estimatedQuantity} shares</p>
-              <p className="mt-2 text-sm text-slate-300">
+            <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-ink-800/60">
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Derived order size</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">{estimatedQuantity} shares</p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                 Estimated notional {estimatedNotional.toLocaleString("en-US", { style: "currency", currency: "USD" })} at{" "}
                 {selectedSymbol.symbol} reference price.
               </p>
             </div>
           </div>
 
-          <div className="rounded-3xl border border-gold-300/20 bg-gradient-to-br from-gold-300/10 to-mint-400/10 p-5 text-sm text-slate-200">
-            <p className="text-xs uppercase tracking-[0.35em] text-gold-300/80">Selected strategy</p>
-            <p className="mt-3 text-lg font-semibold text-white">{selectedStrategy.name}</p>
+          <div className="rounded-3xl border border-gold-300/20 bg-gradient-to-br from-gold-300/10 to-mint-400/10 p-5 text-sm text-slate-700 dark:text-slate-200">
+            <p className="text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300/80">Selected strategy</p>
+            <p className="mt-3 text-lg font-semibold text-slate-900 dark:text-white">{selectedStrategy.name}</p>
             <p className="mt-2 leading-7">{selectedStrategy.risk}</p>
-            <p className="mt-3 text-xs uppercase tracking-[0.3em] text-slate-400">
+            <p className="mt-3 text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
               Allocation {Math.round(selectedStrategy.allocation * 100)}%
             </p>
           </div>
 
-          {serverError ? <p className="text-sm text-rose-300">{serverError}</p> : null}
+          {serverError ? <p className="text-sm text-rose-500 dark:text-rose-300">{serverError}</p> : null}
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button className="sm:min-w-48" disabled={isSubmitting} type="submit">
               {isSubmitting ? "Submitting backtest..." : "Run backtest"}
             </Button>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               The backend accepts the validated symbol, date range, and derived quantity payload.
             </p>
           </div>
@@ -203,9 +224,9 @@ export function BacktestForm() {
       </section>
 
       <aside className="space-y-6">
-        <article className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-glow">
-          <p className="text-xs uppercase tracking-[0.35em] text-gold-300/80">Why this form matters</p>
-          <div className="mt-4 space-y-4 text-sm leading-7 text-slate-300">
+        <article className="rounded-[2rem] border border-slate-200 bg-slate-100 p-6 shadow-glow dark:border-white/10 dark:bg-white/5">
+          <p className="text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300/80">Why this form matters</p>
+          <div className="mt-4 space-y-4 text-sm leading-7 text-slate-600 dark:text-slate-300">
             <p>Each input is validated before the request leaves the browser.</p>
             <p>The selected strategy influences sizing without making the backend contract more complex.</p>
             <p>Submitted jobs return immediately so the later results and status views can attach to the same flow.</p>
@@ -215,23 +236,23 @@ export function BacktestForm() {
         <article
           className={cn(
             "rounded-[2rem] border p-6 shadow-glow transition",
-            submission ? "border-mint-300/30 bg-mint-400/10" : "border-white/10 bg-white/5"
+            submission ? "border-mint-300/30 bg-mint-400/10" : "border-slate-200 bg-slate-100 dark:border-white/10 dark:bg-white/5"
           )}
         >
-          <p className="text-xs uppercase tracking-[0.35em] text-gold-300/80">Latest submission</p>
+          <p className="text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300/80">Latest submission</p>
           {submission ? (
-            <div className="mt-4 space-y-3 text-sm text-slate-200">
-              <p className="text-2xl font-semibold text-white">{submission.status}</p>
+            <div className="mt-4 space-y-3 text-sm text-slate-700 dark:text-slate-200">
+              <p className="text-2xl font-semibold text-slate-900 dark:text-white">{submission.status}</p>
               <p>
-                Backtest ID: <span className="text-white">{submission.id}</span>
+                Backtest ID: <span className="text-slate-900 dark:text-white">{submission.id}</span>
               </p>
               <p>
-                Submitted for <span className="text-white">{submission.request.symbol}</span> from{" "}
-                <span className="text-white">{submission.request.from}</span> to{" "}
-                <span className="text-white">{submission.request.to}</span>.
+                Submitted for <span className="text-slate-900 dark:text-white">{submission.request.symbol}</span> from{" "}
+                <span className="text-slate-900 dark:text-white">{submission.request.from}</span> to{" "}
+                <span className="text-slate-900 dark:text-white">{submission.request.to}</span>.
               </p>
               <p>
-                Quantity queued: <span className="text-white">{submission.request.quantity}</span>
+                Quantity queued: <span className="text-slate-900 dark:text-white">{submission.request.quantity}</span>
               </p>
               <div className="pt-2">
                 <Button asChild size="sm" variant="secondary">
@@ -240,7 +261,7 @@ export function BacktestForm() {
               </div>
             </div>
           ) : (
-            <p className="mt-4 text-sm leading-7 text-slate-300">
+            <p className="mt-4 text-sm leading-7 text-slate-600 dark:text-slate-300">
               Submit a run to see the accepted job payload here. The backtest result summary will appear once the
               execution service completes the async job.
             </p>

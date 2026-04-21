@@ -2,7 +2,9 @@
 FROM python:3.11-slim AS build
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+RUN grep -v '^torch' requirements.txt > requirements-no-torch.txt \
+    && pip install --no-cache-dir --prefix=/install -r requirements-no-torch.txt \
+    && pip install --no-cache-dir --prefix=/install --index-url https://download.pytorch.org/whl/cpu torch==2.9.1
 
 # Stage 2: Runtime
 FROM python:3.11-slim
@@ -13,6 +15,7 @@ COPY src/ ./src/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./alembic.ini
 COPY pyproject.toml ./pyproject.toml
+# Reuse the dependencies installed in the build stage and avoid re-resolving torch.
 RUN pip install --no-cache-dir --no-deps -e .
 USER appuser
 EXPOSE 8000

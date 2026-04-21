@@ -14,7 +14,7 @@ import org.springframework.data.repository.query.Param;
 interface StockPriceJpaRepository extends JpaRepository<StockPriceEntity, Long> {
 
     @Query("""
-            SELECT s FROM StockPriceEntity s
+            SELECT s FROM StockPriceEntity s JOIN FETCH s.symbol
             WHERE s.symbol.ticker = :ticker
             AND s.timeFrame = :timeFrame
             AND s.date BETWEEN :from AND :to
@@ -28,7 +28,7 @@ interface StockPriceJpaRepository extends JpaRepository<StockPriceEntity, Long> 
             Pageable pageable);
 
     @Query("""
-            SELECT s FROM StockPriceEntity s
+            SELECT s FROM StockPriceEntity s JOIN FETCH s.symbol
             WHERE s.symbol.ticker = :ticker
             AND s.timeFrame = :timeFrame
             AND s.date BETWEEN :from AND :to
@@ -41,7 +41,7 @@ interface StockPriceJpaRepository extends JpaRepository<StockPriceEntity, Long> 
             @Param("to") LocalDate to);
 
     @Query("""
-            SELECT s FROM StockPriceEntity s
+            SELECT s FROM StockPriceEntity s JOIN FETCH s.symbol
             WHERE s.symbol.ticker = :ticker AND s.timeFrame = :timeFrame
             ORDER BY s.date DESC
             LIMIT 1

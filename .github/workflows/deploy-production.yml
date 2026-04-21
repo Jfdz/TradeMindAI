@@ -1,0 +1,135 @@
+name: Deploy — Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Git SHA to deploy (defaults to latest main)
+        required: false
+        type: string
+      confirm:
+        description: Type "deploy" to confirm production deployment
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "deploy" ]; then
+            echo "Confirmation string must be 'deploy'. Got: ${{ github.event.inputs.confirm }}"
+            exit 1
+          fi
+
+  approval:
+    name: Manual approval gate
+    needs: validate
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://trading-saas.example.com
+    steps:
+      - name: Approved
+        run: echo "Production deployment approved by ${{ github.actor }}"
+
+  deploy-production:
+    name: Deploy to production
+    needs: approval
+    runs-on: ubuntu-latest
+
+    env:
+      DEPLOY_SHA: ${{ github.event.inputs.sha || github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.29.0
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.PROD_KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Apply namespace and base manifests
+        run: |
+          kubectl apply -f infrastructure/k8s/namespaces/trading-saas.yml
+          kubectl apply -k infrastructure/k8s/base/
+
+      - name: Rolling deploy — market-data-service
+        run: |
+          kubectl set image deployment/market-data-service \
+            market-data-service=ghcr.io/${{ github.repository }}/market-data-service:${{ env.DEPLOY_SHA }} \
+            -n trading-saas
+          kubectl rollout status deployment/market-data-service -n trading-saas --timeout=10m
+
+      - name: Rolling deploy — trading-core-service
+        run: |
+          kubectl set image deployment/trading-core-service \
+            trading-core-service=ghcr.io/${{ github.repository }}/trading-core-service:${{ env.DEPLOY_SHA }} \
+            -n trading-saas
+          kubectl rollout status deployment/trading-core-service -n trading-saas --timeout=10m
+
+      - name: Rolling deploy — ai-engine
+        run: |
+          kubectl set image deployment/ai-engine \
+            ai-engine=ghcr.io/${{ github.repository }}/ai-engine:${{ env.DEPLOY_SHA }} \
+            -n trading-saas
+          kubectl rollout status deployment/ai-engine -n trading-saas --timeout=10m
+
+      - name: Rolling deploy — web-app
+        run: |
+          kubectl set image deployment/web-app \
+            web-app=ghcr.io/${{ github.repository }}/web-app:${{ env.DEPLOY_SHA }} \
+            -n trading-saas
+          kubectl rollout status deployment/web-app -n trading-saas --timeout=10m
+
+      - name: Production smoke tests
+        run: |
+          echo "Waiting for production ingress to stabilize..."
+          sleep 60
+          # Critical path health checks
+          curl -f --retry 3 --retry-delay 10 https://trading-saas.example.com/api/health || exit 1
+          curl -f --retry 3 --retry-delay 10 https://api.trading-saas.example.com/actuator/health || exit 1
+          # Verify auth endpoint responds
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            https://api.trading-saas.example.com/api/v1/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"smoke@test.invalid","password":"invalid"}')
+          if [ "$STATUS" != "401" ]; then
+            echo "Auth endpoint unexpected response: $STATUS (expected 401)"
+            exit 1
+          fi
+          echo "Production smoke tests passed"
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Production deploy FAILED — initiating rollback"
+          kubectl rollout undo deployment/market-data-service -n trading-saas
+          kubectl rollout undo deployment/trading-core-service -n trading-saas
+          kubectl rollout undo deployment/ai-engine -n trading-saas
+          kubectl rollout undo deployment/web-app -n trading-saas
+          echo "Rollback complete"
+          exit 1
+
+      - name: Tag release
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "prod-$(date +%Y%m%d-%H%M)-${{ env.DEPLOY_SHA }}"
+          git push origin --tags

@@ -36,7 +36,7 @@ export default function HomePage() {
         <div className="relative mx-auto max-w-7xl px-6 py-8 lg:px-10">
           <header className="flex items-center justify-between border-b border-white/10 pb-5">
             <div>
-              <p className="text-xs uppercase tracking-[0.45em] text-gold-300/80">TradeMindAI</p>
+              <p className="text-xs uppercase tracking-[0.45em] text-amber-600 dark:text-gold-300/80">TradeMindAI</p>
               <h1 className="mt-2 text-lg font-semibold tracking-wide text-white">Landing page</h1>
             </div>
             <nav className="flex items-center gap-3 text-sm text-slate-300">
@@ -51,7 +51,7 @@ export default function HomePage() {
 
           <div className="grid gap-14 py-16 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             <div className="max-w-3xl">
-              <p className="inline-flex rounded-full border border-gold-300/30 bg-gold-300/10 px-4 py-1 text-xs font-medium uppercase tracking-[0.35em] text-gold-300">
+              <p className="inline-flex rounded-full border border-gold-300/30 bg-gold-300/10 px-4 py-1 text-xs font-medium uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300">
                 FEAT-15 PBI-01
               </p>
               <h2 className="mt-6 text-5xl font-semibold leading-tight text-white sm:text-6xl">
@@ -84,7 +84,7 @@ export default function HomePage() {
             <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-glow backdrop-blur">
               <div className="grid gap-4">
                 <div className="rounded-3xl border border-gold-300/20 bg-gradient-to-br from-gold-300/10 to-mint-400/10 p-5">
-                  <p className="text-xs uppercase tracking-[0.35em] text-gold-300/80">What you get</p>
+                  <p className="text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300/80">What you get</p>
                   <div className="mt-4 space-y-3 text-sm leading-6 text-slate-200">
                     <p>Real-time signal view with confidence and risk context.</p>
                     <p>Strategy controls for user-owned trading plans.</p>
