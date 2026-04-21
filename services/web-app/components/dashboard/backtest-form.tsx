@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -47,7 +48,9 @@ const backtestSchema = z
 type BacktestFormValues = z.infer<typeof backtestSchema>;
 
 const fieldClassName =
-  "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 transition placeholder:text-slate-400 focus:border-gold-300/60 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500";
+  "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 transition placeholder:text-slate-400 focus:border-gold-300/60 dark:border-white/10 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500";
+
+const optionClassName = "bg-white text-slate-900 dark:bg-slate-800 dark:text-white";
 
 function getSymbolPrice(symbol: string) {
   return symbolOptions.find((option) => option.symbol === symbol)?.price ?? symbolOptions[0].price;
@@ -124,9 +127,27 @@ export function BacktestForm() {
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Symbol</span>
-              <select className={fieldClassName} {...register("symbol")}>
+              <select
+                className={fieldClassName}
+                {...register("symbol")}
+                onChange={async (e) => {
+                  register("symbol").onChange(e);
+                  const selected = e.target.value;
+                  try {
+                    const available = await apiClient.checkSymbolAvailability(selected);
+                    if (!available) {
+                      toast.warning("No market data available", {
+                        description: `${selected} has no price data in the database for the selected date range. The backtest will fail.`,
+                        duration: 6000,
+                      });
+                    }
+                  } catch {
+                    // silently ignore availability check errors
+                  }
+                }}
+              >
                 {symbolOptions.map((option) => (
-                  <option key={option.symbol} value={option.symbol}>
+                  <option key={option.symbol} className={optionClassName} value={option.symbol}>
                     {option.symbol} - {option.label}
                   </option>
                 ))}
@@ -138,7 +159,7 @@ export function BacktestForm() {
               <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Strategy</span>
               <select className={fieldClassName} {...register("strategyId")}>
                 {strategyOptions.map((strategy) => (
-                  <option key={strategy.id} value={strategy.id}>
+                  <option key={strategy.id} className={optionClassName} value={strategy.id}>
                     {strategy.name}
                   </option>
                 ))}

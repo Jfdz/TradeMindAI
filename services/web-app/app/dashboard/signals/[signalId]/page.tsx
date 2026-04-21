@@ -4,8 +4,15 @@ import { notFound } from "next/navigation";
 import { SignalChart } from "@/components/dashboard/signal-chart";
 import { formatConfidence, formatPrice, formatSignalDate, getSignalById, getSignalChartData } from "@/lib/dashboard/signals";
 
-export default function SignalDetailPage({ params }: { params: { signalId: string } }) {
-  const signal = getSignalById(params.signalId);
+type SignalDetailPageProps = {
+  params: Promise<{
+    signalId: string;
+  }>;
+};
+
+export default async function SignalDetailPage({ params }: SignalDetailPageProps) {
+  const { signalId } = await params;
+  const signal = getSignalById(signalId);
 
   if (!signal) {
     notFound();

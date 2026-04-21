@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.tradingsaas.tradingcore.application.usecase.backtest.BacktestExecutionService;
 import com.tradingsaas.tradingcore.domain.model.backtest.BacktestJob;
+import com.tradingsaas.tradingcore.domain.model.backtest.OhlcvBar;
+import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort;
 import com.tradingsaas.tradingcore.domain.model.backtest.BacktestMetrics;
 import com.tradingsaas.tradingcore.domain.model.backtest.BacktestRequest;
 import com.tradingsaas.tradingcore.domain.model.backtest.BacktestResult;
@@ -24,7 +26,7 @@ class BacktestControllerTest {
     @Test
     void submitBacktestShouldReturnAcceptedJobSnapshot() {
         BacktestJob job = job();
-        BacktestController controller = new BacktestController(new StubService(job));
+        BacktestController controller = new BacktestController(new StubService(job), new StubMarketDataPort());
 
         BacktestController.BacktestJobResponse response = controller.submitBacktest(
                 new BacktestController.BacktestSubmissionRequest("AAPL", LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 5), 10)
@@ -38,7 +40,7 @@ class BacktestControllerTest {
     @Test
     void getTradesShouldExposeClosedTrades() {
         BacktestJob job = job();
-        BacktestController controller = new BacktestController(new StubService(job));
+        BacktestController controller = new BacktestController(new StubService(job), new StubMarketDataPort());
 
         List<BacktestController.BacktestTradeResponse> trades = controller.getTrades(job.id());
 
@@ -48,7 +50,7 @@ class BacktestControllerTest {
 
     @Test
     void throwsWhenBacktestMissing() {
-        BacktestController controller = new BacktestController(new StubService(null));
+        BacktestController controller = new BacktestController(new StubService(null), new StubMarketDataPort());
         assertThrows(BacktestController.BacktestNotFoundException.class, () -> controller.getBacktest(UUID.randomUUID()));
     }
 
@@ -75,6 +77,18 @@ class BacktestControllerTest {
                 Instant.parse("2026-04-17T12:05:00Z"),
                 null
         );
+    }
+
+    private static final class StubMarketDataPort implements HistoricalMarketDataPort {
+        @Override
+        public List<OhlcvBar> loadHistoricalBars(String symbol, java.time.LocalDate from, java.time.LocalDate to) {
+            return List.of();
+        }
+
+        @Override
+        public boolean hasData(String symbol) {
+            return true;
+        }
     }
 
     private static final class StubService implements BacktestExecutionService {

@@ -10,6 +10,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
+import reactor.core.publisher.Mono;
 
 @Component
 public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
@@ -30,7 +31,12 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
                         .queryParam("size", 1000)
                         .build(symbol))
                 .retrieve()
+                .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        res -> Mono.empty()
+                )
                 .bodyToMono(PriceHistoryResponse.class)
+                .defaultIfEmpty(new PriceHistoryResponse(List.of()))
                 .block();
 
         if (response == null || response.content() == null) {
@@ -46,6 +52,18 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
                         p.ohlcv().close(),
                         p.ohlcv().volume()))
                 .toList();
+    }
+
+    @Override
+    public boolean hasData(String symbol) {
+        return Boolean.TRUE.equals(webClient.get()
+                .uri("/api/v1/prices/{ticker}/latest", symbol)
+                .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), res -> Mono.empty())
+                .bodyToMono(String.class)
+                .map(body -> true)
+                .defaultIfEmpty(false)
+                .block());
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

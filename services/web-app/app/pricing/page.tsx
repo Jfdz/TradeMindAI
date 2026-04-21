@@ -66,12 +66,12 @@ export default function PricingPage() {
               <h1 className="mt-2 text-lg font-semibold tracking-wide text-white">Pricing</h1>
             </div>
             <nav className="flex items-center gap-3 text-sm text-slate-300">
-              <a className="transition hover:text-white" href="/">
+              <Link className="transition hover:text-white" href="/">
                 Home
-              </a>
-              <a className="transition hover:text-white" href="/auth/register">
+              </Link>
+              <Link className="transition hover:text-white" href="/auth/register">
                 Register
-              </a>
+              </Link>
             </nav>
           </header>
 

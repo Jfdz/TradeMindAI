@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import Link from "next/link";
 
 import { BenchmarkComparisonChart } from "@/components/charts/BenchmarkComparisonChart";
@@ -11,8 +12,6 @@ import {
   demoBenchmarkCurve,
   demoDrawdownCurve,
   demoEquityCurve,
-  demoMetricCards,
-  demoTrades,
   formatMoney,
   formatPercent,
 } from "@/lib/dashboard/backtests";
@@ -20,6 +19,35 @@ import {
 type BacktestResultsProps = {
   backtestId: string;
 };
+
+function FailedState({ message }: { message: string }) {
+  return (
+    <article className="rounded-[2rem] border border-slate-200 bg-slate-100 p-8 shadow-glow dark:border-white/10 dark:bg-white/5">
+      <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-rose-100 dark:bg-rose-500/10">
+          <svg className="h-7 w-7 text-rose-500 dark:text-rose-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+          </svg>
+        </div>
+
+        <div className="flex-1">
+          <p className="text-xs uppercase tracking-[0.35em] text-rose-500 dark:text-rose-400/80">Backtest failed</p>
+          <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">Something went wrong</p>
+          <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">{message}</p>
+        </div>
+      </div>
+
+      <div className="mt-8 flex flex-col gap-3 border-t border-slate-200 pt-6 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Adjust your symbol, date range, or strategy and try again.
+        </p>
+        <Button asChild variant="secondary" className="shrink-0">
+          <Link href="/dashboard/backtests">Run another backtest</Link>
+        </Button>
+      </div>
+    </article>
+  );
+}
 
 function LoadingState() {
   return (
@@ -35,6 +63,7 @@ export function BacktestResults({ backtestId }: BacktestResultsProps) {
   const [job, setJob] = useState<BacktestJobResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const toastFiredRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -63,8 +92,26 @@ export function BacktestResults({ backtestId }: BacktestResultsProps) {
     };
   }, [backtestId]);
 
+  useEffect(() => {
+    if (job?.status === "FAILED" && !toastFiredRef.current) {
+      toastFiredRef.current = true;
+      toast.error("Backtest failed", {
+        description: job.errorMessage ?? "The backtest could not be completed.",
+        duration: 8000,
+      });
+    }
+  }, [job]);
+
   if (isLoading) {
     return <LoadingState />;
+  }
+
+  if (error || !job) {
+    return <FailedState message={error ?? `No backtest job found for ID ${backtestId}. The job may have expired or the service was restarted.`} />;
+  }
+
+  if (job.status === "FAILED") {
+    return <FailedState message={job.errorMessage ?? "The backtest could not be completed. Please check your configuration and try again."} />;
   }
 
   const latestJob = job;
@@ -72,14 +119,14 @@ export function BacktestResults({ backtestId }: BacktestResultsProps) {
   const result = latestJob?.result;
   const metricCards = result
     ? [
-        { label: "Total return", value: formatPercent(result.totalReturn * 100), tone: "text-emerald-600 dark:text-mint-300" },
-        { label: "Annualized return", value: formatPercent(result.annualizedReturn * 100), tone: "text-slate-900 dark:text-white" },
-        { label: "Sharpe ratio", value: result.sharpeRatio.toFixed(2), tone: "text-amber-600 dark:text-gold-300" },
-        { label: "Sortino ratio", value: result.sortinoRatio.toFixed(2), tone: "text-slate-900 dark:text-white" },
-        { label: "Max drawdown", value: formatPercent(result.maxDrawdown * 100), tone: "text-rose-400 dark:text-rose-300" },
-        { label: "Profit factor", value: result.profitFactor.toFixed(2), tone: "text-amber-600 dark:text-gold-300" },
+        { label: "Total return", value: formatPercent(Number(result.totalReturn) * 100), tone: result.totalReturn >= 0 ? "text-emerald-600 dark:text-mint-300" : "text-rose-400 dark:text-rose-300" },
+        { label: "Annualized return", value: formatPercent(Number(result.annualizedReturn) * 100), tone: result.annualizedReturn >= 0 ? "text-emerald-600 dark:text-mint-300" : "text-rose-400 dark:text-rose-300" },
+        { label: "Sharpe ratio", value: Number(result.sharpeRatio).toFixed(2), tone: result.sharpeRatio >= 0 ? "text-amber-600 dark:text-gold-300" : "text-rose-400 dark:text-rose-300" },
+        { label: "Sortino ratio", value: Number(result.sortinoRatio).toFixed(2), tone: result.sortinoRatio >= 0 ? "text-slate-900 dark:text-white" : "text-rose-400 dark:text-rose-300" },
+        { label: "Max drawdown", value: formatPercent(Number(result.maxDrawdown) * 100), tone: "text-rose-400 dark:text-rose-300" },
+        { label: "Profit factor", value: isFinite(Number(result.profitFactor)) ? Number(result.profitFactor).toFixed(2) : "∞", tone: "text-amber-600 dark:text-gold-300" },
       ]
-    : demoMetricCards;
+    : [];
 
   const tradeRows = result
     ? result.trades.map((trade, index) => ({
@@ -92,7 +139,7 @@ export function BacktestResults({ backtestId }: BacktestResultsProps) {
         pnl: trade.pnl,
         closedAt: latestJob?.updatedAt ?? latestJob?.createdAt ?? "2026-04-17",
       }))
-    : demoTrades;
+    : [];
 
   const equityCurve = demoEquityCurve;
   const drawdownCurve = demoDrawdownCurve;
@@ -107,9 +154,9 @@ export function BacktestResults({ backtestId }: BacktestResultsProps) {
             <div>
               <h1 className="text-3xl font-semibold text-slate-900 dark:text-white">Results for {backtestId}</h1>
               <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                {result
+                {status === "COMPLETED"
                   ? "Loaded result metrics and trade summary for the completed run."
-                  : "The job is still pending. A sample results snapshot is shown so the page remains useful while the backtest executes."}
+                  : "The job is still running. Refresh this page once it has completed to see the results."}
               </p>
             </div>
             <div className="rounded-3xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-700 dark:border-white/10 dark:bg-ink-800/70 dark:text-slate-200">
@@ -132,12 +179,6 @@ export function BacktestResults({ backtestId }: BacktestResultsProps) {
           </div>
         </article>
       </section>
-
-      {error ? (
-        <article className="rounded-[2rem] border border-rose-300/30 bg-rose-50 p-5 text-sm text-rose-700 shadow-glow dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-100">
-          {error}
-        </article>
-      ) : null}
 
       <section className="grid gap-4 md:grid-cols-3">
         {metricCards.map((card) => (

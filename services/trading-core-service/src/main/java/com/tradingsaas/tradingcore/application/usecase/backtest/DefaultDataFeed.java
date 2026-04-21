@@ -1,5 +1,6 @@
 package com.tradingsaas.tradingcore.application.usecase.backtest;
 
+import com.tradingsaas.tradingcore.domain.exception.InsufficientMarketDataException;
 import com.tradingsaas.tradingcore.domain.model.backtest.OhlcvBar;
 import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort;
 import java.time.LocalDate;
@@ -23,6 +24,13 @@ class DefaultDataFeed implements DataFeed {
         List<OhlcvBar> sortedBars = historicalMarketDataPort.loadHistoricalBars(symbol, from, to).stream()
                 .sorted(Comparator.comparing(OhlcvBar::timestamp))
                 .toList();
+
+        if (sortedBars.isEmpty()) {
+            throw new InsufficientMarketDataException(
+                    "No price data found for " + symbol + " between " + from + " and " + to +
+                    ". Please select a symbol and date range with available market data.");
+        }
+
         return new Cursor(sortedBars);
     }
 

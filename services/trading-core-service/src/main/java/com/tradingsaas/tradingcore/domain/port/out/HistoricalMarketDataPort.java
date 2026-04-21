@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface HistoricalMarketDataPort {
     List<OhlcvBar> loadHistoricalBars(String symbol, LocalDate from, LocalDate to);
+    boolean hasData(String symbol);
 }

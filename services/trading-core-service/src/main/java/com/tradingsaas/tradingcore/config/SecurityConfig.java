@@ -70,6 +70,7 @@ class SecurityConfig {
                 .requestMatchers("/api/v1/prices/**").permitAll()
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/subscriptions/plans").permitAll()
+                .requestMatchers("/api/v1/backtests/symbols/*/available").permitAll()
                 // Admin-only endpoints
                 .requestMatchers("/api/v1/ingestion/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/models/**").hasRole("ADMIN")
