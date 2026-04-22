@@ -56,9 +56,10 @@ jobs:
           version: v0.69.3
           format: sarif
           output: trivy-results.sarif
-          exit-code: '1'
+          exit-code: '0'
           ignore-unfixed: true
           vuln-type: os,library
+          limit-severities-for-sarif: true
           # Fail on CRITICAL or HIGH — MEDIUM/LOW are reported but non-blocking
           severity: CRITICAL,HIGH
           trivyignores: .trivyignore
@@ -79,10 +80,10 @@ jobs:
           image-ref: ${{ inputs.image-ref }}
           version: v0.69.3
           format: table
-          exit-code: '0'
+          exit-code: '1'
           ignore-unfixed: true
           vuln-type: os,library
-          severity: CRITICAL,HIGH,MEDIUM
+          severity: CRITICAL,HIGH
           trivyignores: .trivyignore
           token-setup-trivy: ${{ secrets.GITHUB_TOKEN }}
 
