@@ -138,6 +138,6 @@ jobs:
     secrets: inherit
     uses: ./.github/workflows/trivy-scan.yml
     with:
-      image-ref: ghcr.io/jfdz/trademindai/trading-core-service:${{ github.sha }}
+      image-ref: ghcr.io/${{ github.repository }}/trading-core-service:${{ github.sha }}
       dockerfile: services/trading-core-service/Dockerfile
       context: services/trading-core-service

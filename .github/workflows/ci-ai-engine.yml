@@ -134,6 +134,6 @@ jobs:
     secrets: inherit
     uses: ./.github/workflows/trivy-scan.yml
     with:
-      image-ref: ghcr.io/jfdz/trademindai/ai-engine:${{ github.sha }}
+      image-ref: ghcr.io/${{ github.repository }}/ai-engine:${{ github.sha }}
       dockerfile: services/ai-engine/Dockerfile
       context: services/ai-engine

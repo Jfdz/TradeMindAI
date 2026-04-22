@@ -35,7 +35,7 @@ Update after every completed PBI: record the last done task and the next in deve
 | FEAT-19: Backtest Configuration Form | SCRUM-290 | `Listo` |
 | FEAT-20: Docker & Container Optimization | SCRUM-298 | `In Development` |
 | FEAT-21: Kubernetes Deployment | SCRUM-301 | `To Do` |
-| FEAT-22: CI/CD Pipelines | SCRUM-307 | `To Do` |
+| FEAT-22: CI/CD Pipelines | SCRUM-307 | `In Development` |
 | FEAT-23: Observability | SCRUM-311 | `Listo` |
 | FEAT-24: Security Hardening | SCRUM-316 | `Listo` |
 
@@ -43,11 +43,11 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Current Sprint 8 Snapshot
 
-**Last completed PBI:** `E6-F24-PBI-04` - Load testing with k6
-**Jira:** `SCRUM-316` -> `Listo`
-**Next PBI:** `E6-F20-PBI-01` - Production Docker Compose
-**Jira:** `SCRUM-299` -> `In Development`
-**Branch:** `feature-E6-F20-docker-optimization`
+**Last completed PBI:** `E6-F22-PBI-02` - Staging deploy pipeline
+**Jira:** `SCRUM-309` -> `To Do`
+**Next PBI:** `E6-F22-PBI-03` - Production deploy pipeline
+**Jira:** `SCRUM-310` -> `To Do`
+**Branch:** `feature-E6-F22-ci-cd-pipelines`
 
 ---
 
@@ -75,19 +75,19 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Next In Development
 
-**PBI:** `E6-F22-PBI-01` - GitHub Actions per service
+**PBI:** `E6-F22-PBI-03` - Production deploy pipeline
 **Feature:** FEAT-22: CI/CD Pipelines
 **Epic:** EPIC-6: Production & DevOps
 **Sprint:** S8
-**Jira:** SCRUM-308 -> `In Development`
+**Jira:** SCRUM-310 -> `To Do`
 
 ### Acceptance criteria
 
-- Path-triggered workflows: build → test → Docker → push per service
-- Given PR changes `services/ai-engine/` — When CI runs — Then only ai-engine pipeline triggers
-- Each pipeline: build image, run tests, push to registry on merge to main/develop
+- Auto-deploy to staging on merge to main
+- Given CI passes on `main`, when the merge completes, then staging updates within 10 minutes
+- Staging deployment uses the exact commit SHA that was merged
+- Smoke tests verify the staging web app and API health endpoints after rollout
 
----
 
 ## Backlog Queue (Sprint 8)
 
@@ -100,9 +100,9 @@ Update after every completed PBI: record the last done task and the next in deve
 | E6-F21-PBI-03 | Ingress + TLS | Listo |
 | E6-F21-PBI-04 | NetworkPolicies | Listo |
 | E6-F21-PBI-05 | ConfigMaps and Secrets | Listo |
-| E6-F22-PBI-01 | GitHub Actions per service | In Development |
-| E6-F22-PBI-02 | Staging deploy pipeline | To Do |
-| E6-F22-PBI-03 | Production deploy pipeline | To Do |
+| E6-F22-PBI-01 | GitHub Actions per service | Listo |
+| E6-F22-PBI-02 | Staging deploy pipeline | Listo |
+| E6-F22-PBI-03 | Production deploy pipeline | In Development |
 | E6-F23-PBI-01 | Structured JSON logging | Listo |
 | E6-F23-PBI-02 | Prometheus metrics | Listo |
 | E6-F23-PBI-03 | Grafana dashboards | Listo |

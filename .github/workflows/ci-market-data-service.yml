@@ -109,6 +109,6 @@ jobs:
     secrets: inherit
     uses: ./.github/workflows/trivy-scan.yml
     with:
-      image-ref: ghcr.io/jfdz/trademindai/market-data-service:${{ github.sha }}
+      image-ref: ghcr.io/${{ github.repository }}/market-data-service:${{ github.sha }}
       dockerfile: services/market-data-service/Dockerfile
       context: services/market-data-service
