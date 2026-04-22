@@ -72,28 +72,28 @@ jobs:
       - name: Rolling deploy — market-data-service
         run: |
           kubectl set image deployment/market-data-service \
-            market-data-service=ghcr.io/${{ github.repository }}/market-data-service:${{ env.DEPLOY_SHA }} \
+            market-data-service=ghcr.io/${GITHUB_REPOSITORY,,}/market-data-service:${{ env.DEPLOY_SHA }} \
             -n trading-saas
           kubectl rollout status deployment/market-data-service -n trading-saas --timeout=10m
 
       - name: Rolling deploy — trading-core-service
         run: |
           kubectl set image deployment/trading-core-service \
-            trading-core-service=ghcr.io/${{ github.repository }}/trading-core-service:${{ env.DEPLOY_SHA }} \
+            trading-core-service=ghcr.io/${GITHUB_REPOSITORY,,}/trading-core-service:${{ env.DEPLOY_SHA }} \
             -n trading-saas
           kubectl rollout status deployment/trading-core-service -n trading-saas --timeout=10m
 
       - name: Rolling deploy — ai-engine
         run: |
           kubectl set image deployment/ai-engine \
-            ai-engine=ghcr.io/${{ github.repository }}/ai-engine:${{ env.DEPLOY_SHA }} \
+            ai-engine=ghcr.io/${GITHUB_REPOSITORY,,}/ai-engine:${{ env.DEPLOY_SHA }} \
             -n trading-saas
           kubectl rollout status deployment/ai-engine -n trading-saas --timeout=10m
 
       - name: Rolling deploy — web-app
         run: |
           kubectl set image deployment/web-app \
-            web-app=ghcr.io/${{ github.repository }}/web-app:${{ env.DEPLOY_SHA }} \
+            web-app=ghcr.io/${GITHUB_REPOSITORY,,}/web-app:${{ env.DEPLOY_SHA }} \
             -n trading-saas
           kubectl rollout status deployment/web-app -n trading-saas --timeout=10m
 

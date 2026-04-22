@@ -46,7 +46,7 @@ jobs:
       - name: Update image tags in staging overlay
         run: |
           SHA=${{ github.sha }}
-          REGISTRY=ghcr.io/${{ github.repository }}
+          REGISTRY=ghcr.io/${GITHUB_REPOSITORY,,}
           cd infrastructure/k8s/overlays/staging
           # Patch each deployment with the new image SHA
           kubectl set image deployment/market-data-service \
@@ -70,28 +70,28 @@ jobs:
       - name: Rolling deploy — market-data-service
         run: |
           kubectl set image deployment/market-data-service \
-            market-data-service=ghcr.io/${{ github.repository }}/market-data-service:${{ github.sha }} \
+            market-data-service=ghcr.io/${GITHUB_REPOSITORY,,}/market-data-service:${{ github.sha }} \
             -n trading-saas
           kubectl rollout status deployment/market-data-service -n trading-saas --timeout=5m
 
       - name: Rolling deploy — trading-core-service
         run: |
           kubectl set image deployment/trading-core-service \
-            trading-core-service=ghcr.io/${{ github.repository }}/trading-core-service:${{ github.sha }} \
+            trading-core-service=ghcr.io/${GITHUB_REPOSITORY,,}/trading-core-service:${{ github.sha }} \
             -n trading-saas
           kubectl rollout status deployment/trading-core-service -n trading-saas --timeout=5m
 
       - name: Rolling deploy — ai-engine
         run: |
           kubectl set image deployment/ai-engine \
-            ai-engine=ghcr.io/${{ github.repository }}/ai-engine:${{ github.sha }} \
+            ai-engine=ghcr.io/${GITHUB_REPOSITORY,,}/ai-engine:${{ github.sha }} \
             -n trading-saas
           kubectl rollout status deployment/ai-engine -n trading-saas --timeout=5m
 
       - name: Rolling deploy — web-app
         run: |
           kubectl set image deployment/web-app \
-            web-app=ghcr.io/${{ github.repository }}/web-app:${{ github.sha }} \
+            web-app=ghcr.io/${GITHUB_REPOSITORY,,}/web-app:${{ github.sha }} \
             -n trading-saas
           kubectl rollout status deployment/web-app -n trading-saas --timeout=5m
 

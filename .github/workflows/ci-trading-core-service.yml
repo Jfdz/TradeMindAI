@@ -14,7 +14,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/trading-core-service
 
 jobs:
   build-test:
@@ -52,6 +51,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Compute image coordinates
+        id: image
+        run: echo "name=${GITHUB_REPOSITORY,,}/trading-core-service" >> "$GITHUB_OUTPUT"
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -108,7 +111,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}
           tags: |
             type=sha,prefix=
             type=ref,event=branch
@@ -128,8 +131,9 @@ jobs:
     name: Security Scan
     needs: docker-build-push
     if: github.event_name == 'push'
+    secrets: inherit
     uses: ./.github/workflows/trivy-scan.yml
     with:
-      image-ref: ghcr.io/${{ github.repository }}/trading-core-service:${{ github.sha }}
+      image-ref: ghcr.io/jfdz/trademindai/trading-core-service:${{ github.sha }}
       dockerfile: services/trading-core-service/Dockerfile
       context: services/trading-core-service

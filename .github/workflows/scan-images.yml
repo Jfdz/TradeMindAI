@@ -13,6 +13,7 @@ on:
 jobs:
   scan-market-data-service:
     name: Scan market-data-service
+    secrets: inherit
     uses: ./.github/workflows/trivy-scan.yml
     with:
       image-ref: trading-saas/market-data-service:${{ github.sha }}
@@ -21,6 +22,7 @@ jobs:
 
   scan-trading-core-service:
     name: Scan trading-core-service
+    secrets: inherit
     uses: ./.github/workflows/trivy-scan.yml
     with:
       image-ref: trading-saas/trading-core-service:${{ github.sha }}
@@ -29,6 +31,7 @@ jobs:
 
   scan-ai-engine:
     name: Scan ai-engine
+    secrets: inherit
     uses: ./.github/workflows/trivy-scan.yml
     with:
       image-ref: trading-saas/ai-engine:${{ github.sha }}
@@ -37,6 +40,7 @@ jobs:
 
   scan-web-app:
     name: Scan web-app
+    secrets: inherit
     uses: ./.github/workflows/trivy-scan.yml
     with:
       image-ref: trading-saas/web-app:${{ github.sha }}
