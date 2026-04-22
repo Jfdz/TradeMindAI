@@ -8,9 +8,17 @@ scrape_configs:
     static_configs:
       - targets:
           - market-data-service:8081
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: service
+        replacement: market-data-service
 
   - job_name: trading-core-service
     metrics_path: /actuator/prometheus
     static_configs:
       - targets:
           - trading-core-service:8082
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: service
+        replacement: trading-core-service
