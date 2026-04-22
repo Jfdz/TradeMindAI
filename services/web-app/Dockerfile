@@ -1,7 +1,7 @@
 # Stage 1: install all dependencies needed to build the Next.js app
 FROM node:22-alpine AS deps
 WORKDIR /app
-RUN npm install -g npm@latest
+RUN apk add --no-cache npm
 COPY package.json package-lock.json ./
 RUN npm ci
 
@@ -9,7 +9,7 @@ RUN npm ci
 FROM node:22-alpine AS build
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm install -g npm@latest
+RUN apk add --no-cache npm
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
@@ -20,7 +20,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN npm install -g npm@latest
+RUN apk add --no-cache npm
 RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
 
 COPY package.json package-lock.json ./
