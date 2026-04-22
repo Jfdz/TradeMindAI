@@ -131,6 +131,10 @@ jobs:
     name: Security Scan
     needs: docker-build-push
     if: github.event_name == 'push'
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
     secrets: inherit
     uses: ./.github/workflows/trivy-scan.yml
     with:
