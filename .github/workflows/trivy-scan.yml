@@ -35,6 +35,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Normalize image reference
+        id: normalize
+        run: |
+          set -euo pipefail
+          echo "image-ref=$(echo '${{ inputs.image-ref }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -45,14 +51,14 @@ jobs:
           file: ${{ inputs.dockerfile }}
           push: false
           load: true
-          tags: ${{ inputs.image-ref }}
+          tags: ${{ steps.normalize.outputs.image-ref }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.35.0
         with:
-          image-ref: ${{ inputs.image-ref }}
+          image-ref: ${{ steps.normalize.outputs.image-ref }}
           version: v0.69.3
           format: sarif
           output: trivy-results.sarif
@@ -71,13 +77,13 @@ jobs:
         continue-on-error: true
         with:
           sarif_file: trivy-results.sarif
-          category: trivy-${{ inputs.image-ref }}
+          category: trivy-${{ steps.normalize.outputs.image-ref }}
 
       - name: Run Trivy for human-readable table output
         uses: aquasecurity/trivy-action@0.35.0
         if: always()
         with:
-          image-ref: ${{ inputs.image-ref }}
+          image-ref: ${{ steps.normalize.outputs.image-ref }}
           version: v0.69.3
           format: table
           exit-code: '1'
