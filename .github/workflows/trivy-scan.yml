@@ -24,6 +24,10 @@ jobs:
   trivy:
     name: Trivy scan — ${{ inputs.image-ref }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
     outputs:
       result: ${{ steps.set-result.outputs.result }}
 
