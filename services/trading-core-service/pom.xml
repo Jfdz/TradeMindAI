@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.4</version>
+        <version>3.4.5</version>
         <relativePath/>
     </parent>
 
@@ -25,7 +25,32 @@
         <testcontainers.version>1.19.8</testcontainers.version>
         <jjwt.version>0.12.6</jjwt.version>
         <bucket4j.version>8.10.1</bucket4j.version>
+        <postgresql.version>42.7.7</postgresql.version>
+        <netty.version>4.1.132.Final</netty.version>
+        <tomcat.version>10.1.54</tomcat.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-bom</artifactId>
+                <version>${netty.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-core</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${postgresql.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <!-- ── Web ──────────────────────────────────────────────────────────── -->
