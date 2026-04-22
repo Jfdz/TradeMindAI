@@ -20,11 +20,11 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN apk add --no-cache npm
 RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
 
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
@@ -34,4 +34,4 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["npm", "run", "start"]
+CMD ["node", "./node_modules/next/dist/bin/next", "start"]
