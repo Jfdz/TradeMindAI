@@ -2,12 +2,14 @@
 FROM python:3.11-slim AS build
 WORKDIR /app
 COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN grep -v '^torch' requirements.txt > requirements-no-torch.txt \
     && pip install --no-cache-dir --prefix=/install -r requirements-no-torch.txt \
     && pip install --no-cache-dir --prefix=/install --index-url https://download.pytorch.org/whl/cpu torch==2.9.1
 
 # Stage 2: Runtime
 FROM python:3.11-slim
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN useradd -m -r appuser
 WORKDIR /app
 COPY --from=build /install /usr/local
