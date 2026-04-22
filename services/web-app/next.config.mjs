@@ -1,5 +1,9 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 /** @type {import('next').NextConfig} */
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
+const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
 function getOrigin(url) {
   try {
@@ -37,6 +41,7 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
+  outputFileTracingRoot: workspaceRoot,
   async headers() {
     return [
       {
