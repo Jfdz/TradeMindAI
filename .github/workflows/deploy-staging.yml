@@ -105,11 +105,15 @@ jobs:
 
       - name: Smoke tests
         run: |
+          set -euo pipefail
           echo "Waiting for ingress to stabilize..."
           sleep 30
-          # Health checks against staging
-          curl -f https://staging.trading-saas.example.com/api/health || exit 1
-          curl -f https://api.staging.trading-saas.example.com/actuator/health || exit 1
+          retry_curl() {
+            curl --fail --silent --show-error --retry 3 --retry-delay 10 --retry-all-errors "$@"
+          }
+          retry_curl https://trading-saas.example.com/
+          retry_curl https://staging.trading-saas.example.com/api/health
+          retry_curl https://api.staging.trading-saas.example.com/actuator/health
           echo "Smoke tests passed for SHA ${{ env.DEPLOY_SHA }}"
 
       - name: Notify on failure

@@ -46,7 +46,7 @@ Update after every completed PBI: record the last done task and the next in deve
 **Last completed PBI:** `E6-F22-PBI-02` - Staging deploy pipeline
 **Jira:** `SCRUM-309` -> `To Do`
 **Next PBI:** `E6-F22-PBI-03` - Production deploy pipeline
-**Jira:** `SCRUM-310` -> `To Do`
+**Jira:** `SCRUM-310` -> `In Development`
 **Branch:** `feature-E6-F22-ci-cd-pipelines`
 
 ---
@@ -79,14 +79,14 @@ Update after every completed PBI: record the last done task and the next in deve
 **Feature:** FEAT-22: CI/CD Pipelines
 **Epic:** EPIC-6: Production & DevOps
 **Sprint:** S8
-**Jira:** SCRUM-310 -> `To Do`
+**Jira:** SCRUM-310 -> `In Development`
 
 ### Acceptance criteria
 
-- Auto-deploy to staging on merge to main
-- Given CI passes on `main`, when the merge completes, then staging updates within 10 minutes
-- Staging deployment uses the exact commit SHA that was merged
-- Smoke tests verify the staging web app and API health endpoints after rollout
+- Manual approval gate prevents production promotion until explicitly approved
+- Given the release SHA is selected, when images are verified, then production deploys the exact tagged revision
+- Production rollout updates all four services with zero-downtime rollouts
+- Smoke tests verify the production frontend, API health, and auth rejection path
 
 
 ## Backlog Queue (Sprint 8)

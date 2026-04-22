@@ -38,6 +38,9 @@ jobs:
       packages: read
     env:
       DEPLOY_SHA: ${{ github.event.inputs.sha || github.sha }}
+      DEPLOY_NAMESPACE: trading-saas
+      DEPLOY_NAMESPACE: trading-saas
+      DEPLOY_NAMESPACE: trading-saas
     steps:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -72,6 +75,7 @@ jobs:
 
     env:
       DEPLOY_SHA: ${{ github.event.inputs.sha || github.sha }}
+      DEPLOY_NAMESPACE: trading-saas
 
     steps:
       - name: Checkout
@@ -94,7 +98,7 @@ jobs:
       - name: Apply namespace and base manifests
         run: |
           set -euo pipefail
-          kubectl apply -f infrastructure/k8s/namespaces/trading-saas.yml
+          kubectl apply -f infrastructure/k8s/namespaces/${DEPLOY_NAMESPACE}.yml
           kubectl apply -k infrastructure/k8s/base/
 
       - name: Rolling deploy — market-data-service
@@ -102,43 +106,45 @@ jobs:
           set -euo pipefail
           kubectl set image deployment/market-data-service \
             market-data-service=ghcr.io/${GITHUB_REPOSITORY,,}/market-data-service:${{ env.DEPLOY_SHA }} \
-            -n trading-saas
-          kubectl rollout status deployment/market-data-service -n trading-saas --timeout=10m
+            -n "${DEPLOY_NAMESPACE}"
+          kubectl rollout status deployment/market-data-service -n "${DEPLOY_NAMESPACE}" --timeout=10m
 
       - name: Rolling deploy — trading-core-service
         run: |
           set -euo pipefail
           kubectl set image deployment/trading-core-service \
             trading-core-service=ghcr.io/${GITHUB_REPOSITORY,,}/trading-core-service:${{ env.DEPLOY_SHA }} \
-            -n trading-saas
-          kubectl rollout status deployment/trading-core-service -n trading-saas --timeout=10m
+            -n "${DEPLOY_NAMESPACE}"
+          kubectl rollout status deployment/trading-core-service -n "${DEPLOY_NAMESPACE}" --timeout=10m
 
       - name: Rolling deploy — ai-engine
         run: |
           set -euo pipefail
           kubectl set image deployment/ai-engine \
             ai-engine=ghcr.io/${GITHUB_REPOSITORY,,}/ai-engine:${{ env.DEPLOY_SHA }} \
-            -n trading-saas
-          kubectl rollout status deployment/ai-engine -n trading-saas --timeout=10m
+            -n "${DEPLOY_NAMESPACE}"
+          kubectl rollout status deployment/ai-engine -n "${DEPLOY_NAMESPACE}" --timeout=10m
 
       - name: Rolling deploy — web-app
         run: |
           set -euo pipefail
           kubectl set image deployment/web-app \
             web-app=ghcr.io/${GITHUB_REPOSITORY,,}/web-app:${{ env.DEPLOY_SHA }} \
-            -n trading-saas
-          kubectl rollout status deployment/web-app -n trading-saas --timeout=10m
+            -n "${DEPLOY_NAMESPACE}"
+          kubectl rollout status deployment/web-app -n "${DEPLOY_NAMESPACE}" --timeout=10m
 
       - name: Production smoke tests
         run: |
           set -euo pipefail
           echo "Waiting for production ingress to stabilize..."
           sleep 60
-          # Critical path health checks
-          curl -f --retry 3 --retry-delay 10 https://trading-saas.example.com/api/health || exit 1
-          curl -f --retry 3 --retry-delay 10 https://api.trading-saas.example.com/actuator/health || exit 1
-          # Verify auth endpoint responds
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+          retry_curl() {
+            curl --fail --silent --show-error --retry 5 --retry-delay 10 --retry-all-errors "$@"
+          }
+          retry_curl https://trading-saas.example.com/
+          retry_curl https://trading-saas.example.com/api/health
+          retry_curl https://api.trading-saas.example.com/actuator/health
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --retry 5 --retry-delay 10 --retry-all-errors -X POST \
             https://api.trading-saas.example.com/api/v1/auth/login \
             -H "Content-Type: application/json" \
             -d '{"email":"smoke@test.invalid","password":"invalid"}')
@@ -153,10 +159,10 @@ jobs:
         run: |
           set -euo pipefail
           echo "Production deploy FAILED — initiating rollback"
-          kubectl rollout undo deployment/market-data-service -n trading-saas
-          kubectl rollout undo deployment/trading-core-service -n trading-saas
-          kubectl rollout undo deployment/ai-engine -n trading-saas
-          kubectl rollout undo deployment/web-app -n trading-saas
+          kubectl rollout undo deployment/market-data-service -n "${DEPLOY_NAMESPACE}"
+          kubectl rollout undo deployment/trading-core-service -n "${DEPLOY_NAMESPACE}"
+          kubectl rollout undo deployment/ai-engine -n "${DEPLOY_NAMESPACE}"
+          kubectl rollout undo deployment/web-app -n "${DEPLOY_NAMESPACE}"
           echo "Rollback complete"
           exit 1
 
