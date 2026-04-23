@@ -41,7 +41,9 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
-  outputFileTracingRoot: workspaceRoot,
+  // outputFileTracingRoot is needed for local monorepo builds but breaks Vercel
+  // (Vercel sets VERCEL=1 automatically during its builds)
+  ...(process.env.VERCEL !== "1" && { outputFileTracingRoot: workspaceRoot }),
   async headers() {
     return [
       {
