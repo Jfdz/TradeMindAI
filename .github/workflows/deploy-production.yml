@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: https://trading-saas.example.com
+      url: https://trademind.es
     steps:
       - name: Approved
         run: echo "Production deployment approved by ${{ github.actor }}"
@@ -139,11 +139,10 @@ jobs:
           retry_curl() {
             curl --fail --silent --show-error --retry 5 --retry-delay 10 --retry-all-errors "$@"
           }
-          retry_curl https://trading-saas.example.com/
-          retry_curl https://trading-saas.example.com/api/health
-          retry_curl https://api.trading-saas.example.com/actuator/health
+          retry_curl https://trademind.es/
+          retry_curl https://api.trademind.es/actuator/health
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" --retry 5 --retry-delay 10 --retry-all-errors -X POST \
-            https://api.trading-saas.example.com/api/v1/auth/login \
+            https://api.trademind.es/api/v1/auth/login \
             -H "Content-Type: application/json" \
             -d '{"email":"smoke@test.invalid","password":"invalid"}')
           if [ "$STATUS" != "401" ]; then
