@@ -4,6 +4,9 @@ kind: Kustomization
 resources:
   - ../namespaces/trading-saas.yml
   - configmaps.yml
+  - postgres.yml
+  - redis.yml
+  - rabbitmq.yml
   - market-data-service.yml
   - trading-core-service.yml
   - ai-engine.yml

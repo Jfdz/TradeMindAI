@@ -1,3 +1,5 @@
+# TODO before deploying: replace every occurrence of trading-saas.example.com
+# with your real domain (e.g. https://myapp.com / https://api.myapp.com).
 apiVersion: v1
 kind: ConfigMap
 metadata:
