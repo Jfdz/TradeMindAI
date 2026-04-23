@@ -1,0 +1,94 @@
+name: Docker Image Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run weekly on Monday at 06:00 UTC to catch new CVEs in existing images
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  scan-market-data-service:
+    name: Scan market-data-service
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    secrets: inherit
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      image-ref: trading-saas/market-data-service:${{ github.sha }}
+      dockerfile: services/market-data-service/Dockerfile
+      context: services/market-data-service
+
+  scan-trading-core-service:
+    name: Scan trading-core-service
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    secrets: inherit
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      image-ref: trading-saas/trading-core-service:${{ github.sha }}
+      dockerfile: services/trading-core-service/Dockerfile
+      context: services/trading-core-service
+
+  scan-ai-engine:
+    name: Scan ai-engine
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    secrets: inherit
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      image-ref: trading-saas/ai-engine:${{ github.sha }}
+      dockerfile: services/ai-engine/Dockerfile
+      context: services/ai-engine
+
+  scan-web-app:
+    name: Scan web-app
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    secrets: inherit
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      image-ref: trading-saas/web-app:${{ github.sha }}
+      dockerfile: services/web-app/Dockerfile
+      context: services/web-app
+
+  scan-summary:
+    name: Scan Summary
+    needs:
+      - scan-market-data-service
+      - scan-trading-core-service
+      - scan-ai-engine
+      - scan-web-app
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check scan results
+        run: |
+          results=(
+            "${{ needs.scan-market-data-service.result }}"
+            "${{ needs.scan-trading-core-service.result }}"
+            "${{ needs.scan-ai-engine.result }}"
+            "${{ needs.scan-web-app.result }}"
+          )
+          failed=0
+          for r in "${results[@]}"; do
+            if [ "$r" != "success" ]; then
+              failed=1
+            fi
+          done
+          if [ $failed -eq 1 ]; then
+            echo "One or more image scans failed — CRITICAL/HIGH CVEs detected"
+            exit 1
+          fi
+          echo "All image scans passed"

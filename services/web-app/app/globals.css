@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --background: 0 0% 100%;
+  --foreground: 222 47% 11%;
+  --card: 210 40% 98%;
+  --card-foreground: 222 47% 11%;
+  --primary: 39 92% 65%;
+  --primary-foreground: 222 47% 11%;
+  --secondary: 165 71% 58%;
+  --secondary-foreground: 222 47% 11%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 222 47% 11%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 39 92% 65%;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: 217 53% 8%;
+  --foreground: 210 40% 98%;
+  --card: 216 38% 14%;
+  --card-foreground: 210 40% 98%;
+  --primary: 39 92% 65%;
+  --primary-foreground: 222 47% 11%;
+  --secondary: 165 71% 58%;
+  --secondary-foreground: 222 47% 11%;
+  --accent: 216 34% 18%;
+  --accent-foreground: 210 40% 98%;
+  --muted: 215 28% 20%;
+  --muted-foreground: 215 20% 65%;
+  --border: 215 25% 23%;
+  --input: 215 25% 23%;
+  --ring: 39 92% 65%;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+a {
+  text-decoration: none;
+}
+
+* {
+  box-sizing: border-box;
+}

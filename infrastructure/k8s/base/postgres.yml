@@ -1,0 +1,140 @@
+# ConfigMap holding the schema-init script.
+# Mounted into /docker-entrypoint-initdb.d/ so PostgreSQL runs it on first start.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-config
+  namespace: trading-saas
+data:
+  init-schemas.sql: |
+    CREATE SCHEMA IF NOT EXISTS market_data;
+    CREATE SCHEMA IF NOT EXISTS trading_core;
+    CREATE SCHEMA IF NOT EXISTS ai_engine;
+
+    ALTER SCHEMA market_data OWNER TO trading_user;
+    ALTER SCHEMA trading_core OWNER TO trading_user;
+    ALTER SCHEMA ai_engine OWNER TO trading_user;
+
+    CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+    DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'market_data') THEN
+            RAISE EXCEPTION 'Schema market_data was not created';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'trading_core') THEN
+            RAISE EXCEPTION 'Schema trading_core was not created';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'ai_engine') THEN
+            RAISE EXCEPTION 'Schema ai_engine was not created';
+        END IF;
+        RAISE NOTICE 'All 3 schemas created successfully: market_data, trading_core, ai_engine';
+    END $$;
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data-pvc
+  namespace: trading-saas
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 80Gi
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: trading-saas
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: trading_saas
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+          resources:
+            requests:
+              cpu: 256m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 6
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: postgres-data-pvc
+        - name: init-scripts
+          configMap:
+            name: postgres-init-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: trading-saas
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+  type: ClusterIP

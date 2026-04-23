@@ -1,0 +1,139 @@
+name: CI — ai-engine
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'services/ai-engine/**'
+      - '.github/workflows/ci-ai-engine.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'services/ai-engine/**'
+      - '.github/workflows/ci-ai-engine.yml'
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/ai-engine
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: ai_engine_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt -r requirements-dev.txt
+          pip install -e .
+
+      - name: Dependency scan
+        run: |
+          python -m pip install pip-audit
+          pip-audit
+
+      - name: Run linting
+        run: |
+          pip install ruff
+          ruff check src/
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/ai_engine_test
+          APP_ENV: test
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-engine-test-results
+          path: services/ai-engine/pytest-results.xml
+
+  docker-build-push:
+    name: Docker Build & Push
+    needs: build-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute image coordinates
+        id: image
+        run: echo "name=${GITHUB_REPOSITORY,,}/ai-engine" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: services/ai-engine
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  security-scan:
+    name: Security Scan
+    needs: docker-build-push
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    secrets: inherit
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      image-ref: ghcr.io/${{ github.repository }}/ai-engine:${{ github.sha }}
+      dockerfile: services/ai-engine/Dockerfile
+      context: services/ai-engine
