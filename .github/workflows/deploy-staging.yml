@@ -48,7 +48,7 @@ jobs:
   deploy-staging:
     name: Deploy to staging
     needs: check-images
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     env:
       DEPLOY_SHA: ${{ github.event.inputs.sha || github.sha }}
     environment:
@@ -58,17 +58,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
-        with:
-          version: v1.29.0
-
-      - name: Configure kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.STAGING_KUBECONFIG }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
 
       - name: Apply namespace and base manifests
         run: |
