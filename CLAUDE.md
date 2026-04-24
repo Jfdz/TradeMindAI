@@ -33,35 +33,47 @@ Update after every completed PBI: record the last done task and the next in deve
 | FEAT-17: Charts & Visualization | SCRUM-281 | `Listo` |
 | FEAT-18: Backtesting Engine Core | SCRUM-285 | `Listo` |
 | FEAT-19: Backtest Configuration Form | SCRUM-290 | `Listo` |
-| FEAT-20: Docker & Container Optimization | SCRUM-298 | `In Development` |
-| FEAT-21: Kubernetes Deployment | SCRUM-301 | `To Do` |
-| FEAT-22: CI/CD Pipelines | SCRUM-307 | `In Development` |
+| FEAT-20: Docker & Container Optimization | SCRUM-298 | `Listo` |
+| FEAT-21: Kubernetes Deployment | SCRUM-301 | `Listo` |
+| FEAT-22: CI/CD Pipelines | SCRUM-307 | `Listo` |
 | FEAT-23: Observability | SCRUM-311 | `Listo` |
 | FEAT-24: Security Hardening | SCRUM-316 | `Listo` |
 
 ---
 
-## Current Sprint 8 Snapshot
+## Sprint 8 — COMPLETE
 
-**Last completed PBI:** `E6-F22-PBI-02` - Staging deploy pipeline
-**Jira:** `SCRUM-309` -> `To Do`
-**Next PBI:** `E6-F22-PBI-03` - Production deploy pipeline
-**Jira:** `SCRUM-310` -> `In Development`
-**Branch:** `feature-E6-F22-ci-cd-pipelines`
+All Sprint 8 PBIs delivered. EPIC-6 (Production & DevOps) is fully done.
+
+**Last completed PBI:** `E6-F22-PBI-03` - Production deploy pipeline
+**Jira:** `SCRUM-310` -> `Listo`
+**Branch:** `claude/review-deployment-plan-MFCwx`
+**Completed:** 2026-04-24
 
 ---
 
 ## Last Completed Task
 
-**PBI:** `E6-F21-PBI-01..05` - Full Kubernetes Deployment (FEAT-21)
-**Feature:** FEAT-21: Kubernetes Deployment
+**PBI:** `E6-F22-PBI-03` - Production deploy pipeline
+**Feature:** FEAT-22: CI/CD Pipelines
 **Epic:** EPIC-6: Production & DevOps
 **Sprint:** S8
-**Jira:** SCRUM-301 -> `Listo`
-**Branch:** `feature-E6-F21-kubernetes-deployment`
-**Completed:** 2026-04-21
+**Jira:** SCRUM-310 -> `Listo`
+**Branch:** `claude/review-deployment-plan-MFCwx`
+**Completed:** 2026-04-24
 
-### What was built (full FEAT-21)
+### What was built (full FEAT-22 PBI-03)
+
+| Acceptance criterion | Status |
+|---|---|
+| Manual approval gate via `environment: production` in GitHub Actions | Listo |
+| `verify-images` job checks all 4 images at exact DEPLOY_SHA before any deploy | Listo |
+| Rolling deploy steps for market-data-service, trading-core-service, ai-engine, web-app | Listo |
+| Smoke tests: frontend 200, `/actuator/health` 200, auth endpoint 401 | Listo |
+| Automatic `kubectl rollout undo` for all services on any failure | Listo |
+| Release git tag `prod-YYYYMMDD-HHMM-SHA` on success | Listo |
+
+### Also completed in this epic cycle
 
 | PBI | Jira | What was built | Status |
 |---|---|---|---|
@@ -70,23 +82,15 @@ Update after every completed PBI: record the last done task and the next in deve
 | E6-F21-PBI-03 | SCRUM-304 | Ingress with TLS, path-based routing to microservices, cert-manager ClusterIssuer for Let's Encrypt | Listo |
 | E6-F21-PBI-04 | SCRUM-305 | NetworkPolicies — default deny-all, explicit allowlist per service, web-app blocked from ai-engine | Listo |
 | E6-F21-PBI-05 | SCRUM-306 | ConfigMaps per service, secrets-template.yml with REPLACE_ME placeholders, kustomization.yml | Listo |
+| E6-F22-PBI-01 | SCRUM-308 | GitHub Actions CI per service — build, test, OWASP, Trivy, GHCR push | Listo |
+| E6-F22-PBI-02 | SCRUM-309 | Staging deploy pipeline — image verify, rolling deploy, smoke tests | Listo |
+| In-cluster infra | — | postgres.yml, redis.yml, rabbitmq.yml StatefulSets/Deployments for Oracle Always Free K3s | Listo |
 
 ---
 
 ## Next In Development
 
-**PBI:** `E6-F22-PBI-03` - Production deploy pipeline
-**Feature:** FEAT-22: CI/CD Pipelines
-**Epic:** EPIC-6: Production & DevOps
-**Sprint:** S8
-**Jira:** SCRUM-310 -> `In Development`
-
-### Acceptance criteria
-
-- Manual approval gate prevents production promotion until explicitly approved
-- Given the release SHA is selected, when images are verified, then production deploys the exact tagged revision
-- Production rollout updates all four services with zero-downtime rollouts
-- Smoke tests verify the production frontend, API health, and auth rejection path
+**Sprint 9 planning required.** All Sprint 8 items are complete. EPIC-6 is delivered.
 
 
 ## Backlog Queue (Sprint 8)
@@ -102,7 +106,7 @@ Update after every completed PBI: record the last done task and the next in deve
 | E6-F21-PBI-05 | ConfigMaps and Secrets | Listo |
 | E6-F22-PBI-01 | GitHub Actions per service | Listo |
 | E6-F22-PBI-02 | Staging deploy pipeline | Listo |
-| E6-F22-PBI-03 | Production deploy pipeline | In Development |
+| E6-F22-PBI-03 | Production deploy pipeline | Listo |
 | E6-F23-PBI-01 | Structured JSON logging | Listo |
 | E6-F23-PBI-02 | Prometheus metrics | Listo |
 | E6-F23-PBI-03 | Grafana dashboards | Listo |
