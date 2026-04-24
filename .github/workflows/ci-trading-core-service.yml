@@ -11,6 +11,7 @@ on:
     paths:
       - 'services/trading-core-service/**'
       - '.github/workflows/ci-trading-core-service.yml'
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
