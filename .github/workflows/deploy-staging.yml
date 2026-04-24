@@ -113,6 +113,18 @@ jobs:
           kubectl apply -f infrastructure/k8s/namespaces/trading-saas.yml
           kubectl apply -k infrastructure/k8s/base/
 
+      - name: Wait for infrastructure to be ready
+        run: |
+          set -euo pipefail
+          echo "Waiting for postgres..."
+          kubectl rollout status statefulset/postgres -n trading-saas --timeout=3m
+          kubectl exec -n trading-saas postgres-0 -- pg_isready -h 127.0.0.1 -p 5432 -U tradinguser
+          echo "Waiting for redis..."
+          kubectl rollout status deployment/redis -n trading-saas --timeout=2m
+          echo "Waiting for rabbitmq..."
+          kubectl rollout status statefulset/rabbitmq -n trading-saas --timeout=2m
+          echo "Infrastructure ready"
+
       - name: Rolling deploy — market-data-service
         run: |
           kubectl set image deployment/market-data-service \
