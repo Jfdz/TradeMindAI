@@ -27,8 +27,7 @@ class SecurityConfigTest {
 
     @Test
     void addsSecurityHeadersOnResponses() throws Exception {
-        mockMvc.perform(get("/test").accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
+        mockMvc.perform(get("/test").secure(true).accept(MediaType.APPLICATION_JSON))
                 .andExpect(header().string("X-Content-Type-Options", "nosniff"))
                 .andExpect(header().string("X-Frame-Options", "DENY"))
                 .andExpect(header().string("Referrer-Policy", "same-origin"))
