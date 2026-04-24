@@ -23,7 +23,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: ai-engine
-          image: trading-saas/ai-engine:latest
+          image: ghcr.io/jfdz/trademindai/ai-engine:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8000

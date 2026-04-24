@@ -23,7 +23,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: market-data-service
-          image: trading-saas/market-data-service:latest
+          image: ghcr.io/jfdz/trademindai/market-data-service:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8081

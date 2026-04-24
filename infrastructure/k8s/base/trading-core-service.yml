@@ -23,7 +23,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: trading-core-service
-          image: trading-saas/trading-core-service:latest
+          image: ghcr.io/jfdz/trademindai/trading-core-service:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8082
