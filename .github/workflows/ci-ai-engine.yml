@@ -81,7 +81,7 @@ jobs:
     name: Docker Build & Push
     needs: build-test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       packages: write
@@ -128,7 +128,7 @@ jobs:
   security-scan:
     name: Security Scan
     needs: docker-build-push
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       actions: read
