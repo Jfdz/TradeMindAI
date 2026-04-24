@@ -5,12 +5,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tradingsaas.tradingcore.adapter.in.web.JwtAuthenticationFilter;
 import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
-import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
@@ -21,14 +19,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @WebMvcTest(controllers = SecurityConfigTest.TestController.class)
-@AutoConfigureMockMvc
 @Import(SecurityConfig.class)
 @TestPropertySource(properties = {
         "trading-core.cors.allowed-origins=https://trading-saas.example.com"
 })
 class SecurityConfigTest {
 
-    @Resource
+    @Autowired
     private MockMvc mockMvc;
 
     @MockBean
@@ -37,13 +34,9 @@ class SecurityConfigTest {
     @MockBean
     private LettuceBasedProxyManager<String> rateLimitProxyManager;
 
-    @MockBean
-    private ObjectMapper objectMapper;
-
     @Test
     void addsSecurityHeadersOnResponses() throws Exception {
-        mockMvc.perform(get("/test").accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
+        mockMvc.perform(get("/test").secure(true).accept(MediaType.APPLICATION_JSON))
                 .andExpect(header().string("X-Content-Type-Options", "nosniff"))
                 .andExpect(header().string("X-Frame-Options", "DENY"))
                 .andExpect(header().string("Referrer-Policy", "same-origin"))

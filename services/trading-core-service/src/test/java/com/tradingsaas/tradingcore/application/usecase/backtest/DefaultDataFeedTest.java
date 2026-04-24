@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.tradingsaas.tradingcore.domain.exception.InsufficientMarketDataException;
 import com.tradingsaas.tradingcore.domain.model.backtest.OhlcvBar;
 import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort;
 import java.time.Instant;
@@ -39,16 +40,14 @@ class DefaultDataFeedTest {
     }
 
     @Test
-    void openShouldReturnEmptyCursorForNoData() {
+    void openShouldThrowWhenNoDataAvailable() {
         HistoricalMarketDataPort marketDataPort = mock(HistoricalMarketDataPort.class);
         DefaultDataFeed dataFeed = new DefaultDataFeed(marketDataPort);
 
         when(marketDataPort.loadHistoricalBars("MSFT", LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 2)))
                 .thenReturn(List.of());
 
-        Iterator<OhlcvBar> cursor = dataFeed.open("MSFT", LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 2));
-
-        assertFalse(cursor.hasNext());
-        assertThrows(NoSuchElementException.class, cursor::next);
+        assertThrows(InsufficientMarketDataException.class,
+                () -> dataFeed.open("MSFT", LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 2)));
     }
 }

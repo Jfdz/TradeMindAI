@@ -17,14 +17,27 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import org.mapstruct.factory.Mappers;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration(classes = MarketDataPersistenceMapperTest.MapperConfig.class)
 class MarketDataPersistenceMapperTest {
 
-    private final SymbolEntityMapper symbolMapper = Mappers.getMapper(SymbolEntityMapper.class);
-    private final StockPriceEntityMapper stockPriceMapper = Mappers.getMapper(StockPriceEntityMapper.class);
-    private final TechnicalIndicatorEntityMapper technicalIndicatorMapper =
-            Mappers.getMapper(TechnicalIndicatorEntityMapper.class);
+    @Configuration
+    @ComponentScan("com.tradingsaas.marketdata.adapter.out.persistence.mapper")
+    static class MapperConfig {}
+
+    @Autowired
+    private SymbolEntityMapper symbolMapper;
+    @Autowired
+    private StockPriceEntityMapper stockPriceMapper;
+    @Autowired
+    private TechnicalIndicatorEntityMapper technicalIndicatorMapper;
 
     @Test
     void symbolMapperRoundTripsDomainModel() {
