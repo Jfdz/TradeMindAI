@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       sha:
-        description: Git SHA to deploy (defaults to the triggering commit)
+        description: Git SHA to deploy (leave empty to use latest built image)
         required: false
         type: string
 
@@ -25,12 +25,8 @@ jobs:
       contents: read
       packages: read
     outputs:
-      sha: ${{ steps.set-sha.outputs.sha }}
+      deploy-sha: ${{ steps.resolve-sha.outputs.sha }}
     steps:
-      - name: Set SHA
-        id: set-sha
-        run: echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -38,14 +34,35 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Verify images exist
+      - name: Resolve deploy SHA
+        id: resolve-sha
         env:
-          DEPLOY_SHA: ${{ github.event.inputs.sha || github.sha }}
+          INPUT_SHA: ${{ github.event.inputs.sha }}
+        run: |
+          set -euo pipefail
+          REPO="ghcr.io/${GITHUB_REPOSITORY,,}"
+          if [ -n "${INPUT_SHA}" ]; then
+            echo "sha=${INPUT_SHA}" >> "$GITHUB_OUTPUT"
+          else
+            RESOLVED=$(docker buildx imagetools inspect "${REPO}/market-data-service:latest" \
+              --format '{{ index .Manifest.Annotations "org.opencontainers.image.revision" }}')
+            if [ -z "${RESOLVED}" ]; then
+              echo "ERROR: Could not resolve SHA from latest image. Push service code first or provide a SHA manually."
+              exit 1
+            fi
+            echo "Using SHA from latest image: ${RESOLVED}"
+            echo "sha=${RESOLVED}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify all images exist for resolved SHA
+        env:
+          DEPLOY_SHA: ${{ steps.resolve-sha.outputs.sha }}
         run: |
           set -euo pipefail
           REPO="ghcr.io/${GITHUB_REPOSITORY,,}"
           for image in market-data-service trading-core-service ai-engine web-app; do
             docker buildx imagetools inspect "${REPO}/${image}:${DEPLOY_SHA}" >/dev/null
+            echo "✓ ${image}:${DEPLOY_SHA}"
           done
 
   deploy-staging:
@@ -53,7 +70,7 @@ jobs:
     needs: check-images
     runs-on: self-hosted
     env:
-      DEPLOY_SHA: ${{ github.event.inputs.sha || github.sha }}
+      DEPLOY_SHA: ${{ needs.check-images.outputs.deploy-sha }}
     environment:
       name: staging
       url: https://trademind.es
@@ -109,6 +126,4 @@ jobs:
 
       - name: Notify on failure
         if: failure()
-        run: |
-          echo "Staging deploy failed for SHA ${{ env.DEPLOY_SHA }}"
-          # Add Slack/Teams notification here if needed
+        run: echo "Staging deploy failed for SHA ${{ env.DEPLOY_SHA }}"
