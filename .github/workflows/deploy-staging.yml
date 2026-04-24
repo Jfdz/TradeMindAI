@@ -53,7 +53,7 @@ jobs:
       DEPLOY_SHA: ${{ github.event.inputs.sha || github.sha }}
     environment:
       name: staging
-      url: https://staging.trading-saas.example.com
+      url: https://trademind.es
 
     steps:
       - name: Checkout
@@ -111,9 +111,8 @@ jobs:
           retry_curl() {
             curl --fail --silent --show-error --retry 3 --retry-delay 10 --retry-all-errors "$@"
           }
-          retry_curl https://trading-saas.example.com/
-          retry_curl https://staging.trading-saas.example.com/api/health
-          retry_curl https://api.staging.trading-saas.example.com/actuator/health
+          retry_curl https://trademind.es/
+          retry_curl https://api.trademind.es/actuator/health
           echo "Smoke tests passed for SHA ${{ env.DEPLOY_SHA }}"
 
       - name: Notify on failure
