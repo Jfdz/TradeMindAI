@@ -1,7 +1,8 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
+// Server-side only — never exposed to the browser bundle
+const API_BASE_URL = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
 
 type AuthUser = {
   id: string;
@@ -37,24 +38,31 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!response.ok) {
+            console.error("[auth] Backend login failed:", response.status, response.statusText);
             return null;
           }
 
+          // Backend returns { accessToken, tokenType, expiresIn }
           const data = (await response.json()) as {
-            userId?: string;
-            email?: string;
-            firstName?: string;
-            lastName?: string;
             accessToken?: string;
+            tokenType?: string;
+            expiresIn?: number;
           };
 
+          if (!data.accessToken) {
+            console.error("[auth] Backend login response missing accessToken");
+            return null;
+          }
+
           return {
-            id: data.userId ?? email,
-            email: data.email ?? email,
-            name: [data.firstName, data.lastName].filter(Boolean).join(" ") || email,
+            id: email,
+            email,
+            name: email,
             accessToken: data.accessToken,
           } satisfies AuthUser;
-        } catch {
+        } catch (err) {
+          console.error("[auth] Failed to reach backend at", API_BASE_URL, err);
+
           if (process.env.NODE_ENV !== "production") {
             return {
               id: "demo-user",
