@@ -25,4 +25,4 @@ server:
 
 market-data:
   cors:
-    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:https://trading-saas.example.com}
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:https://trademind.es}
