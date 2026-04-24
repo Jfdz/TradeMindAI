@@ -64,18 +64,14 @@ spec:
               cpu: 500m
               memory: 512Mi
           livenessProbe:
-            exec:
-              command:
-                - rabbitmq-diagnostics
-                - ping
+            tcpSocket:
+              port: 5672
             initialDelaySeconds: 60
             periodSeconds: 30
             failureThreshold: 6
           readinessProbe:
-            exec:
-              command:
-                - rabbitmq-diagnostics
-                - check_port_connectivity
+            tcpSocket:
+              port: 5672
             initialDelaySeconds: 20
             periodSeconds: 10
             failureThreshold: 3
