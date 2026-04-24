@@ -31,22 +31,24 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: prod
-            - name: DB_HOST
+            - name: POSTGRES_HOST
               valueFrom:
                 secretKeyRef:
                   name: postgres-credentials
                   key: host
-            - name: DB_NAME
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:
                   name: postgres-credentials
                   key: market-data-db
-            - name: DB_USERNAME
+            - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
                   name: postgres-credentials
                   key: username
-            - name: DB_PASSWORD
+            - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: postgres-credentials
