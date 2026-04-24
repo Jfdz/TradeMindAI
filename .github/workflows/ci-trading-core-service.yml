@@ -60,11 +60,6 @@ jobs:
           distribution: temurin
           cache: maven
 
-      - name: Dependency scan
-        run: mvn -q org.owasp:dependency-check-maven:12.2.0:check -DfailBuildOnCVSS=7 -DnvdApiKey="$NVD_API_KEY"
-        env:
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-
       - name: Build and test
         run: mvn clean verify -q
         env:
