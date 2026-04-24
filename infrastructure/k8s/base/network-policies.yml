@@ -105,6 +105,75 @@ spec:
           port: 8000
 
 ---
+# market-data-service and trading-core-service can reach postgres
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-services-to-postgres
+  namespace: trading-saas
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: market-data-service
+        - podSelector:
+            matchLabels:
+              app: trading-core-service
+      ports:
+        - protocol: TCP
+          port: 5432
+
+---
+# trading-core-service can reach redis
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trading-core-to-redis
+  namespace: trading-saas
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: trading-core-service
+      ports:
+        - protocol: TCP
+          port: 6379
+
+---
+# trading-core-service can reach rabbitmq
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trading-core-to-rabbitmq
+  namespace: trading-saas
+spec:
+  podSelector:
+    matchLabels:
+      app: rabbitmq
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: trading-core-service
+      ports:
+        - protocol: TCP
+          port: 5672
+
+---
 # Prometheus scraping — monitoring namespace may reach all pods on their HTTP port
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
