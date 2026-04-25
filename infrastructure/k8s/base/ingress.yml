@@ -79,6 +79,33 @@ spec:
                 port:
                   number: 8082
 ---
+# Separate ingress for /actuator paths — no rewrite so Spring Boot receives the full path
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: trading-saas-actuator-ingress
+  namespace: trading-saas
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.trademind.es
+      secretName: trading-saas-tls
+  rules:
+    - host: api.trademind.es
+      http:
+        paths:
+          - path: /actuator/
+            pathType: Prefix
+            backend:
+              service:
+                name: trading-core-service
+                port:
+                  number: 8082
+---
 # cert-manager ClusterIssuer for Let's Encrypt production certificates
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
