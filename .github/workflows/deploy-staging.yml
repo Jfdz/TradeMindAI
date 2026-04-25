@@ -159,7 +159,7 @@ jobs:
           echo "Waiting for ingress to stabilize..."
           sleep 30
           retry_curl() {
-            curl --fail --silent --show-error -k --retry 3 --retry-delay 10 --retry-all-errors "$@"
+            curl --fail --silent --show-error --retry 3 --retry-delay 10 --retry-all-errors "$@"
           }
           retry_curl https://api.trademind.es/actuator/health
           echo "Smoke tests passed for SHA ${{ env.DEPLOY_SHA }}"
