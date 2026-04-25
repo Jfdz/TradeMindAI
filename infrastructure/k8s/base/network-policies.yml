@@ -198,3 +198,25 @@ spec:
           port: 8000
         - protocol: TCP
           port: 3000
+
+---
+# cert-manager ACME HTTP-01 solver — ingress-nginx must reach the solver pod
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-acme-solver
+  namespace: trading-saas
+spec:
+  podSelector:
+    matchLabels:
+      acme.cert-manager.io/http01-solver: "true"
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8089
