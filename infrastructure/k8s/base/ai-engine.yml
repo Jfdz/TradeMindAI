@@ -40,8 +40,8 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: postgres-credentials
-                  key: ai-engine-db
-            - name: DB_USERNAME
+                  key: market-data-db
+            - name: DB_USER
               valueFrom:
                 secretKeyRef:
                   name: postgres-credentials
@@ -51,12 +51,14 @@ spec:
                 secretKeyRef:
                   name: postgres-credentials
                   key: password
+            - name: DATABASE_URL
+              value: "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST)/$(DB_NAME)"
             - name: RABBITMQ_HOST
               valueFrom:
                 secretKeyRef:
                   name: rabbitmq-credentials
                   key: host
-            - name: RABBITMQ_USERNAME
+            - name: RABBITMQ_USER
               valueFrom:
                 secretKeyRef:
                   name: rabbitmq-credentials
@@ -66,6 +68,12 @@ spec:
                 secretKeyRef:
                   name: rabbitmq-credentials
                   key: password
+            - name: RABBITMQ_URL
+              value: "amqp://$(RABBITMQ_USER):$(RABBITMQ_PASSWORD)@$(RABBITMQ_HOST)"
+            - name: MODEL_PATH
+              value: /app/models
+            - name: CORS_ALLOWED_ORIGINS
+              value: https://trademind.es
           resources:
             requests:
               cpu: 500m
