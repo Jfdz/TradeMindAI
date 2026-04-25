@@ -154,7 +154,6 @@ jobs:
           kubectl rollout status deployment/web-app -n trading-saas --timeout=5m
 
       - name: Smoke tests
-        continue-on-error: true
         run: |
           set -euo pipefail
           echo "Waiting for ingress to stabilize..."
@@ -162,7 +161,6 @@ jobs:
           retry_curl() {
             curl --fail --silent --show-error --retry 3 --retry-delay 10 --retry-all-errors "$@"
           }
-          retry_curl https://trademind.es/
           retry_curl https://api.trademind.es/actuator/health
           echo "Smoke tests passed for SHA ${{ env.DEPLOY_SHA }}"
 
