@@ -83,17 +83,6 @@ jobs:
             echo "✓ ${image}:${DEPLOY_SHA}"
           done
 
-      - name: Verify all images exist for resolved SHA
-        env:
-          DEPLOY_SHA: ${{ steps.resolve-sha.outputs.sha }}
-        run: |
-          set -euo pipefail
-          REPO="ghcr.io/${GITHUB_REPOSITORY,,}"
-          for image in market-data-service trading-core-service ai-engine web-app; do
-            docker buildx imagetools inspect "${REPO}/${image}:${DEPLOY_SHA}" >/dev/null
-            echo "✓ ${image}:${DEPLOY_SHA}"
-          done
-
   deploy-staging:
     name: Deploy to staging
     needs: check-images
