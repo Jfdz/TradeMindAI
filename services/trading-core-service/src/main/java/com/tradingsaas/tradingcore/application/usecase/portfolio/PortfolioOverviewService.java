@@ -39,7 +39,8 @@ public class PortfolioOverviewService {
         BigDecimal costBasis = BigDecimal.ZERO;
         BigDecimal marketValue = BigDecimal.ZERO;
 
-        for (PortfolioPositionJpaEntity position : portfolio.getPositions()) {
+        for (PortfolioPositionJpaEntity position : portfolio.getPositions().stream()
+                .filter(p -> !"CLOSED".equals(p.getStatus())).toList()) {
             BigDecimal currentPrice = latestPrice(position.getSymbolTicker()).orElse(position.getEntryPrice());
             BigDecimal positionCost = position.getEntryPrice().multiply(position.getQuantity());
             BigDecimal positionValue = currentPrice.multiply(position.getQuantity());
@@ -86,11 +87,19 @@ public class PortfolioOverviewService {
                 ? 0
                 : (double) normalizedHoldings.stream().filter(h -> h.unrealizedPnl().signum() > 0).count() / normalizedHoldings.size();
 
+        BigDecimal realizedPnl = portfolio.getPositions().stream()
+                .filter(p -> "CLOSED".equals(p.getStatus()) && p.getExitPrice() != null)
+                .map(p -> p.getExitPrice()
+                        .subtract(p.getEntryPrice())
+                        .multiply(p.getQuantity())
+                        .subtract(p.getFees()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         return new PortfolioOverview(
                 portfolio.getUser().getId(),
                 portfolio.getInitialCapital(),
                 cash,
-                BigDecimal.ZERO,
+                realizedPnl,
                 unrealizedPnl,
                 equity,
                 winRate,

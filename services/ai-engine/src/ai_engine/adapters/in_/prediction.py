@@ -68,6 +68,6 @@ def _get_service(request: Request):
 
 
 def _fetch_ohlcv(ticker: str):
-    # Data fetching from market-data-service is wired in FEAT-10+.
-    # Raises NotImplementedError so integration tests can mock this boundary.
-    raise NotImplementedError(f"OHLCV data fetch for {ticker} not yet wired")
+    from ai_engine.adapters.out.market_data_client import MarketDataClient
+    from ai_engine.config import get_settings
+    return MarketDataClient(get_settings().market_data_service_url).fetch_ohlcv(ticker)
