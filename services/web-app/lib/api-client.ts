@@ -389,17 +389,6 @@ export const apiClient = {
     });
   },
 
-  async addPosition(payload: { ticker: string; quantity: number; entryPrice: number }): Promise<{ id: string; ticker: string; quantity: number; entryPrice: number; status: string; openedAt: string }> {
-    return await requestJson("/api/v1/portfolio/positions", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-  },
-
-  async deletePosition(positionId: string): Promise<void> {
-    await requestJson(`/api/v1/portfolio/positions/${positionId}`, { method: "DELETE" });
-  },
-
   async getPortfolio(): Promise<PortfolioOverviewResponse> {
     try {
       return await requestJson<PortfolioOverviewResponse>("/api/v1/portfolio");

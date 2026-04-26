@@ -6,7 +6,6 @@ import { toast } from "sonner";
 
 import { apiClient, type MarketSymbolResponse, type PortfolioHoldingResponse, type PortfolioOverviewResponse } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 type EnrichedHolding = PortfolioHoldingResponse & {
   name: string;
@@ -157,7 +156,6 @@ function AddPositionPanel({
 
 export default function PortfolioPage() {
   const [portfolio, setPortfolio] = useState<PortfolioOverviewResponse | null>(null);
-  const [symbols, setSymbols] = useState<MarketSymbolResponse[]>([]);
   const [holdings, setHoldings] = useState<EnrichedHolding[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -170,7 +168,7 @@ export default function PortfolioPage() {
         apiClient.getSymbols(),
       ]);
 
-      const symbolMap = new Map(symbolResponse.content.map((symbol) => [symbol.ticker, symbol]));
+      const symbolMap = new Map<string, MarketSymbolResponse>(symbolResponse.content.map((symbol) => [symbol.ticker, symbol]));
       const enriched = await Promise.all(
         overview.holdings.map(async (holding, index) => {
           const symbol = symbolMap.get(holding.symbol);
@@ -197,7 +195,6 @@ export default function PortfolioPage() {
       );
 
       setPortfolio(overview);
-      setSymbols(symbolResponse.content);
       setHoldings(enriched);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to load portfolio");
