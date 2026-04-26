@@ -18,10 +18,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -56,31 +54,6 @@ class PortfolioController {
         return PortfolioOverviewResponse.from(
                 portfolioOverviewService.getOverview(claims.userId(), claims.subscriptionPlan())
         );
-    }
-
-    @PostMapping("/positions")
-    @ResponseStatus(HttpStatus.CREATED)
-    PositionResponse addPosition(@Valid @RequestBody AddPositionRequest request, Authentication authentication) {
-        TokenClaims claims = claims(authentication);
-        var saved = portfolioOverviewService.addPosition(
-                claims.userId(),
-                request.ticker(),
-                request.quantity(),
-                request.entryPrice()
-        );
-        return new PositionResponse(saved.getId(), saved.getSymbolTicker(), saved.getQuantity(),
-                saved.getEntryPrice(), saved.getStatus(), saved.getOpenedAt());
-    }
-
-    @DeleteMapping("/positions/{positionId}")
-    ResponseEntity<Void> deletePosition(@PathVariable UUID positionId, Authentication authentication) {
-        TokenClaims claims = claims(authentication);
-        try {
-            portfolioOverviewService.deletePosition(positionId, claims.userId());
-            return ResponseEntity.noContent().build();
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
-        }
     }
 
     @PostMapping("/positions")
@@ -124,7 +97,8 @@ class PortfolioController {
                 .findByIdAndUserId(id, claims.userId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Position not found"));
         if ("CLOSED".equals(position.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cannot delete a closed position — it contributes to realized P&L history");
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Cannot delete a closed position — it contributes to realized P&L history");
         }
         positionRepository.delete(position);
     }
@@ -196,14 +170,6 @@ class PortfolioController {
             );
         }
     }
-
-    record AddPositionRequest(
-            @NotBlank String ticker,
-            @NotNull @DecimalMin("0.00000001") BigDecimal quantity,
-            @NotNull @DecimalMin("0.01") BigDecimal entryPrice) {}
-
-    record PositionResponse(UUID id, String ticker, BigDecimal quantity, BigDecimal entryPrice,
-                            String status, Instant openedAt) {}
 
     record PortfolioHoldingResponse(
             String symbol,
