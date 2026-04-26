@@ -154,14 +154,10 @@ export const apiClient = {
   },
 
   async submitBacktest(payload: SubmitBacktestPayload): Promise<BacktestJobResponse> {
-    try {
-      return await requestJson<BacktestJobResponse>("/api/v1/backtests", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-    } catch {
-      return buildDemoBacktest(`demo-${payload.symbol.toLowerCase()}-${Date.now()}`, payload);
-    }
+    return await requestJson<BacktestJobResponse>("/api/v1/backtests", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
 
   async getBacktest(backtestId: string): Promise<BacktestJobResponse> {
