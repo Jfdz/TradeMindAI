@@ -23,7 +23,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: web-app
-          image: trading-saas/web-app:latest
+          image: ghcr.io/jfdz/trademindai/web-app:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
@@ -55,7 +55,7 @@ spec:
               memory: 512Mi
           livenessProbe:
             httpGet:
-              path: /api/health
+              path: /
               port: 3000
             initialDelaySeconds: 30
             periodSeconds: 30
@@ -63,7 +63,7 @@ spec:
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /api/health
+              path: /
               port: 3000
             initialDelaySeconds: 15
             periodSeconds: 10

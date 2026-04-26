@@ -5,8 +5,6 @@ metadata:
   namespace: trading-saas
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/use-regex: "true"
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
@@ -22,57 +20,77 @@ spec:
     - host: api.trademind.es
       http:
         paths:
-          - path: /api/v1/symbols(/|$)(.*)
-            pathType: ImplementationSpecific
+          - path: /api/v1/symbols
+            pathType: Prefix
             backend:
               service:
                 name: market-data-service
                 port:
                   number: 8081
-          - path: /api/v1/prices(/|$)(.*)
-            pathType: ImplementationSpecific
+          - path: /api/v1/prices
+            pathType: Prefix
             backend:
               service:
                 name: market-data-service
                 port:
                   number: 8081
-          - path: /api/v1/auth(/|$)(.*)
-            pathType: ImplementationSpecific
+          - path: /api/v1/auth
+            pathType: Prefix
             backend:
               service:
                 name: trading-core-service
                 port:
                   number: 8082
-          - path: /api/v1/signals(/|$)(.*)
-            pathType: ImplementationSpecific
+          - path: /api/v1/signals
+            pathType: Prefix
             backend:
               service:
                 name: trading-core-service
                 port:
                   number: 8082
-          - path: /api/v1/strategies(/|$)(.*)
-            pathType: ImplementationSpecific
+          - path: /api/v1/strategies
+            pathType: Prefix
             backend:
               service:
                 name: trading-core-service
                 port:
                   number: 8082
-          - path: /api/v1/backtests(/|$)(.*)
-            pathType: ImplementationSpecific
+          - path: /api/v1/backtests
+            pathType: Prefix
             backend:
               service:
                 name: trading-core-service
                 port:
                   number: 8082
-          - path: /api/v1/subscriptions(/|$)(.*)
-            pathType: ImplementationSpecific
+          - path: /api/v1/subscriptions
+            pathType: Prefix
             backend:
               service:
                 name: trading-core-service
                 port:
                   number: 8082
-          - path: /actuator(/|$)(.*)
-            pathType: ImplementationSpecific
+---
+# Separate ingress for /actuator paths — no rewrite so Spring Boot receives the full path
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: trading-saas-actuator-ingress
+  namespace: trading-saas
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.trademind.es
+      secretName: trading-saas-tls
+  rules:
+    - host: api.trademind.es
+      http:
+        paths:
+          - path: /actuator/
+            pathType: Prefix
             backend:
               service:
                 name: trading-core-service

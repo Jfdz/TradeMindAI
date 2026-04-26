@@ -23,7 +23,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: market-data-service
-          image: trading-saas/market-data-service:latest
+          image: ghcr.io/jfdz/trademindai/market-data-service:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8081
@@ -31,25 +31,56 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: prod
-            - name: DB_HOST
+            - name: POSTGRES_HOST
               valueFrom:
                 secretKeyRef:
                   name: postgres-credentials
                   key: host
-            - name: DB_NAME
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:
                   name: postgres-credentials
                   key: market-data-db
-            - name: DB_USERNAME
+            - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
                   name: postgres-credentials
                   key: username
-            - name: DB_PASSWORD
+            - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: postgres-credentials
+                  key: password
+            - name: REDIS_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: host
+            - name: REDIS_PORT
+              value: "6379"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: password
+            - name: RABBITMQ_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: host
+            - name: RABBITMQ_PORT
+              value: "5672"
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: username
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
                   key: password
           envFrom:
             - configMapRef:

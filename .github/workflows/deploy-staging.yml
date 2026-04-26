@@ -3,10 +3,13 @@ name: Deploy — Staging
 on:
   push:
     branches: [main]
+    paths:
+      - 'services/**'
+      - 'infrastructure/**'
   workflow_dispatch:
     inputs:
       sha:
-        description: Git SHA to deploy (defaults to the triggering commit)
+        description: Git SHA to deploy (leave empty to use latest built image)
         required: false
         type: string
 
@@ -22,11 +25,12 @@ jobs:
       contents: read
       packages: read
     outputs:
-      sha: ${{ steps.set-sha.outputs.sha }}
+      deploy-sha: ${{ steps.resolve-sha.outputs.sha }}
     steps:
-      - name: Set SHA
-        id: set-sha
-        run: echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 30
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -35,14 +39,48 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Verify images exist
+      - name: Resolve deploy SHA
+        id: resolve-sha
         env:
-          DEPLOY_SHA: ${{ github.event.inputs.sha || github.sha }}
+          INPUT_SHA: ${{ github.event.inputs.sha }}
+        run: |
+          set -euo pipefail
+          REPO="ghcr.io/${GITHUB_REPOSITORY,,}"
+          IMAGES="market-data-service trading-core-service ai-engine web-app"
+
+          if [ -n "${INPUT_SHA}" ]; then
+            echo "sha=${INPUT_SHA}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "No SHA provided — scanning last 30 commits for a complete image set..."
+          for sha in $(git log --format='%H' -30); do
+            found=true
+            for image in ${IMAGES}; do
+              if ! docker buildx imagetools inspect "${REPO}/${image}:${sha}" >/dev/null 2>&1; then
+                found=false
+                break
+              fi
+            done
+            if [ "${found}" = "true" ]; then
+              echo "Found complete image set at ${sha}"
+              echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+
+          echo "ERROR: No commit in the last 30 has all 4 images in GHCR. Run CI workflows first."
+          exit 1
+
+      - name: Verify all images exist for resolved SHA
+        env:
+          DEPLOY_SHA: ${{ steps.resolve-sha.outputs.sha }}
         run: |
           set -euo pipefail
           REPO="ghcr.io/${GITHUB_REPOSITORY,,}"
           for image in market-data-service trading-core-service ai-engine web-app; do
             docker buildx imagetools inspect "${REPO}/${image}:${DEPLOY_SHA}" >/dev/null
+            echo "✓ ${image}:${DEPLOY_SHA}"
           done
 
   deploy-staging:
@@ -50,7 +88,7 @@ jobs:
     needs: check-images
     runs-on: self-hosted
     env:
-      DEPLOY_SHA: ${{ github.event.inputs.sha || github.sha }}
+      DEPLOY_SHA: ${{ needs.check-images.outputs.deploy-sha }}
     environment:
       name: staging
       url: https://trademind.es
@@ -63,6 +101,18 @@ jobs:
         run: |
           kubectl apply -f infrastructure/k8s/namespaces/trading-saas.yml
           kubectl apply -k infrastructure/k8s/base/
+
+      - name: Wait for infrastructure to be ready
+        run: |
+          set -euo pipefail
+          echo "Waiting for postgres..."
+          kubectl rollout status statefulset/postgres -n trading-saas --timeout=3m
+          kubectl exec -n trading-saas postgres-0 -- pg_isready -h 127.0.0.1 -p 5432 -U tradinguser
+          echo "Waiting for redis..."
+          kubectl rollout status deployment/redis -n trading-saas --timeout=2m
+          echo "Waiting for rabbitmq..."
+          kubectl rollout status statefulset/rabbitmq -n trading-saas --timeout=2m
+          echo "Infrastructure ready"
 
       - name: Rolling deploy — market-data-service
         run: |
@@ -100,12 +150,9 @@ jobs:
           retry_curl() {
             curl --fail --silent --show-error --retry 3 --retry-delay 10 --retry-all-errors "$@"
           }
-          retry_curl https://trademind.es/
           retry_curl https://api.trademind.es/actuator/health
           echo "Smoke tests passed for SHA ${{ env.DEPLOY_SHA }}"
 
       - name: Notify on failure
         if: failure()
-        run: |
-          echo "Staging deploy failed for SHA ${{ env.DEPLOY_SHA }}"
-          # Add Slack/Teams notification here if needed
+        run: echo "Staging deploy failed for SHA ${{ env.DEPLOY_SHA }}"

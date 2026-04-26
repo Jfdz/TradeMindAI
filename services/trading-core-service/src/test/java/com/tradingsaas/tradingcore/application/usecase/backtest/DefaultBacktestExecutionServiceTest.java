@@ -45,7 +45,15 @@ class DefaultBacktestExecutionServiceTest {
             );
         };
 
-        Executor executor = command -> new Thread(command).start();
+        CountDownLatch startPermit = new CountDownLatch(1);
+        Executor executor = command -> new Thread(() -> {
+            try {
+                startPermit.await(5, TimeUnit.SECONDS);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+            }
+            command.run();
+        }).start();
         DefaultBacktestExecutionService service = new DefaultBacktestExecutionService(
                 jobStore,
                 processor,
@@ -56,6 +64,7 @@ class DefaultBacktestExecutionServiceTest {
         UUID jobId = service.submit(new BacktestRequest("AAPL", LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 2), 10));
         BacktestJob pendingJob = jobStore.findById(jobId).orElseThrow();
         assertEquals(BacktestStatus.PENDING, pendingJob.status());
+        startPermit.countDown();
 
         assertTrue(executionLatch.await(5, TimeUnit.SECONDS));
         BacktestJob runningJob = jobStore.findById(jobId).orElseThrow();

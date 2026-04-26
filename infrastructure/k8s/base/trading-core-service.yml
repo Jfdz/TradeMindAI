@@ -23,7 +23,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: trading-core-service
-          image: trading-saas/trading-core-service:latest
+          image: ghcr.io/jfdz/trademindai/trading-core-service:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8082
@@ -31,22 +31,24 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: prod
-            - name: DB_HOST
+            - name: POSTGRES_HOST
               valueFrom:
                 secretKeyRef:
                   name: postgres-credentials
                   key: host
-            - name: DB_NAME
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:
                   name: postgres-credentials
                   key: trading-core-db
-            - name: DB_USERNAME
+            - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
                   name: postgres-credentials
                   key: username
-            - name: DB_PASSWORD
+            - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: postgres-credentials
@@ -56,6 +58,8 @@ spec:
                 secretKeyRef:
                   name: redis-credentials
                   key: host
+            - name: REDIS_PORT
+              value: "6379"
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -66,7 +70,9 @@ spec:
                 secretKeyRef:
                   name: rabbitmq-credentials
                   key: host
-            - name: RABBITMQ_USERNAME
+            - name: RABBITMQ_PORT
+              value: "5672"
+            - name: RABBITMQ_USER
               valueFrom:
                 secretKeyRef:
                   name: rabbitmq-credentials

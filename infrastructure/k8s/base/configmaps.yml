@@ -30,6 +30,7 @@ data:
   JWT_EXPIRATION_MS: "900000"
   JWT_REFRESH_EXPIRATION_MS: "604800000"
   APP_CORS_ALLOWED_ORIGINS: https://trademind.es
+  SERVICES_MARKET_DATA_URL: http://market-data-service.trading-saas.svc.cluster.local:8081
 
 ---
 apiVersion: v1
