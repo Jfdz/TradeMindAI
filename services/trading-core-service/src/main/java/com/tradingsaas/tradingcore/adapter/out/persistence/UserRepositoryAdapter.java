@@ -49,6 +49,7 @@ class UserRepositoryAdapter implements UserRepository {
                 user.getPasswordHash(),
                 user.getFirstName(),
                 user.getLastName(),
+                user.getTimezone(),
                 user.isActive(),
                 user.getCreatedAt() != null ? user.getCreatedAt() : now,
                 now

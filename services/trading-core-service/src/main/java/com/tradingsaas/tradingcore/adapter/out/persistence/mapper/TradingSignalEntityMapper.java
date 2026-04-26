@@ -12,23 +12,27 @@ public class TradingSignalEntityMapper {
         return new TradingSignalJpaEntity(
                 signal.getId(),
                 signal.getSymbolId(),
+                signal.getTicker(),
                 signal.getType(),
                 signal.getConfidence().getValue(),
                 signal.getTimeframe(),
                 signal.getGeneratedAt(),
                 signal.getStopLossPct(),
-                signal.getTakeProfitPct());
+                signal.getTakeProfitPct(),
+                signal.getPredictedChangePct());
     }
 
     public TradingSignal toDomain(TradingSignalJpaEntity entity) {
         return new TradingSignal(
                 entity.getId(),
                 entity.getSymbolId(),
+                entity.getTicker(),
                 entity.getSignalType(),
                 new Confidence(entity.getConfidence()),
                 entity.getTimeframe(),
                 entity.getGeneratedAt(),
                 entity.getStopLossPct(),
-                entity.getTakeProfitPct());
+                entity.getTakeProfitPct(),
+                entity.getPredictedChangePct());
     }
 }

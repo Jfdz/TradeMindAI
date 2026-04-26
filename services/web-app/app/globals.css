@@ -3,41 +3,26 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
-  --background: 0 0% 100%;
-  --foreground: 222 47% 11%;
-  --card: 210 40% 98%;
-  --card-foreground: 222 47% 11%;
-  --primary: 39 92% 65%;
-  --primary-foreground: 222 47% 11%;
-  --secondary: 165 71% 58%;
-  --secondary-foreground: 222 47% 11%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222 47% 11%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 39 92% 65%;
+  color-scheme: dark;
+  --background: 7 12% 4%;
+  --foreground: 201 38% 89%;
+  --card: 219 31% 9%;
+  --card-foreground: 201 38% 89%;
+  --primary: 184 100% 41%;
+  --primary-foreground: 7 12% 4%;
+  --secondary: 219 25% 16%;
+  --secondary-foreground: 201 38% 89%;
+  --accent: 219 24% 13%;
+  --accent-foreground: 201 38% 89%;
+  --muted: 219 24% 13%;
+  --muted-foreground: 210 21% 56%;
+  --border: 220 18% 20%;
+  --input: 220 18% 20%;
+  --ring: 184 100% 41%;
 }
 
 .dark {
   color-scheme: dark;
-  --background: 217 53% 8%;
-  --foreground: 210 40% 98%;
-  --card: 216 38% 14%;
-  --card-foreground: 210 40% 98%;
-  --primary: 39 92% 65%;
-  --primary-foreground: 222 47% 11%;
-  --secondary: 165 71% 58%;
-  --secondary-foreground: 222 47% 11%;
-  --accent: 216 34% 18%;
-  --accent-foreground: 210 40% 98%;
-  --muted: 215 28% 20%;
-  --muted-foreground: 215 20% 65%;
-  --border: 215 25% 23%;
-  --input: 215 25% 23%;
-  --ring: 39 92% 65%;
 }
 
 html {
@@ -47,9 +32,10 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
-  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  background: #07090e;
+  color: #dce8f0;
+  font-family: var(--font-inter), Inter, "Segoe UI", Arial, sans-serif;
+  overflow-x: hidden;
 }
 
 a {
@@ -58,4 +44,19 @@ a {
 
 * {
   box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(0, 200, 212, 0.24);
+  color: #ffffff;
+}
+
+.tm-grid-background {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.tm-sheen {
+  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.03));
+  background-size: 200% 100%;
 }

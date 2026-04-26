@@ -47,24 +47,26 @@ class SignalController {
 
     record SignalResponse(
             UUID id,
-            UUID symbolId,
+            String symbol,
             String type,
             BigDecimal confidence,
             String timeframe,
             Instant generatedAt,
             BigDecimal stopLossPct,
-            BigDecimal takeProfitPct) {
+            BigDecimal takeProfitPct,
+            BigDecimal predictedChangePct) {
 
         static SignalResponse fromDomain(TradingSignal signal) {
             return new SignalResponse(
                     signal.getId(),
-                    signal.getSymbolId(),
+                    signal.getTicker() != null ? signal.getTicker() : signal.getSymbolId().toString(),
                     signal.getType().name(),
                     signal.getConfidence().getValue(),
                     signal.getTimeframe().name(),
                     signal.getGeneratedAt(),
                     signal.getStopLossPct(),
-                    signal.getTakeProfitPct());
+                    signal.getTakeProfitPct(),
+                    signal.getPredictedChangePct());
         }
     }
 

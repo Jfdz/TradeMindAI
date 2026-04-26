@@ -31,6 +31,9 @@ public class UserJpaEntity {
     @Column(name = "last_name", nullable = false, length = 100)
     private String lastName;
 
+    @Column(name = "timezone", nullable = false, length = 64)
+    private String timezone;
+
     @Column(name = "active", nullable = false)
     private boolean active;
 
@@ -46,12 +49,13 @@ public class UserJpaEntity {
     protected UserJpaEntity() {}
 
     public UserJpaEntity(UUID id, String email, String passwordHash, String firstName,
-                         String lastName, boolean active, Instant createdAt, Instant updatedAt) {
+                         String lastName, String timezone, boolean active, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.email = email;
         this.passwordHash = passwordHash;
         this.firstName = firstName;
         this.lastName = lastName;
+        this.timezone = timezone;
         this.active = active;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -62,6 +66,7 @@ public class UserJpaEntity {
     public String getPasswordHash() { return passwordHash; }
     public String getFirstName() { return firstName; }
     public String getLastName() { return lastName; }
+    public String getTimezone() { return timezone; }
     public boolean isActive() { return active; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

@@ -35,7 +35,7 @@ export function SignalsPreview() {
     <section className="border-t border-slate-200 py-8 dark:border-white/10">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300/80">API client check</p>
+          <p className="text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-goldScale-300/80">API client check</p>
           <h3 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">Recent signals through `apiClient.getSignals()`</h3>
         </div>
         <span className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">

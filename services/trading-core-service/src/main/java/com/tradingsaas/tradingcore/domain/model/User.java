@@ -15,6 +15,7 @@ public class User {
     private final String passwordHash;
     private final String firstName;
     private final String lastName;
+    private final String timezone;
     private final Subscription subscription;
     private final Instant createdAt;
     private final boolean active;
@@ -24,6 +25,7 @@ public class User {
                 String passwordHash,
                 String firstName,
                 String lastName,
+                String timezone,
                 Subscription subscription,
                 Instant createdAt,
                 boolean active) {
@@ -38,6 +40,7 @@ public class User {
         this.passwordHash = passwordHash;
         this.firstName = firstName;
         this.lastName = lastName;
+        this.timezone = timezone == null || timezone.isBlank() ? "UTC" : timezone;
         this.subscription = subscription;
         this.createdAt = createdAt;
         this.active = active;
@@ -61,6 +64,10 @@ public class User {
 
     public String getLastName() {
         return lastName;
+    }
+
+    public String getTimezone() {
+        return timezone;
     }
 
     public Subscription getSubscription() {
