@@ -1,0 +1,83 @@
+groups:
+  - name: trademind_pipeline
+    interval: 1m
+    rules:
+      # No new trading signal generated in the last 25 hours (business hours + buffer)
+      - alert: SignalGenerationStale
+        expr: |
+          (time() - max by() (trading_signals_last_generated_timestamp_seconds{job="trading-core-service"}) > 90000)
+          or absent(trading_signals_last_generated_timestamp_seconds{job="trading-core-service"})
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No new trading signals generated in >25h"
+          description: "The signal generation pipeline may be broken. Check ai-engine consumers and market-data ingestion."
+
+      # Any dead letter queue has messages (malformed events being dropped)
+      - alert: DLQNonEmpty
+        expr: rabbitmq_queue_messages_ready{queue=~"dlq\\..*"} > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Dead letter queue {{ $labels.queue }} has {{ $value }} message(s)"
+          description: "Messages are being routed to a DLQ. Inspect and replay or discard."
+
+      # ai-engine is not responding
+      - alert: AiEngineDown
+        expr: up{job="ai-engine"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ai-engine is not reachable"
+          description: "Prometheus cannot scrape ai-engine. Predictions are unavailable."
+
+      # ai-engine model not loaded (/ready returns 503)
+      - alert: AiEngineModelNotLoaded
+        expr: |
+          probe_http_status_code{instance="http://ai-engine:8000/ready"} != 200
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ai-engine /ready is not 200 — model may not be loaded"
+          description: "Run scripts/seed_model.py or trigger POST /api/v1/models/train to load a model."
+
+      # Yahoo Finance circuit breaker is open (data ingestion will fail)
+      - alert: YahooFinanceCircuitBreakerOpen
+        expr: |
+          resilience4j_circuitbreaker_state{name="yahoo-finance", state="open"} == 1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Yahoo Finance circuit breaker is OPEN"
+          description: "External market data fetch is failing. Prices and signals will become stale."
+
+  - name: trademind_infrastructure
+    interval: 30s
+    rules:
+      # trading-core-service memory pressure
+      - alert: TradingCoreHighMemory
+        expr: |
+          jvm_memory_used_bytes{job="trading-core-service", area="heap"}
+          / jvm_memory_max_bytes{job="trading-core-service", area="heap"} > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "trading-core-service heap usage above 85%"
+          description: "Consider increasing memory limits or investigating memory leaks."
+
+      # Redis connection failures
+      - alert: RedisConnectionFailures
+        expr: |
+          increase(lettuce_command_failure_total{job="trading-core-service"}[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis command failures detected in trading-core-service"
+          description: "Rate limiting and caching may be degraded."

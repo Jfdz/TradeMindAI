@@ -108,6 +108,21 @@ export type PortfolioHoldingResponse = {
   closedAt?: string | null;
 };
 
+export type AddPositionPayload = {
+  ticker: string;
+  quantity: number;
+  entryPrice: number;
+  purchaseDate?: string;
+  fees?: number;
+  notes?: string;
+};
+
+export type ClosePositionPayload = {
+  exitPrice: number;
+  closedAt?: string;
+  fees?: number;
+};
+
 export type PortfolioOverviewResponse = {
   userId: string;
   initialCapital: number;
@@ -141,10 +156,23 @@ export type MarketSymbolResponse = {
   active: boolean;
 };
 
+const demoPrices: Record<string, number> = {
+  "AAPL": 178.5,
+  "NVDA": 846.2,
+  "MSFT": 421.1,
+  "TSLA": 187.8,
+  "AMD": 171.25,
+  "BTC/USDT": 68412.5,
+  "ETH/USDT": 3328.4,
+};
+
 const demoSignals: SignalResponse[] = [
-  { id: "sig-aapl-1", symbol: "AAPL", type: "BUY", confidence: 0.92, generatedAt: "2026-04-20T14:30:00Z", timeframe: "1D", stopLossPct: 2, takeProfitPct: 4, predictedChangePct: 2.8 },
-  { id: "sig-nvda-1", symbol: "NVDA", type: "BUY", confidence: 0.88, generatedAt: "2026-04-20T13:00:00Z", timeframe: "4H", stopLossPct: 2, takeProfitPct: 4, predictedChangePct: 3.4 },
-  { id: "sig-msft-1", symbol: "MSFT", type: "HOLD", confidence: 0.74, generatedAt: "2026-04-19T15:45:00Z", timeframe: "1D", stopLossPct: null, takeProfitPct: null, predictedChangePct: 0.2 },
+  { id: "sig-btc-1", symbol: "BTC/USDT", type: "BUY", confidence: 0.942, generatedAt: "2026-04-20T14:30:00Z", timeframe: "4H", stopLossPct: 0.53, takeProfitPct: 2.70, predictedChangePct: 2.7 },
+  { id: "sig-eth-1", symbol: "ETH/USDT", type: "BUY", confidence: 0.888, generatedAt: "2026-04-20T13:00:00Z", timeframe: "1H", stopLossPct: 1.63, takeProfitPct: 2.93, predictedChangePct: 2.9 },
+  { id: "sig-aapl-1", symbol: "AAPL", type: "HOLD", confidence: 0.742, generatedAt: "2026-04-19T15:45:00Z", timeframe: "1D", stopLossPct: 1.80, takeProfitPct: 2.59, predictedChangePct: 0.2 },
+  { id: "sig-tsla-1", symbol: "TSLA", type: "SELL", confidence: 0.811, generatedAt: "2026-04-18T16:15:00Z", timeframe: "4H", stopLossPct: 2.92, takeProfitPct: 5.37, predictedChangePct: -4.1 },
+  { id: "sig-amd-1", symbol: "AMD", type: "BUY", confidence: 0.792, generatedAt: "2026-04-17T12:10:00Z", timeframe: "1D", stopLossPct: 2.18, takeProfitPct: 4.65, predictedChangePct: 3.8 },
+  { id: "sig-msft-1", symbol: "MSFT", type: "HOLD", confidence: 0.691, generatedAt: "2026-04-16T11:05:00Z", timeframe: "1D", stopLossPct: 1.60, takeProfitPct: 3.25, predictedChangePct: 0.5 },
 ];
 
 function buildDemoBacktest(id: string, request?: SubmitBacktestPayload): BacktestJobResponse {
@@ -240,10 +268,15 @@ export const apiClient = {
   },
 
   async submitBacktest(payload: SubmitBacktestPayload): Promise<BacktestJobResponse> {
-    return await requestJson<BacktestJobResponse>("/api/v1/backtests", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+    try {
+      return await requestJson<BacktestJobResponse>("/api/v1/backtests", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        fallbackOnError: true,
+      });
+    } catch {
+      return buildDemoBacktest(`demo-${Date.now()}`, payload);
+    }
   },
 
   async getBacktest(backtestId: string): Promise<BacktestJobResponse> {
@@ -289,7 +322,15 @@ export const apiClient = {
         fallbackOnError: true,
       });
     } catch {
-      return null;
+      const fallbackClose = demoPrices[ticker];
+      if (fallbackClose == null) return null;
+      return {
+        ticker,
+        date: new Date().toISOString().slice(0, 10),
+        timeFrame: "DAILY",
+        ohlcv: { open: fallbackClose, high: fallbackClose, low: fallbackClose, close: fallbackClose, volume: 0 },
+        adjustedClose: fallbackClose,
+      };
     }
   },
 
@@ -363,5 +404,25 @@ export const apiClient = {
         holdings: [],
       };
     }
+  },
+
+  async addPosition(payload: AddPositionPayload): Promise<{ id: string }> {
+    return requestJson<{ id: string }>("/api/v1/portfolio/positions", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async closePosition(positionId: string, payload: ClosePositionPayload): Promise<void> {
+    await requestJson<void>(`/api/v1/portfolio/positions/${positionId}/close`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async deletePosition(positionId: string): Promise<void> {
+    await requestJson<void>(`/api/v1/portfolio/positions/${positionId}`, {
+      method: "DELETE",
+    });
   },
 };

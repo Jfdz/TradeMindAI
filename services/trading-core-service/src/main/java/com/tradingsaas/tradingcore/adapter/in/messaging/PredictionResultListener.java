@@ -13,10 +13,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
-import org.springframework.amqp.core.ExchangeTypes;
-import org.springframework.amqp.rabbit.annotation.Exchange;
-import org.springframework.amqp.rabbit.annotation.Queue;
-import org.springframework.amqp.rabbit.annotation.QueueBinding;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
@@ -34,9 +30,7 @@ public class PredictionResultListener {
         this.objectMapper = objectMapper;
     }
 
-    @RabbitListener(bindings = @QueueBinding(
-            value = @Queue(value = QUEUE_NAME, durable = "true"),
-            exchange = @Exchange(value = EXCHANGE_NAME, durable = "true", type = ExchangeTypes.FANOUT)))
+    @RabbitListener(queues = QUEUE_NAME)
     public void onPredictionResult(String payload) {
         try {
             PredictionResultEvent event = objectMapper.readValue(payload, PredictionResultEvent.class);

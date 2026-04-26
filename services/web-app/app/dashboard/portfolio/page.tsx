@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { apiClient, type MarketSymbolResponse, type PortfolioHoldingResponse, type PortfolioOverviewResponse } from "@/lib/api-client";
+import { Button } from "@/components/ui/button";
 
 type EnrichedHolding = PortfolioHoldingResponse & {
   name: string;
@@ -52,72 +55,157 @@ function buildFallbackTrend(lastPrice: number) {
   return Array.from({ length: 10 }, (_, index) => Number((lastPrice * (0.96 + index * 0.01)).toFixed(2)));
 }
 
+const fieldCls =
+  "w-full rounded-2xl border border-border bg-bg-2 px-4 py-3 text-sm text-white outline-none transition placeholder:text-text-3 focus:border-cyan/40";
+
+function AddPositionPanel({
+  onAdded,
+  onClose,
+}: {
+  onAdded: () => void;
+  onClose: () => void;
+}) {
+  const [ticker, setTicker] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [entryPrice, setEntryPrice] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const firstRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    firstRef.current?.focus();
+  }, []);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const qty = parseFloat(quantity);
+    const price = parseFloat(entryPrice);
+    if (!ticker.trim() || isNaN(qty) || qty <= 0 || isNaN(price) || price <= 0) {
+      setErr("Please fill all fields with valid positive numbers.");
+      return;
+    }
+    setSubmitting(true);
+    setErr(null);
+    try {
+      await apiClient.addPosition({ ticker: ticker.trim().toUpperCase(), quantity: qty, entryPrice: price });
+      toast.success(`${ticker.toUpperCase()} position added`);
+      onAdded();
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : "Failed to add position");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-end sm:items-center sm:justify-center">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-md rounded-t-[28px] sm:rounded-[28px] border border-border bg-bg-1 p-6 shadow-glow">
+        <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Portfolio</div>
+        <h3 className="mt-2 font-display text-2xl font-bold tracking-[-0.04em] text-white">Add position</h3>
+        <p className="mt-2 text-sm text-text-2">Enter the ticker, quantity and your average entry price.</p>
+        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+          <label className="block">
+            <span className="mb-2 block text-xs uppercase tracking-[0.22em] text-text-3">Ticker</span>
+            <input
+              ref={firstRef}
+              className={fieldCls}
+              placeholder="e.g. AAPL"
+              value={ticker}
+              onChange={(e) => setTicker(e.target.value)}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-2 block text-xs uppercase tracking-[0.22em] text-text-3">Quantity</span>
+            <input
+              type="number"
+              min="0.00000001"
+              step="any"
+              className={fieldCls}
+              placeholder="10"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-2 block text-xs uppercase tracking-[0.22em] text-text-3">Entry price (USD)</span>
+            <input
+              type="number"
+              min="0.01"
+              step="any"
+              className={fieldCls}
+              placeholder="178.50"
+              value={entryPrice}
+              onChange={(e) => setEntryPrice(e.target.value)}
+            />
+          </label>
+          {err ? <p className="text-sm text-red">{err}</p> : null}
+          <div className="flex gap-3 pt-2">
+            <Button type="submit" variant="cyan" disabled={submitting} className="flex-1">
+              {submitting ? "Adding…" : "Add position"}
+            </Button>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function PortfolioPage() {
   const [portfolio, setPortfolio] = useState<PortfolioOverviewResponse | null>(null);
-  const [symbols, setSymbols] = useState<MarketSymbolResponse[]>([]);
   const [holdings, setHoldings] = useState<EnrichedHolding[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  async function loadPortfolio() {
+    try {
+      const [overview, symbolResponse] = await Promise.all([
+        apiClient.getPortfolio(),
+        apiClient.getSymbols(),
+      ]);
+
+      const symbolMap = new Map<string, MarketSymbolResponse>(symbolResponse.content.map((symbol) => [symbol.ticker, symbol]));
+      const enriched = await Promise.all(
+        overview.holdings.map(async (holding, index) => {
+          const symbol = symbolMap.get(holding.symbol);
+          const from = new Date();
+          from.setUTCDate(from.getUTCDate() - 10);
+          const history = await apiClient.getHistoricalPrices(
+            holding.symbol,
+            from.toISOString().slice(0, 10),
+            new Date().toISOString().slice(0, 10),
+            12
+          );
+          const trend = history.content.length
+            ? history.content.slice().reverse().map((bar) => bar.adjustedClose ?? bar.ohlcv.close)
+            : buildFallbackTrend(holding.lastPrice);
+
+          return {
+            ...holding,
+            name: symbol?.name ?? holding.symbol,
+            sector: symbol?.sector ?? "Portfolio holding",
+            color: palette[index % palette.length],
+            trend,
+          };
+        })
+      );
+
+      setPortfolio(overview);
+      setHoldings(enriched);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to load portfolio");
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   useEffect(() => {
-    let mounted = true;
-
-    async function loadPortfolio() {
-      try {
-        const [overview, symbolResponse] = await Promise.all([
-          apiClient.getPortfolio(),
-          apiClient.getSymbols(),
-        ]);
-
-        const symbolMap = new Map(symbolResponse.content.map((symbol) => [symbol.ticker, symbol]));
-        const enriched = await Promise.all(
-          overview.holdings.map(async (holding, index) => {
-            const symbol = symbolMap.get(holding.symbol);
-            const from = new Date();
-            from.setUTCDate(from.getUTCDate() - 10);
-            const history = await apiClient.getHistoricalPrices(
-              holding.symbol,
-              from.toISOString().slice(0, 10),
-              new Date().toISOString().slice(0, 10),
-              12
-            );
-            const trend = history.content.length
-              ? history.content.slice().reverse().map((bar) => bar.adjustedClose ?? bar.ohlcv.close)
-              : buildFallbackTrend(holding.lastPrice);
-
-            return {
-              ...holding,
-              name: symbol?.name ?? holding.symbol,
-              sector: symbol?.sector ?? "Portfolio holding",
-              color: palette[index % palette.length],
-              trend,
-            };
-          })
-        );
-
-        if (!mounted) {
-          return;
-        }
-
-        setPortfolio(overview);
-        setSymbols(symbolResponse.content);
-        setHoldings(enriched);
-      } catch (requestError) {
-        if (mounted) {
-          setError(requestError instanceof Error ? requestError.message : "Unable to load portfolio");
-        }
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
     loadPortfolio();
-
-    return () => {
-      mounted = false;
-    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const summary = useMemo(() => {
@@ -180,6 +268,17 @@ export default function PortfolioPage() {
 
   return (
     <div className="space-y-8">
+      {showAddForm ? (
+        <AddPositionPanel
+          onAdded={() => {
+            setShowAddForm(false);
+            setIsLoading(true);
+            loadPortfolio();
+          }}
+          onClose={() => setShowAddForm(false)}
+        />
+      ) : null}
+
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {summary.map((card) => (
           <article key={card.label} className="rounded-[20px] border border-border bg-bg-1/80 p-5 shadow-glow">
@@ -229,9 +328,12 @@ export default function PortfolioPage() {
               <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Positions</div>
               <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">Open holdings</h3>
             </div>
-            <div className="rounded-full border border-border bg-bg-2 px-4 py-2 text-xs uppercase tracking-[0.22em] text-text-2">
-              {symbols.length > 0 ? "Backend book" : "Live book"}
-            </div>
+            <Link
+              href="/dashboard/portfolio/add"
+              className="inline-flex items-center gap-2 rounded-full bg-cyan px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-black transition-opacity hover:opacity-80"
+            >
+              + Add Position
+            </Link>
           </div>
 
           <div className="mt-6 overflow-x-auto">
