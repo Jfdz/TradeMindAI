@@ -1,3 +1,5 @@
+import { getSession } from "next-auth/react";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
 
 type RequestOptions = RequestInit & {
@@ -96,11 +98,15 @@ function buildDemoBacktest(id: string, request?: SubmitBacktestPayload): Backtes
 async function requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { fallbackOnError = false, ...fetchOptions } = options;
 
+  const session = await getSession();
+  const token = (session as { accessToken?: string } | null)?.accessToken;
+
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       ...fetchOptions,
       headers: {
         Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(fetchOptions.body ? { "Content-Type": "application/json" } : {}),
         ...(fetchOptions.headers ?? {}),
       },
