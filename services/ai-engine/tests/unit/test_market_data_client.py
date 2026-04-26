@@ -53,7 +53,7 @@ def test_fetch_ohlcv_returns_oldest_rows_first(monkeypatch):
     frame = MarketDataClient("http://market-data-service:8081").fetch_ohlcv("AAPL", size=2)
 
     assert isinstance(frame, pd.DataFrame)
-    assert list(frame["date"]) == ["2026-04-16", "2026-04-17"]
+    assert list(frame.index.strftime("%Y-%m-%d")) == ["2026-04-16", "2026-04-17"]
     assert list(frame["close"]) == [101.0, 103.0]
 
 
@@ -63,5 +63,5 @@ def test_fetch_ohlcv_raises_for_empty_history(monkeypatch):
 
     monkeypatch.setattr(market_data_client_module.httpx, "get", fake_get)
 
-    with pytest.raises(ValueError, match="No OHLCV data for AAPL"):
+    with pytest.raises(ValueError, match=r"No OHLCV data returned for ticker 'AAPL'"):
         MarketDataClient("http://market-data-service:8081").fetch_ohlcv("AAPL")
