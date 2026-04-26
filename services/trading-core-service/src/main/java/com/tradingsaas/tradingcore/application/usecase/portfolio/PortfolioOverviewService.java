@@ -1,16 +1,21 @@
 package com.tradingsaas.tradingcore.application.usecase.portfolio;
 
 import com.tradingsaas.tradingcore.adapter.out.persistence.PortfolioJpaRepository;
+import com.tradingsaas.tradingcore.adapter.out.persistence.PortfolioPositionJpaRepository;
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.PortfolioJpaEntity;
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.PortfolioPositionJpaEntity;
+import com.tradingsaas.tradingcore.adapter.out.persistence.entity.UserJpaEntity;
 import com.tradingsaas.tradingcore.domain.model.backtest.OhlcvBar;
 import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort;
+import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,11 +24,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class PortfolioOverviewService {
 
     private final PortfolioJpaRepository portfolioJpaRepository;
+    private final PortfolioPositionJpaRepository positionRepository;
+    private final EntityManager entityManager;
     private final HistoricalMarketDataPort historicalMarketDataPort;
 
     public PortfolioOverviewService(PortfolioJpaRepository portfolioJpaRepository,
+                                    PortfolioPositionJpaRepository positionRepository,
+                                    EntityManager entityManager,
                                     HistoricalMarketDataPort historicalMarketDataPort) {
         this.portfolioJpaRepository = portfolioJpaRepository;
+        this.positionRepository = positionRepository;
+        this.entityManager = entityManager;
         this.historicalMarketDataPort = historicalMarketDataPort;
     }
 
@@ -113,6 +124,44 @@ public class PortfolioOverviewService {
             case "PREMIUM" -> BigDecimal.valueOf(100_000);
             default -> BigDecimal.valueOf(10_000);
         };
+    }
+
+    @Transactional
+    public PortfolioPositionJpaEntity addPosition(UUID userId, String symbolTicker, BigDecimal quantity, BigDecimal entryPrice) {
+        PortfolioJpaEntity portfolio = portfolioJpaRepository.findByUser_Id(userId)
+                .orElseGet(() -> createPortfolio(userId));
+
+        PortfolioPositionJpaEntity position = new PortfolioPositionJpaEntity(
+                UUID.randomUUID(),
+                portfolio,
+                symbolTicker.toUpperCase(),
+                quantity,
+                entryPrice,
+                "OPEN",
+                Instant.now(),
+                null
+        );
+        return positionRepository.save(position);
+    }
+
+    @Transactional
+    public void deletePosition(UUID positionId, UUID userId) {
+        PortfolioPositionJpaEntity position = positionRepository.findByIdAndUserId(positionId, userId)
+                .orElseThrow(() -> new NoSuchElementException("Position not found"));
+        positionRepository.delete(position);
+    }
+
+    private PortfolioJpaEntity createPortfolio(UUID userId) {
+        UserJpaEntity userRef = entityManager.getReference(UserJpaEntity.class, userId);
+        Instant now = Instant.now();
+        PortfolioJpaEntity portfolio = new PortfolioJpaEntity(
+                UUID.randomUUID(),
+                userRef,
+                BigDecimal.valueOf(10_000),
+                now,
+                now
+        );
+        return portfolioJpaRepository.save(portfolio);
     }
 
     private static double percentage(BigDecimal value, BigDecimal basis) {
