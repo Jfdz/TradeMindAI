@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     model_path: str = "./models/"
     enable_gpu: bool = False
     cors_allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    market_data_service_url: str = "http://market-data-service:8081"
 
     def parsed_cors_allowed_origins(self) -> list[str]:
         return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]

@@ -108,6 +108,21 @@ export type PortfolioHoldingResponse = {
   closedAt?: string | null;
 };
 
+export type AddPositionPayload = {
+  ticker: string;
+  quantity: number;
+  entryPrice: number;
+  purchaseDate?: string;
+  fees?: number;
+  notes?: string;
+};
+
+export type ClosePositionPayload = {
+  exitPrice: number;
+  closedAt?: string;
+  fees?: number;
+};
+
 export type PortfolioOverviewResponse = {
   userId: string;
   initialCapital: number;
@@ -400,5 +415,25 @@ export const apiClient = {
         holdings: [],
       };
     }
+  },
+
+  async addPosition(payload: AddPositionPayload): Promise<{ id: string }> {
+    return requestJson<{ id: string }>("/api/v1/portfolio/positions", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async closePosition(positionId: string, payload: ClosePositionPayload): Promise<void> {
+    await requestJson<void>(`/api/v1/portfolio/positions/${positionId}/close`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async deletePosition(positionId: string): Promise<void> {
+    await requestJson<void>(`/api/v1/portfolio/positions/${positionId}`, {
+      method: "DELETE",
+    });
   },
 };
