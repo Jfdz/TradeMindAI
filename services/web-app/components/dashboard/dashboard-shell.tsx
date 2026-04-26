@@ -58,6 +58,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           <div className="mt-8 rounded-3xl border border-gold-300/20 bg-gradient-to-br from-gold-300/10 to-mint-400/10 p-4">
             <p className="text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300/80">Session</p>
             <p className="mt-3 text-sm text-slate-700 dark:text-slate-200">{session?.user?.email ?? "Authenticated user"}</p>
+            <Button
+              onClick={() => signOut({ callbackUrl: "/" })}
+              type="button"
+              variant="outline"
+              className="mt-4 w-full"
+            >
+              Sign out
+            </Button>
           </div>
         </aside>
 
@@ -95,7 +103,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 onClick={() => signOut({ callbackUrl: "/" })}
                 type="button"
                 variant="outline"
-                className="hidden sm:inline-flex"
+                className="inline-flex"
               >
                 Sign out
               </Button>
