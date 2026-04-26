@@ -8,9 +8,17 @@ export async function middleware(request: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET,
   });
 
-  if (!token) {
+  const { pathname } = request.nextUrl;
+
+  // Authenticated users visiting public/auth pages → send to dashboard
+  if (token && (pathname === "/" || pathname.startsWith("/auth/"))) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  // Unauthenticated users visiting protected pages → send to login
+  if (!token && pathname.startsWith("/dashboard")) {
     const loginUrl = new URL("/auth/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", request.nextUrl.pathname);
+    loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -18,5 +26,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ["/", "/auth/:path*", "/dashboard/:path*"],
 };
