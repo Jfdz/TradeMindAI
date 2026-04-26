@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
     app.state.prediction_service = None
     app.state.consumers = []
 
-    _start_consumers(app)
+    await _start_consumers(app)
 
     yield
 
@@ -53,11 +53,10 @@ async def lifespan(app: FastAPI):
     app.state.model_loaded = False
 
 
-def _start_consumers(app: FastAPI) -> None:
-    """Wire RabbitMQ consumers when config + model are available.
+async def _start_consumers(app: FastAPI) -> None:
+    """Initialise the prediction service, load the active model, and start RabbitMQ consumers.
 
-    Skipped at startup if config is missing (e.g. during tests / first boot
-    before .env is provided); consumers can be started later via admin endpoint.
+    Gracefully skipped when config is missing (e.g. unit tests / first boot without .env).
     """
     try:
         from ai_engine.adapters.out.rabbitmq_consumer import (
@@ -65,20 +64,135 @@ def _start_consumers(app: FastAPI) -> None:
             PredictionRequestConsumer,
         )
         from ai_engine.config import get_settings
+        from ai_engine.core.use_cases.model_registry import ModelRegistry
+        from ai_engine.core.use_cases.prediction_service import PredictionService
 
         settings = get_settings()
 
-        def _predict(tickers: list[str]) -> list[dict]:
-            svc = app.state.prediction_service
-            if svc is None:
-                return []
-            return []  # full wiring in FEAT-10 once data fetch is available
+        registry = ModelRegistry(settings.model_path)
+        svc = PredictionService(registry)
+        app.state.prediction_service = svc
 
-        pred_consumer = PredictionRequestConsumer(settings.rabbitmq_url, _predict)
-        mde_consumer = MarketDataEventConsumer(settings.rabbitmq_url, lambda syms: None)
+        try:
+            svc.reload()
+            app.state.model_loaded = True
+            logger.info("Active model loaded successfully")
+        except RuntimeError:
+            logger.warning(
+                "No active model version found — run scripts/seed_model.py to bootstrap. "
+                "Predictions will be unavailable until a model is activated."
+            )
+
+        pred_consumer = PredictionRequestConsumer(
+            settings.rabbitmq_url,
+            _make_sync_predict(app),
+        )
+        mde_consumer = MarketDataEventConsumer(
+            settings.rabbitmq_url,
+            _make_market_data_trigger(app, settings),
+        )
         app.state.consumers = [pred_consumer, mde_consumer]
+
+        await pred_consumer.start()
+        await mde_consumer.start()
+        logger.info("RabbitMQ consumers started")
     except Exception:
-        logger.warning("RabbitMQ consumers not started (config missing or broker unreachable)")
+        logger.warning(
+            "RabbitMQ consumers not started (config missing or broker unreachable)",
+            exc_info=True,
+        )
+
+
+def _make_sync_predict(app: FastAPI):
+    """Return a sync predict callback for PredictionRequestConsumer."""
+    from ai_engine.adapters.out.market_data_client import MarketDataClient
+    from ai_engine.config import get_settings
+
+    def _predict(tickers: list[str]) -> list[dict]:
+        svc = app.state.prediction_service
+        if svc is None or not app.state.model_loaded:
+            logger.warning("Prediction requested but service/model not ready")
+            return []
+        try:
+            settings = get_settings()
+            client = MarketDataClient(settings.market_data_service_url)
+            pairs = []
+            for ticker in tickers:
+                try:
+                    df = client.fetch_ohlcv(ticker)
+                    pairs.append((ticker, df))
+                except Exception:
+                    logger.exception("Failed to fetch OHLCV for %s", ticker)
+            if not pairs:
+                return []
+            results = svc.predict_batch(pairs)
+            return [r.__dict__ for r in results]
+        except Exception:
+            logger.exception("Batch prediction failed")
+            return []
+
+    return _predict
+
+
+def _make_market_data_trigger(app: FastAPI, settings):
+    """Return an async trigger callable for MarketDataEventConsumer."""
+    import json
+
+    import aio_pika
+    from aio_pika import ExchangeType, Message
+
+    from ai_engine.adapters.out.market_data_client import MarketDataClient
+    from ai_engine.adapters.out.rabbitmq_consumer import PREDICTION_RESULT_EXCHANGE
+
+    async def _trigger(symbols: list[str]) -> None:
+        if not app.state.model_loaded:
+            logger.warning("Market data event received but model not loaded — skipping predictions")
+            return
+
+        svc = app.state.prediction_service
+        client = MarketDataClient(settings.market_data_service_url)
+
+        pairs = []
+        for ticker in symbols:
+            try:
+                df = client.fetch_ohlcv(ticker)
+                pairs.append((ticker, df))
+            except Exception:
+                logger.exception("Failed to fetch OHLCV for %s", ticker)
+
+        if not pairs:
+            logger.warning("No OHLCV data retrieved for symbols: %s", symbols)
+            return
+
+        try:
+            results = svc.predict_batch(pairs)
+        except Exception:
+            logger.exception("Batch prediction failed for symbols: %s", symbols)
+            return
+
+        payload = json.dumps({
+            "tickers": symbols,
+            "predictions": [r.__dict__ for r in results],
+        }).encode()
+
+        try:
+            connection = await aio_pika.connect_robust(settings.rabbitmq_url)
+            async with connection:
+                channel = await connection.channel()
+                exchange = await channel.declare_exchange(
+                    PREDICTION_RESULT_EXCHANGE,
+                    ExchangeType.FANOUT,
+                    durable=True,
+                )
+                await exchange.publish(
+                    Message(body=payload, content_type="application/json"),
+                    routing_key="",
+                )
+            logger.info("Published %d predictions for %s", len(results), symbols)
+        except Exception:
+            logger.exception("Failed to publish prediction results")
+
+    return _trigger
 
 
 def create_app() -> FastAPI:

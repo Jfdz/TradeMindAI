@@ -1,0 +1,5 @@
+ALTER TABLE trading_core.positions
+    ADD COLUMN IF NOT EXISTS exit_price  NUMERIC(18,4),
+    ADD COLUMN IF NOT EXISTS fees        NUMERIC(10,4) NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS notes       TEXT,
+    ADD COLUMN IF NOT EXISTS purchase_date DATE;

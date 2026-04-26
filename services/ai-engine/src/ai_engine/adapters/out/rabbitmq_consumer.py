@@ -2,7 +2,7 @@
 
 import json
 import logging
-from typing import Callable
+from typing import Awaitable, Callable
 
 import aio_pika
 from aio_pika import ExchangeType, IncomingMessage, Message
@@ -88,7 +88,7 @@ class MarketDataEventConsumer:
     list of updated symbols.
     """
 
-    def __init__(self, amqp_url: str, trigger_fn: Callable[[list[str]], None]):
+    def __init__(self, amqp_url: str, trigger_fn: Callable[[list[str]], Awaitable[None]]):
         self._amqp_url = amqp_url
         self._trigger_fn = trigger_fn
         self._connection: aio_pika.abc.AbstractConnection | None = None
@@ -121,7 +121,7 @@ class MarketDataEventConsumer:
                     body = json.loads(msg.body)
                     if body.get("event") == MARKET_DATA_EVENT:
                         symbols: list[str] = body.get("symbols", [])
-                        self._trigger_fn(symbols)
+                        await self._trigger_fn(symbols)
                 except Exception:
                     logger.exception("Failed to process market-data event")
                     raise

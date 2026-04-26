@@ -13,3 +13,4 @@ resources:
   - hpa.yml
   - ingress.yml
   - network-policies.yml
+  - cronjobs.yml

@@ -136,6 +136,14 @@ market-data:
         name: Advanced Micro Devices, Inc.
         exchange: NASDAQ
         active: true
+      - ticker: BTC-USD
+        name: Bitcoin USD
+        exchange: CRYPTO
+        active: true
+      - ticker: ETH-USD
+        name: Ethereum USD
+        exchange: CRYPTO
+        active: true
   events:
     prices-updated-routing-key: ${MARKET_DATA_PRICES_UPDATED_ROUTING_KEY:market-data.prices.updated}
 

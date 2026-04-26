@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { apiClient, type MarketSymbolResponse, type PortfolioHoldingResponse, type PortfolioOverviewResponse } from "@/lib/api-client";
@@ -229,9 +230,12 @@ export default function PortfolioPage() {
               <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Positions</div>
               <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">Open holdings</h3>
             </div>
-            <div className="rounded-full border border-border bg-bg-2 px-4 py-2 text-xs uppercase tracking-[0.22em] text-text-2">
-              {symbols.length > 0 ? "Backend book" : "Live book"}
-            </div>
+            <Link
+              href="/dashboard/portfolio/add"
+              className="inline-flex items-center gap-2 rounded-full bg-cyan px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-black transition-opacity hover:opacity-80"
+            >
+              + Add Position
+            </Link>
           </div>
 
           <div className="mt-6 overflow-x-auto">
