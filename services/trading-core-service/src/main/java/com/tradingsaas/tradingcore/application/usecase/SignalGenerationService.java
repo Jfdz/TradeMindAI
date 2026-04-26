@@ -37,12 +37,14 @@ class SignalGenerationService implements GenerateSignalUseCase {
         TradingSignal signal = new TradingSignal(
                 UUID.randomUUID(),
                 symbolId,
+                prediction.getTicker(),
                 prediction.getSignalType(),
                 prediction.getConfidence(),
                 Timeframe.DAILY,
                 Instant.now(),
                 riskStopLossPct(prediction.getSignalType()),
-                riskTakeProfitPct(prediction.getSignalType()));
+                riskTakeProfitPct(prediction.getSignalType()),
+                prediction.getPredictedChangePct());
         return tradingSignalRepository.save(signal);
     }
 

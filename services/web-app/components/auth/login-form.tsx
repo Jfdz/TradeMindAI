@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -57,38 +58,58 @@ export function LoginForm() {
   return (
     <form className="space-y-5" onSubmit={onSubmit}>
       <div>
-        <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200" htmlFor="email">
+        <label className="mb-2 block text-xs uppercase tracking-[0.22em] text-text-3" htmlFor="email">
           Email
         </label>
         <input
           id="email"
           type="email"
           autoComplete="email"
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 transition placeholder:text-slate-400 focus:border-gold-300/60 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
+          className="w-full rounded-2xl border border-border bg-bg-2 px-4 py-3 text-sm text-white outline-none transition placeholder:text-text-3 focus:border-cyan/40"
           {...register("email")}
         />
-        {errors.email ? <p className="mt-2 text-sm text-rose-500 dark:text-rose-300">{errors.email.message}</p> : null}
+        {errors.email ? <p className="mt-2 text-sm text-red">{errors.email.message}</p> : null}
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200" htmlFor="password">
-          Password
-        </label>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <label className="block text-xs uppercase tracking-[0.22em] text-text-3" htmlFor="password">
+            Password
+          </label>
+          <Link className="text-xs text-cyan transition hover:text-white" href="/auth/login">
+            Forgot password?
+          </Link>
+        </div>
         <input
           id="password"
           type="password"
           autoComplete="current-password"
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 transition placeholder:text-slate-400 focus:border-gold-300/60 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
+          className="w-full rounded-2xl border border-border bg-bg-2 px-4 py-3 text-sm text-white outline-none transition placeholder:text-text-3 focus:border-cyan/40"
           {...register("password")}
         />
-        {errors.password ? <p className="mt-2 text-sm text-rose-500 dark:text-rose-300">{errors.password.message}</p> : null}
+        {errors.password ? <p className="mt-2 text-sm text-red">{errors.password.message}</p> : null}
       </div>
 
-      {serverError ? <p className="text-sm text-rose-500 dark:text-rose-300">{serverError}</p> : null}
+      {serverError ? <p className="text-sm text-red">{serverError}</p> : null}
 
-      <Button className="w-full" type="submit" disabled={isSubmitting}>
+      <Button className="w-full" size="xl" type="submit" variant="cyan" disabled={isSubmitting}>
         {isSubmitting ? "Signing in..." : "Sign in"}
       </Button>
+
+      <div className="flex items-center gap-4 py-2">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-[11px] uppercase tracking-[0.22em] text-text-3">or continue with</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Button type="button" variant="outline" size="lg" className="w-full">
+          Google
+        </Button>
+        <Button type="button" variant="outline" size="lg" className="w-full">
+          GitHub
+        </Button>
+      </div>
     </form>
   );
 }

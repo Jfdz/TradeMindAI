@@ -41,6 +41,7 @@ class RegisterUserService implements RegisterUserUseCase {
                 passwordEncoder.encode(cmd.rawPassword()),
                 cmd.firstName(),
                 cmd.lastName(),
+                "UTC",
                 subscription,
                 now,
                 true

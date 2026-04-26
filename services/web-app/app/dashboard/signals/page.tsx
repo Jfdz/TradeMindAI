@@ -1,192 +1,312 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import {
-  formatConfidence,
-  formatPrice,
-  formatSignalDate,
-  signalRecords,
-  type SignalRecord,
-  type SignalType,
-} from "@/lib/dashboard/signals";
+import { apiClient, type SignalResponse } from "@/lib/api-client";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-const signalTypes: Array<SignalType | "ALL"> = ["ALL", "BUY", "SELL", "HOLD"];
-const pageSize = 4;
+type FilterValue = "ALL" | "BUY" | "SELL" | "HOLD";
 
-function sortSignals(signals: SignalRecord[], sortBy: string) {
-  const items = [...signals];
+type ResolvedSignal = SignalResponse & {
+  latestPrice: number | null;
+  entry: number | null;
+  takeProfit: number | null;
+  stopLoss: number | null;
+  live: boolean;
+  status: "LIVE" | "PENDING";
+  age: string;
+  generatedLabel: string;
+  reasoning: string;
+};
 
-  if (sortBy === "confidence") {
-    return items.sort((left, right) => right.confidence - left.confidence);
+const filterOptions: FilterValue[] = ["ALL", "BUY", "SELL", "HOLD"];
+
+function formatPrice(value: number | null) {
+  if (value == null || Number.isNaN(value)) {
+    return "N/A";
   }
 
-  if (sortBy === "price") {
-    return items.sort((left, right) => right.price - left.price);
+  return value.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  });
+}
+
+function formatConfidence(value: number) {
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+function formatAge(value: string) {
+  const generatedAt = new Date(value).getTime();
+  if (Number.isNaN(generatedAt)) {
+    return "recently";
   }
 
-  return items.sort((left, right) => Number(new Date(right.date)) - Number(new Date(left.date)));
+  const diffMinutes = Math.max(Math.round((Date.now() - generatedAt) / 60000), 0);
+  if (diffMinutes < 60) {
+    return `${Math.max(diffMinutes, 1)}m ago`;
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours}h ago`;
+  }
+
+  return `${Math.max(Math.round(diffHours / 24), 1)}d ago`;
+}
+
+function buildReasoning(signal: SignalResponse, latestPrice: number | null) {
+  const predicted = signal.predictedChangePct ?? 0;
+  const move = `${Math.abs(predicted).toFixed(1)}%`;
+  const priceText = latestPrice == null ? "the latest market price" : formatPrice(latestPrice);
+
+  if (signal.type === "BUY") {
+    return `Bullish continuation setup around ${priceText} with ${move} projected upside and ${formatConfidence(signal.confidence)} confidence.`;
+  }
+
+  if (signal.type === "SELL") {
+    return `Bearish breakdown setup around ${priceText} with ${move} projected downside and ${formatConfidence(signal.confidence)} confidence.`;
+  }
+
+  return `Neutral setup near ${priceText} while the model waits for a stronger directional edge.`;
+}
+
+function deriveSignal(signal: SignalResponse, latestPrice: number | null): ResolvedSignal {
+  const entry = latestPrice;
+  const takeProfit =
+    signal.type === "BUY"
+      ? signal.takeProfitPct != null && entry != null
+        ? entry * (1 + signal.takeProfitPct / 100)
+        : null
+      : signal.type === "SELL"
+        ? signal.takeProfitPct != null && entry != null
+          ? entry * (1 - signal.takeProfitPct / 100)
+          : null
+        : entry;
+  const stopLoss =
+    signal.type === "BUY"
+      ? signal.stopLossPct != null && entry != null
+        ? entry * (1 - signal.stopLossPct / 100)
+        : null
+      : signal.type === "SELL"
+        ? signal.stopLossPct != null && entry != null
+          ? entry * (1 + signal.stopLossPct / 100)
+          : null
+        : entry;
+  const live = Date.now() - new Date(signal.generatedAt).getTime() < 1000 * 60 * 60 * 24;
+
+  return {
+    ...signal,
+    latestPrice,
+    entry,
+    takeProfit,
+    stopLoss,
+    live,
+    status: live ? "LIVE" : "PENDING",
+    age: formatAge(signal.generatedAt),
+    generatedLabel: new Date(signal.generatedAt).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }),
+    reasoning: buildReasoning(signal, latestPrice),
+  };
 }
 
 export default function SignalsPage() {
-  const [search, setSearch] = useState("");
-  const [selectedType, setSelectedType] = useState<(typeof signalTypes)[number]>("ALL");
-  const [sortBy, setSortBy] = useState("recent");
-  const [page, setPage] = useState(1);
-
-  const filteredSignals = sortSignals(
-    signalRecords.filter((signal) => {
-      const matchesSearch = [signal.symbol, signal.type, signal.timeframe].some((value) =>
-        value.toLowerCase().includes(search.trim().toLowerCase())
-      );
-      const matchesType = selectedType === "ALL" || signal.type === selectedType;
-
-      return matchesSearch && matchesType;
-    }),
-    sortBy
-  );
-
-  const pageCount = Math.max(1, Math.ceil(filteredSignals.length / pageSize));
-  const currentPage = Math.min(page, pageCount);
-  const pagedSignals = filteredSignals.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const [activeFilter, setActiveFilter] = useState<FilterValue>("ALL");
+  const [signals, setSignals] = useState<ResolvedSignal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setPage(1);
-  }, [search, selectedType, sortBy]);
+    let mounted = true;
+
+    async function loadSignals() {
+      try {
+        const response = await apiClient.getSignals();
+        const content = response.content ?? [];
+        const uniqueSymbols = Array.from(new Set(content.map((signal) => signal.symbol)));
+        const latestPriceBySymbol = new Map<string, number | null>();
+
+        await Promise.all(
+          uniqueSymbols.map(async (symbol) => {
+            const latest = await apiClient.getLatestPrice(symbol);
+            latestPriceBySymbol.set(symbol, latest?.adjustedClose ?? latest?.ohlcv.close ?? null);
+          })
+        );
+
+        if (!mounted) {
+          return;
+        }
+
+        setSignals(content.map((signal) => deriveSignal(signal, latestPriceBySymbol.get(signal.symbol) ?? null)));
+      } catch (requestError) {
+        if (mounted) {
+          setError(requestError instanceof Error ? requestError.message : "Unable to load signals");
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadSignals();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const filteredSignals = useMemo(() => {
+    if (activeFilter === "ALL") {
+      return signals;
+    }
+
+    return signals.filter((signal) => signal.type === activeFilter);
+  }, [activeFilter, signals]);
 
   return (
     <div className="space-y-8">
-      <section className="rounded-[2rem] border border-slate-200 bg-slate-100 p-6 shadow-glow dark:border-white/10 dark:bg-white/5">
+      <section className="rounded-[24px] border border-border bg-bg-1/80 p-6 shadow-glow">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300/80">Signals</p>
-            <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">Filter and review trading signals</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
-              Review the latest model output, narrow the list with symbol and type filters, and sort by recency,
-              confidence, or price before opening the full signal detail page.
+            <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-cyan">
+              <span className="h-2 w-2 rounded-full bg-green animate-pulse-soft" />
+              Live signals
+            </div>
+            <h2 className="mt-3 font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
+              Updating from the backend
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-text-2">
+              Review the latest signal feed, narrow the list with filters, and open a full signal detail page for more
+              context.
             </p>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-700 dark:border-white/10 dark:bg-ink-800/70 dark:text-slate-200">
-            <p className="text-xs uppercase tracking-[0.35em] text-amber-600 dark:text-gold-300/80">Visible</p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{filteredSignals.length}</p>
-            <p className="mt-1 text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">of {signalRecords.length} signals</p>
+          <div className="flex flex-wrap gap-2">
+            {filterOptions.map((filter) => (
+              <Button
+                key={filter}
+                size="sm"
+                variant={activeFilter === filter ? "cyan" : "outline"}
+                onClick={() => setActiveFilter(filter)}
+              >
+                {filter}
+              </Button>
+            ))}
           </div>
-        </div>
-
-        <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_auto_auto]">
-          <label className="block">
-            <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Search</span>
-            <input
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-gold-300/40 dark:border-white/10 dark:bg-ink-800/80 dark:text-white dark:placeholder:text-slate-500"
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Symbol, type, or timeframe"
-              value={search}
-            />
-          </label>
-
-          <label className="block min-w-40">
-            <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Type</span>
-            <select
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-gold-300/40 dark:border-white/10 dark:bg-ink-800/80 dark:text-white"
-              onChange={(event) => setSelectedType(event.target.value as (typeof signalTypes)[number])}
-              value={selectedType}
-            >
-              {signalTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type === "ALL" ? "All signals" : type}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block min-w-44">
-            <span className="mb-2 block text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Sort by</span>
-            <select
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-gold-300/40 dark:border-white/10 dark:bg-ink-800/80 dark:text-white"
-              onChange={(event) => setSortBy(event.target.value)}
-              value={sortBy}
-            >
-              <option value="recent">Recent</option>
-              <option value="confidence">Confidence</option>
-              <option value="price">Price</option>
-            </select>
-          </label>
         </div>
       </section>
 
-      <section className="rounded-[2rem] border border-slate-200 bg-slate-100 p-6 shadow-glow dark:border-white/10 dark:bg-white/5">
-        <div className="overflow-hidden rounded-3xl border border-slate-200 dark:border-white/10">
-          <table className="min-w-full divide-y divide-slate-200 dark:divide-white/10">
-            <thead className="bg-slate-100 dark:bg-white/5">
-              <tr className="text-left text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
-                <th className="px-5 py-4">Symbol</th>
-                <th className="px-5 py-4">Type</th>
-                <th className="px-5 py-4">Confidence</th>
-                <th className="px-5 py-4">Price</th>
-                <th className="px-5 py-4">Date</th>
-                <th className="px-5 py-4">Timeframe</th>
-                <th className="px-5 py-4">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 bg-white dark:divide-white/10 dark:bg-ink-800/50">
-              {pagedSignals.map((signal) => (
-                <tr key={signal.id} className="text-sm text-slate-700 transition hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-white/5">
-                  <td className="px-5 py-4 font-semibold text-slate-900 dark:text-white">{signal.symbol}</td>
-                  <td className="px-5 py-4">{signal.type}</td>
-                  <td className="px-5 py-4">{formatConfidence(signal.confidence)}</td>
-                  <td className="px-5 py-4">{formatPrice(signal.price)}</td>
-                  <td className="px-5 py-4">{formatSignalDate(signal.date)}</td>
-                  <td className="px-5 py-4">{signal.timeframe}</td>
-                  <td className="px-5 py-4">
-                    <Link
-                      className="rounded-full border border-gold-300/20 bg-gold-300/10 px-4 py-2 text-xs uppercase tracking-[0.3em] text-amber-600 dark:text-gold-300 transition hover:border-gold-300/40 hover:bg-gold-300/20"
-                      href={`/dashboard/signals/${signal.id}`}
-                    >
-                      Open
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-              {pagedSignals.length === 0 ? (
-                <tr>
-                  <td className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400" colSpan={7}>
-                    No signals match the current filters.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-slate-600 dark:text-slate-300">
-            Showing {pagedSignals.length} of {filteredSignals.length} matching signals.
-          </p>
-
-          <div className="flex items-center gap-3">
-            <button
-              className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-700 disabled:opacity-40 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
-              disabled={currentPage === 1}
-              onClick={() => setPage((value) => Math.max(1, value - 1))}
-              type="button"
-            >
-              Previous
-            </button>
-            <span className="text-sm text-slate-600 dark:text-slate-300">
-              Page {currentPage} of {pageCount}
-            </span>
-            <button
-              className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-700 disabled:opacity-40 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
-              disabled={currentPage === pageCount}
-              onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
-              type="button"
-            >
-              Next
-            </button>
+      <section className="rounded-[24px] border border-border bg-bg-1/80 p-6 shadow-glow">
+        {isLoading ? (
+          <div className="space-y-4">
+            <div className="h-8 w-64 animate-pulse rounded-full bg-bg-2" />
+            <div className="h-[360px] animate-pulse rounded-[20px] bg-bg-2" />
           </div>
-        </div>
+        ) : error ? (
+          <div className="rounded-2xl border border-red/30 bg-red/10 p-4 text-sm text-red">
+            {error}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-[1200px] w-full border-separate border-spacing-0">
+              <thead className="text-[11px] uppercase tracking-[0.22em] text-text-3">
+                <tr>
+                  <th className="px-4 py-3 text-left">Pair</th>
+                  <th className="px-4 py-3 text-left">Signal</th>
+                  <th className="px-4 py-3 text-left">TF</th>
+                  <th className="px-4 py-3 text-left">Entry</th>
+                  <th className="px-4 py-3 text-left">Take Profit</th>
+                  <th className="px-4 py-3 text-left">Stop Loss</th>
+                  <th className="px-4 py-3 text-left">Confidence</th>
+                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left">Reasoning</th>
+                  <th className="px-4 py-3 text-left">Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredSignals.map((signal, index) => (
+                  <tr
+                    key={signal.id}
+                    className={cn("transition hover:bg-white/[0.025]", index % 2 === 0 ? "bg-white/[0.012]" : "")}
+                  >
+                    <td className="border-t border-border px-4 py-4">
+                      <div className="font-display text-base font-semibold tracking-[-0.03em] text-white">{signal.symbol}</div>
+                      <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">{signal.age}</div>
+                    </td>
+                    <td className="border-t border-border px-4 py-4">
+                      <span
+                        className={cn(
+                          "rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]",
+                          signal.type === "BUY"
+                            ? "border-green/30 bg-[rgba(0,214,143,0.12)] text-green"
+                            : signal.type === "SELL"
+                              ? "border-red/30 bg-[rgba(255,77,106,0.12)] text-red"
+                              : "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold"
+                        )}
+                      >
+                        {signal.type}
+                      </span>
+                    </td>
+                    <td className="border-t border-border px-4 py-4 font-mono text-text-1">{signal.timeframe}</td>
+                    <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatPrice(signal.entry)}</td>
+                    <td className="border-t border-border px-4 py-4 font-mono text-green">
+                      {formatPrice(signal.takeProfit)}
+                    </td>
+                    <td className="border-t border-border px-4 py-4 font-mono text-red">
+                      {formatPrice(signal.stopLoss)}
+                    </td>
+                    <td className="border-t border-border px-4 py-4">
+                      <div className="w-44">
+                        <div className="flex items-center justify-between text-xs text-text-2">
+                          <span>{formatConfidence(signal.confidence)}</span>
+                          <span>{signal.live ? "LIVE" : "PENDING"}</span>
+                        </div>
+                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-bg-3">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-cyan to-cyan/60"
+                            style={{ width: `${signal.confidence * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="border-t border-border px-4 py-4">
+                      <span
+                        className={cn(
+                          "rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]",
+                          signal.status === "LIVE"
+                            ? "border-cyan/30 bg-cyan-dim text-cyan"
+                            : "border-border bg-bg-2 text-text-2"
+                        )}
+                      >
+                        {signal.status}
+                      </span>
+                    </td>
+                    <td className="border-t border-border px-4 py-4 text-sm leading-6 text-text-2">{signal.reasoning}</td>
+                    <td className="border-t border-border px-4 py-4">
+                      <div className="font-mono text-text-1">{signal.age}</div>
+                      <div className="mt-1 text-xs text-text-3">{signal.generatedLabel}</div>
+                    </td>
+                  </tr>
+                ))}
+                {filteredSignals.length === 0 ? (
+                  <tr>
+                    <td className="border-t border-border px-4 py-10 text-center text-sm text-text-2" colSpan={10}>
+                      No signals match the current filter.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </div>
   );

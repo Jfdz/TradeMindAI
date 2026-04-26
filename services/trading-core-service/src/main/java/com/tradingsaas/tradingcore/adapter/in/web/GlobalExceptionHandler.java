@@ -5,6 +5,7 @@ import com.tradingsaas.tradingcore.domain.exception.InsufficientSubscriptionExce
 import com.tradingsaas.tradingcore.domain.exception.InvalidCredentialsException;
 import com.tradingsaas.tradingcore.domain.exception.StrategyNotFoundException;
 import com.tradingsaas.tradingcore.domain.exception.TokenBlacklistedException;
+import com.tradingsaas.tradingcore.domain.exception.UserNotFoundException;
 import com.tradingsaas.tradingcore.adapter.in.web.SignalController.SignalNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -76,6 +77,13 @@ class GlobalExceptionHandler {
     @ExceptionHandler(StrategyNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     ErrorResponse handleStrategyNotFound(StrategyNotFoundException ex, HttpServletRequest req) {
+        return new ErrorResponse(404, "Not Found", ex.getMessage(), List.of(),
+                Instant.now(), req.getRequestURI());
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    ErrorResponse handleUserNotFound(UserNotFoundException ex, HttpServletRequest req) {
         return new ErrorResponse(404, "Not Found", ex.getMessage(), List.of(),
                 Instant.now(), req.getRequestURI());
     }
