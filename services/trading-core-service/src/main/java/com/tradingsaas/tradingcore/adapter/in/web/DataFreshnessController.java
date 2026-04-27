@@ -3,6 +3,7 @@ package com.tradingsaas.tradingcore.adapter.in.web;
 import com.tradingsaas.tradingcore.adapter.out.persistence.TradingSignalJpaRepository;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,10 +32,12 @@ class DataFreshnessController {
                             "status", status
                     );
                 })
-                .orElseGet(() -> Map.of(
-                        "lastSignalAt", null,
-                        "signalAgeHours", null,
-                        "status", "CRITICAL"
-                ));
+                .orElseGet(() -> {
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("lastSignalAt", null);
+                    result.put("signalAgeHours", null);
+                    result.put("status", "CRITICAL");
+                    return result;
+                });
     }
 }
