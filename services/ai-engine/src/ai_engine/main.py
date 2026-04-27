@@ -2,6 +2,8 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
+from alembic import command as alembic_command
+from alembic.config import Config as AlembicConfig
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -37,12 +39,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 async def _apply_migrations() -> None:
     try:
-        from alembic import command
-        from alembic.config import Config
-
         ini_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "alembic.ini")
-        alembic_cfg = Config(ini_path)
-        command.upgrade(alembic_cfg, "head")
+        alembic_cfg = AlembicConfig(ini_path)
+        alembic_command.upgrade(alembic_cfg, "head")
         logger.info("Alembic migrations applied")
     except Exception:
         logger.warning("Could not apply Alembic migrations (non-fatal)", exc_info=True)
