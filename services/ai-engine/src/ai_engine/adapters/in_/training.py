@@ -82,12 +82,15 @@ async def _run_training(run_id: str, params: TrainRequest, started_at: datetime)
             "horizon": HORIZON,
         }
 
-        upsert_training_run(
-            run_id=run_id,
-            status="RUNNING",
-            hyperparameters=hp,
-            started_at=started_at,
-        )
+        try:
+            upsert_training_run(
+                run_id=run_id,
+                status="RUNNING",
+                hyperparameters=hp,
+                started_at=started_at,
+            )
+        except Exception as db_exc:
+            logger.warning("[%s] Could not persist RUNNING status (non-fatal): %s", run_id, db_exc)
 
         # 1 ── load OHLCV from DB
         logger.info("[%s] Loading OHLCV data...", run_id)
@@ -206,24 +209,27 @@ async def _run_training(run_id: str, params: TrainRequest, started_at: datetime)
         )
         artifact_path = f"{settings.model_path}/{version_id}/model.pt"
 
-        # 8 ── persist to DB
+        # 8 ── persist to DB (non-fatal if tables missing)
         finished_at = datetime.now(timezone.utc)
-        upsert_model_version(
-            version_id=version_id,
-            version_tag=params.version_tag,
-            architecture="StockCNN-1D",
-            artifact_path=artifact_path,
-            metrics=metrics,
-        )
-        upsert_training_run(
-            run_id=run_id,
-            status="COMPLETED",
-            hyperparameters=hp,
-            started_at=started_at,
-            metrics=metrics,
-            finished_at=finished_at,
-            model_version_id=version_id,
-        )
+        try:
+            upsert_model_version(
+                version_id=version_id,
+                version_tag=params.version_tag,
+                architecture="StockCNN-1D",
+                artifact_path=artifact_path,
+                metrics=metrics,
+            )
+            upsert_training_run(
+                run_id=run_id,
+                status="COMPLETED",
+                hyperparameters=hp,
+                started_at=started_at,
+                metrics=metrics,
+                finished_at=finished_at,
+                model_version_id=version_id,
+            )
+        except Exception as db_exc:
+            logger.warning("[%s] Could not persist results to DB (non-fatal): %s", run_id, db_exc)
 
         _runs[run_id].update({
             "status":       "COMPLETED",
