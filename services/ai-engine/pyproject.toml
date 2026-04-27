@@ -50,6 +50,9 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["ai_engine"]
+
 [tool.mypy]
 python_version = "3.11"
 strict = false
