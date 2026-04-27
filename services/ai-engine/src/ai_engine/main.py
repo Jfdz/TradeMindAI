@@ -37,10 +37,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 async def _apply_migrations() -> None:
     try:
         import os
+
         from alembic import command
         from alembic.config import Config
 
-        alembic_cfg = Config(os.path.join(os.path.dirname(__file__), "..", "..", "..", "alembic.ini"))
+        ini_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "alembic.ini")
+        alembic_cfg = Config(ini_path)
         command.upgrade(alembic_cfg, "head")
         logger.info("Alembic migrations applied")
     except Exception:
