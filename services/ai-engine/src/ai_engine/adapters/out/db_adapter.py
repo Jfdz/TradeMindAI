@@ -1,12 +1,11 @@
 """PostgreSQL adapter: reads market data and persists training records."""
 
 import json
-from datetime import datetime
 from contextlib import contextmanager
+from datetime import datetime
 
 import pandas as pd
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
 
 from ai_engine.config import get_settings
 

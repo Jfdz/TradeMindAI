@@ -58,19 +58,20 @@ async def _run_training(run_id: str, params: TrainRequest, started_at: datetime)
 
     try:
         from ai_engine.adapters.out.db_adapter import (
-            load_ohlcv, upsert_training_run, upsert_model_version,
+            load_ohlcv,
+            upsert_model_version,
+            upsert_training_run,
         )
-        from ai_engine.adapters.out.db_adapter import load_ohlcv
         from ai_engine.config import get_settings
+        from ai_engine.core.domain.data_loader import make_data_loaders
         from ai_engine.core.domain.feature_engineering import compute_features
         from ai_engine.core.domain.label_generator import generate_labels
-        from ai_engine.core.domain.sequence_builder import build_sequences
         from ai_engine.core.domain.normalizer import MinMaxNormalizer
-        from ai_engine.core.domain.data_loader import make_data_loaders
+        from ai_engine.core.domain.sequence_builder import build_sequences
         from ai_engine.core.models.cnn import StockCNN
-        from ai_engine.core.use_cases.trainer import Trainer
         from ai_engine.core.use_cases.evaluator import Evaluator
         from ai_engine.core.use_cases.model_registry import ModelRegistry
+        from ai_engine.core.use_cases.trainer import Trainer
 
         hp = {
             "max_epochs": params.max_epochs,
