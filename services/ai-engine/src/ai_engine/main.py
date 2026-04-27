@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -36,8 +37,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 async def _apply_migrations() -> None:
     try:
-        import os
-
         from alembic import command
         from alembic.config import Config
 
