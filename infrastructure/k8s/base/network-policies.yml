@@ -105,7 +105,7 @@ spec:
           port: 8000
 
 ---
-# market-data-service and trading-core-service can reach postgres
+# market-data-service, trading-core-service and ai-engine can reach postgres
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -125,6 +125,9 @@ spec:
         - podSelector:
             matchLabels:
               app: trading-core-service
+        - podSelector:
+            matchLabels:
+              app: ai-engine
       ports:
         - protocol: TCP
           port: 5432
