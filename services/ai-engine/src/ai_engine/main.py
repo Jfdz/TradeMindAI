@@ -34,12 +34,26 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+async def _apply_migrations() -> None:
+    try:
+        import os
+        from alembic import command
+        from alembic.config import Config
+
+        alembic_cfg = Config(os.path.join(os.path.dirname(__file__), "..", "..", "..", "alembic.ini"))
+        command.upgrade(alembic_cfg, "head")
+        logger.info("Alembic migrations applied")
+    except Exception:
+        logger.warning("Could not apply Alembic migrations (non-fatal)", exc_info=True)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.model_loaded = False
     app.state.prediction_service = None
     app.state.consumers = []
 
+    await _apply_migrations()
     await _start_consumers(app)
 
     yield
