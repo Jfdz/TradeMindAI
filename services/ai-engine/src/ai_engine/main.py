@@ -1,6 +1,6 @@
 import logging
-import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from alembic.config import Config as AlembicConfig
 from fastapi import FastAPI
@@ -38,8 +38,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 async def _apply_migrations() -> None:
-    ini_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "alembic.ini")
-    alembic_cfg = AlembicConfig(ini_path)
+    ini_path = Path(__file__).resolve().parents[2] / "alembic.ini"
+    alembic_cfg = AlembicConfig(str(ini_path))
     alembic_command.upgrade(alembic_cfg, "head")
     logger.info("Alembic migrations applied")
 
