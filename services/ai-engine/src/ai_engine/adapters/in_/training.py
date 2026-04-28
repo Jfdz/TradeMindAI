@@ -4,8 +4,10 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import numpy as np
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel
+
+from ai_engine.adapters.in_.auth import require_internal_secret
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/models", tags=["training"])
@@ -31,7 +33,7 @@ class TrainResponse(BaseModel):
     started_at: str
 
 
-@router.post("/train", status_code=202, response_model=TrainResponse)
+@router.post("/train", status_code=202, response_model=TrainResponse, dependencies=[Depends(require_internal_secret)])
 async def trigger_training(body: TrainRequest, background_tasks: BackgroundTasks):
     """Trigger an async CNN training run. Returns 202 with run_id immediately."""
     import uuid
@@ -42,7 +44,7 @@ async def trigger_training(body: TrainRequest, background_tasks: BackgroundTasks
     return TrainResponse(run_id=run_id, status="PENDING", started_at=started_at)
 
 
-@router.get("/train/{run_id}", tags=["training"])
+@router.get("/train/{run_id}", tags=["training"], dependencies=[Depends(require_internal_secret)])
 async def get_training_status(run_id: str):
     """Poll the status of a training run."""
     if run_id not in _runs:
