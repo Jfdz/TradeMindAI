@@ -105,9 +105,9 @@ def test_training_flow_completes(client, monkeypatch):
             index=dates,
         )
 
-    db_adapter.load_ohlcv = lambda symbols=None, min_rows=200: {"AAPL": _make_ohlcv(), "MSFT": _make_ohlcv()}
-    db_adapter.upsert_model_version = lambda *a, **kw: None
-    training_router.load_training_run = lambda run_id: training_router._runs.get(run_id)
+    monkeypatch.setitem(db_adapter.__dict__, "load_ohlcv", lambda symbols=None, min_rows=200: {"AAPL": _make_ohlcv(), "MSFT": _make_ohlcv()})
+    monkeypatch.setitem(db_adapter.__dict__, "upsert_model_version", lambda *a, **kw: None)
+    monkeypatch.setitem(db_adapter.__dict__, "load_training_run", lambda run_id: training_router._runs.get(run_id))
 
     response = client.post(
         "/api/v1/models/train",
