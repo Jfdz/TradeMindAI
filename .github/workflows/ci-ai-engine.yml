@@ -125,6 +125,17 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Verify db_adapter.py in image
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ github.sha }}"
+          docker run --rm "$IMAGE" ls -la src/ai_engine/adapters/out/db_adapter.py
+          if [ $? -eq 0 ]; then
+            echo "✓ db_adapter.py exists in image"
+          else
+            echo "✗ db_adapter.py NOT found in image"
+            exit 1
+          fi
+
   security-scan:
     name: Security Scan
     needs: docker-build-push
