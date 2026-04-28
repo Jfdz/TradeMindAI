@@ -27,8 +27,10 @@ class _PredictionService:
 
 @pytest.fixture(autouse=True)
 def reset_app_state(monkeypatch):
+    monkeypatch.setattr(ai_main, "_apply_migrations", AsyncMock(return_value=None))
     monkeypatch.setattr(ai_main, "_start_consumers", AsyncMock(return_value=None))
     ai_main.app.state.model_loaded = False
+    ai_main.app.state.consumers_ready = True
     ai_main.app.state.prediction_service = None
     training_router._runs.clear()
     yield
