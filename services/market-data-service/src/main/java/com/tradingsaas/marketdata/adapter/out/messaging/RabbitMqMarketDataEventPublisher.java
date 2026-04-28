@@ -12,28 +12,19 @@ import org.springframework.stereotype.Component;
 @Component
 public class RabbitMqMarketDataEventPublisher implements MarketDataEventPublisher {
 
+    static final String PRICES_EXCHANGE = "market-data.prices";
+
     private final RabbitTemplate rabbitTemplate;
-    private final String routingKey;
 
     public RabbitMqMarketDataEventPublisher(
             RabbitTemplate rabbitTemplate,
             MarketDataMessagingProperties properties) {
         this.rabbitTemplate = Objects.requireNonNull(rabbitTemplate, "rabbitTemplate must not be null");
-        this.routingKey = Objects.requireNonNull(
-                properties.pricesUpdatedRoutingKey() == null || properties.pricesUpdatedRoutingKey().isBlank()
-                        ? "market-data.prices.updated"
-                        : properties.pricesUpdatedRoutingKey(),
-                "routingKey must not be null");
     }
 
     @Override
     public void publishPricesUpdated(Symbol symbol, TimeFrame timeFrame, LocalDate from, LocalDate to, int count) {
-        MarketDataPricesUpdatedEvent event = new MarketDataPricesUpdatedEvent(
-                symbol.ticker(),
-                timeFrame.name(),
-                from,
-                to,
-                count);
-        rabbitTemplate.convertAndSend(routingKey, event);
+        // Publish to the named fanout exchange; AI engine consumer binds its queue to it.
+        rabbitTemplate.convertAndSend(PRICES_EXCHANGE, "", MarketDataPricesUpdatedEvent.of(symbol.ticker()));
     }
 }
