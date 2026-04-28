@@ -12,9 +12,9 @@ import com.tradingsaas.tradingcore.domain.port.in.LoginUseCase;
 import com.tradingsaas.tradingcore.domain.port.in.LogoutUseCase;
 import com.tradingsaas.tradingcore.domain.port.in.RefreshTokenUseCase;
 import com.tradingsaas.tradingcore.domain.port.in.RegisterUserUseCase;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.ResponseCookie;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.util.StringUtils;
@@ -100,21 +100,25 @@ class AuthController {
     }
 
     private void clearRefreshTokenCookie(HttpServletResponse response) {
-        Cookie cookie = new Cookie("refresh_token", "");
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/api/v1/auth");
-        cookie.setMaxAge(0);
-        response.addCookie(cookie);
+        ResponseCookie cookie = ResponseCookie.from("refresh_token", "")
+                .httpOnly(true)
+                .secure(true)
+                .path("/api/v1/auth")
+                .maxAge(0)
+                .sameSite("Lax")
+                .build();
+        response.addHeader("Set-Cookie", cookie.toString());
     }
 
     private void setRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
-        Cookie cookie = new Cookie("refresh_token", refreshToken);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/api/v1/auth");
-        cookie.setMaxAge((int) jwtProperties.getRefreshTokenExpiry());
-        response.addCookie(cookie);
+        ResponseCookie cookie = ResponseCookie.from("refresh_token", refreshToken)
+                .httpOnly(true)
+                .secure(true)
+                .path("/api/v1/auth")
+                .maxAge(jwtProperties.getRefreshTokenExpiry())
+                .sameSite("Lax")
+                .build();
+        response.addHeader("Set-Cookie", cookie.toString());
     }
 
     private RegisterResponse toRegisterResponse(User user) {

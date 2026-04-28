@@ -38,8 +38,8 @@ class BacktestController {
     }
 
     @GetMapping("/symbols/{symbol}/available")
-    boolean checkSymbolAvailability(@PathVariable String symbol) {
-        return historicalMarketDataPort.hasData(symbol);
+    java.util.Map<String, Boolean> checkSymbolAvailability(@PathVariable String symbol) {
+        return java.util.Map.of("available", historicalMarketDataPort.hasData(symbol));
     }
 
     @PostMapping

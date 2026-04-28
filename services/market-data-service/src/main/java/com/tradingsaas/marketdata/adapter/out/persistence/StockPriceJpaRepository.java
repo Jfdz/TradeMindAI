@@ -44,11 +44,17 @@ interface StockPriceJpaRepository extends JpaRepository<StockPriceEntity, Long> 
             SELECT s FROM StockPriceEntity s JOIN FETCH s.symbol
             WHERE s.symbol.ticker = :ticker AND s.timeFrame = :timeFrame
             ORDER BY s.date DESC
-            LIMIT 1
             """)
-    Optional<StockPriceEntity> findLatestByTickerAndTimeFrame(
+    Page<StockPriceEntity> findLatestPageByTickerAndTimeFrame(
             @Param("ticker") String ticker,
-            @Param("timeFrame") TimeFrame timeFrame);
+            @Param("timeFrame") TimeFrame timeFrame,
+            Pageable pageable);
+
+    default Optional<StockPriceEntity> findLatestByTickerAndTimeFrame(String ticker, TimeFrame timeFrame) {
+        return findLatestPageByTickerAndTimeFrame(ticker, timeFrame,
+                org.springframework.data.domain.PageRequest.of(0, 1))
+                .stream().findFirst();
+    }
 
     @Query("""
             SELECT s FROM StockPriceEntity s JOIN FETCH s.symbol
