@@ -8,7 +8,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,7 +23,9 @@ class DefaultBacktestExecutionService implements BacktestExecutionService {
 
     @org.springframework.beans.factory.annotation.Autowired
     DefaultBacktestExecutionService(BacktestJobStore jobStore, BacktestProcessor backtestProcessor) {
-        this(jobStore, backtestProcessor, Executors.newCachedThreadPool(), Clock.systemUTC());
+        this(jobStore, backtestProcessor,
+                new ThreadPoolExecutor(2, 10, 60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(50)),
+                Clock.systemUTC());
     }
 
     DefaultBacktestExecutionService(BacktestJobStore jobStore, BacktestProcessor backtestProcessor, Executor executor, Clock clock) {

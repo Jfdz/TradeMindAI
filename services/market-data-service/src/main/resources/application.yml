@@ -80,8 +80,8 @@ management:
       base-path: /actuator
   endpoint:
     health:
-      show-details: always
-      show-components: always
+      show-details: never
+      show-components: never
   health:
     db:
       enabled: true

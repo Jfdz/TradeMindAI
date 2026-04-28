@@ -39,9 +39,11 @@ public class MarketDataOutboxService {
         ));
     }
 
+    static final int MAX_ATTEMPTS = 5;
+
     @Transactional(readOnly = true)
     public List<MarketDataOutboxJpaEntity> findPendingBatch() {
-        return repository.findTop50ByPublishedAtIsNullOrderByCreatedAtAsc();
+        return repository.findTop50ByPublishedAtIsNullAndAttemptCountLessThanOrderByCreatedAtAsc(MAX_ATTEMPTS);
     }
 
     @Transactional
