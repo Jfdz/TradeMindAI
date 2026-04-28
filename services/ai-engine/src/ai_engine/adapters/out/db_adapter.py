@@ -87,7 +87,9 @@ def load_training_run(run_id: str) -> dict | None:
 
     return {
         "run_id": str(row["id"]),
-        "model_version_id": str(row["model_version_id"]) if row["model_version_id"] is not None else None,
+        "model_version_id": (
+            str(row["model_version_id"]) if row["model_version_id"] is not None else None
+        ),
         "status": row["status"],
         "hyperparameters": row["hyperparameters"] or {},
         "metrics": row["metrics"] or {},
