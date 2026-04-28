@@ -105,9 +105,24 @@ def test_training_flow_completes(client, monkeypatch):
             index=dates,
         )
 
+    def _mock_load_training_run(run_id):
+        stored = training_router._runs.get(run_id)
+        if stored is None:
+            return None
+        return {
+            "run_id": run_id,
+            "model_version_id": stored.get("version_id"),
+            "status": stored.get("status", "PENDING"),
+            "hyperparameters": {},
+            "metrics": stored.get("metrics", {}),
+            "started_at": stored.get("started_at"),
+            "finished_at": stored.get("finished_at"),
+            "created_at": None,
+        }
+
     monkeypatch.setitem(db_adapter.__dict__, "load_ohlcv", lambda symbols=None, min_rows=200: {"AAPL": _make_ohlcv(), "MSFT": _make_ohlcv()})
     monkeypatch.setitem(db_adapter.__dict__, "upsert_model_version", lambda *a, **kw: None)
-    monkeypatch.setitem(db_adapter.__dict__, "load_training_run", lambda run_id: training_router._runs.get(run_id))
+    monkeypatch.setitem(db_adapter.__dict__, "load_training_run", _mock_load_training_run)
 
     response = client.post(
         "/api/v1/models/train",
