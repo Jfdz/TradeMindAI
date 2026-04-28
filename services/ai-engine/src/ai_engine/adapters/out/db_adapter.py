@@ -67,6 +67,36 @@ def load_ohlcv(symbols: list[str] | None = None, min_rows: int = 200) -> dict[st
     return result
 
 
+def load_training_run(run_id: str) -> dict | None:
+    with _conn() as conn:
+        row = conn.execute(text("""
+            SELECT id,
+                   model_version_id,
+                   status,
+                   hyperparameters,
+                   metrics,
+                   started_at,
+                   finished_at,
+                   created_at
+            FROM ai_engine.training_runs
+            WHERE id = cast(:id as uuid)
+        """), {"id": run_id}).mappings().first()
+
+    if row is None:
+        return None
+
+    return {
+        "run_id": str(row["id"]),
+        "model_version_id": str(row["model_version_id"]) if row["model_version_id"] is not None else None,
+        "status": row["status"],
+        "hyperparameters": row["hyperparameters"] or {},
+        "metrics": row["metrics"] or {},
+        "started_at": row["started_at"].isoformat() if row["started_at"] is not None else None,
+        "finished_at": row["finished_at"].isoformat() if row["finished_at"] is not None else None,
+        "created_at": row["created_at"].isoformat() if row["created_at"] is not None else None,
+    }
+
+
 # ── writes ────────────────────────────────────────────────────────────────────
 
 def upsert_training_run(

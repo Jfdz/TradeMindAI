@@ -152,6 +152,10 @@ export type MarketSymbolResponse = {
   active: boolean;
 };
 
+export type LatestPricesResponse = {
+  prices: MarketPriceResponse[];
+};
+
 async function requestJson<T>(path: string, options: RequestInit = {}): Promise<T> {
   const session = await getSession();
   const token = (session as { accessToken?: string } | null)?.accessToken;
@@ -208,6 +212,24 @@ export const apiClient = {
       return await requestJson<MarketPriceResponse>(`/api/v1/prices/${ticker}/latest?timeframe=DAILY`);
     } catch {
       return null;
+    }
+  },
+
+  async getLatestPrices(tickers: string[]): Promise<LatestPricesResponse> {
+    if (tickers.length === 0) {
+      return { prices: [] };
+    }
+
+    const params = new URLSearchParams();
+    for (const ticker of tickers) {
+      params.append("tickers", ticker);
+    }
+    params.set("timeframe", "DAILY");
+
+    try {
+      return await requestJson<LatestPricesResponse>(`/api/v1/prices/latest?${params.toString()}`);
+    } catch {
+      return { prices: [] };
     }
   },
 

@@ -1,66 +1,20 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { SignalChart } from "@/components/dashboard/signal-chart";
 import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
-import { apiClient, type MarketPriceResponse, type SignalResponse } from "@/lib/api-client";
+import { fetchSignalDetailData } from "@/lib/dashboard/client-data";
 import type { ChartCandle, ChartMarker } from "@/lib/dashboard/signals";
 
 type SignalDetailClientProps = {
   signalId: string;
 };
 
-function toBusinessDay(dateValue: string): ChartCandle["time"] {
-  const date = new Date(dateValue);
-
-  return {
-    year: date.getUTCFullYear(),
-    month: date.getUTCMonth() + 1,
-    day: date.getUTCDate(),
-  };
-}
-
-function buildSyntheticCandles(signal: SignalResponse, basePrice: number): ChartCandle[] {
-  return Array.from({ length: 12 }, (_, index) => {
-    const drift = (index - 6) * (signal.type === "SELL" ? -1.1 : 1.1);
-    const open = Number((basePrice - 6 + drift).toFixed(2));
-    const close = Number((open + (index % 2 === 0 ? 1.8 : -1.1)).toFixed(2));
-    const high = Number((Math.max(open, close) + 1.7).toFixed(2));
-    const low = Number((Math.min(open, close) - 1.4).toFixed(2));
-    const day = new Date(signal.generatedAt);
-    day.setUTCDate(day.getUTCDate() + index - 6);
-
-    return {
-      time: toBusinessDay(day.toISOString()),
-      open,
-      high,
-      low,
-      close,
-      volume: 700000 + index * 72000,
-    };
-  });
-}
-
-function buildCandles(signal: SignalResponse, history: MarketPriceResponse[], fallbackPrice: number): ChartCandle[] {
-  if (history.length > 0) {
-    return history
-      .slice()
-      .reverse()
-      .map((bar) => ({
-        time: toBusinessDay(bar.date),
-        open: bar.ohlcv.open,
-        high: bar.ohlcv.high,
-        low: bar.ohlcv.low,
-        close: bar.ohlcv.close,
-        volume: bar.ohlcv.volume,
-      }));
-  }
-
-  return buildSyntheticCandles(signal, fallbackPrice);
-}
+const EMPTY_CANDLES: ChartCandle[] = [];
 
 function formatPrice(value: number | null | undefined) {
   if (value == null || Number.isNaN(value)) {
@@ -89,53 +43,13 @@ function formatSignalDate(value: string) {
 }
 
 export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
-  const [signal, setSignal] = useState<SignalResponse | null>(null);
-  const [latestPrice, setLatestPrice] = useState<number | null>(null);
-  const [candles, setCandles] = useState<ChartCandle[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadSignal() {
-      try {
-        const response = await apiClient.getSignal(signalId);
-        const latest = await apiClient.getLatestPrice(response.symbol);
-        const latestClose = latest?.adjustedClose ?? latest?.ohlcv.close ?? null;
-        const from = new Date(response.generatedAt);
-        from.setUTCDate(from.getUTCDate() - 10);
-        const historical = await apiClient.getHistoricalPrices(
-          response.symbol,
-          from.toISOString().slice(0, 10),
-          new Date().toISOString().slice(0, 10),
-          18
-        );
-
-        if (!mounted) {
-          return;
-        }
-
-        setSignal(response);
-        setLatestPrice(latestClose);
-        setCandles(buildCandles(response, historical.content, latestClose ?? response.predictedChangePct ?? 0));
-      } catch (requestError) {
-        if (mounted) {
-          setError(requestError instanceof Error ? requestError.message : "Unable to load signal");
-        }
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    loadSignal();
-
-    return () => {
-      mounted = false;
-    };
-  }, [signalId]);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["signal", signalId],
+    queryFn: () => fetchSignalDetailData(signalId),
+  });
+  const signal = data?.signal ?? null;
+  const latestPrice = data?.latestPrice ?? null;
+  const candles = data?.candles ?? EMPTY_CANDLES;
 
   const marker: ChartMarker | null = useMemo(() => {
     if (!signal || candles.length === 0) {
@@ -214,7 +128,9 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
         <h2 className="mt-3 font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
           Unable to load signal
         </h2>
-        <p className="mt-3 text-sm leading-7 text-text-2">{error ?? "The signal could not be found."}</p>
+        <p className="mt-3 text-sm leading-7 text-text-2">
+          {error instanceof Error ? error.message : "The signal could not be found."}
+        </p>
         <Button asChild variant="outlineCyan" size="sm" className="mt-6">
           <Link href="/dashboard/signals">
             Back to signals
