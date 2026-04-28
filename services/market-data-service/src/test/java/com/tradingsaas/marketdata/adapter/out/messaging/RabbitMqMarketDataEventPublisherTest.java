@@ -28,6 +28,6 @@ class RabbitMqMarketDataEventPublisherTest {
                 LocalDate.of(2026, 4, 16),
                 42);
 
-        verify(rabbitTemplate).convertAndSend(eq("market-data.prices.updated"), any(MarketDataPricesUpdatedEvent.class));
+        verify(rabbitTemplate).convertAndSend(eq("market-data.prices"), eq(""), any(MarketDataPricesUpdatedEvent.class));
     }
 }

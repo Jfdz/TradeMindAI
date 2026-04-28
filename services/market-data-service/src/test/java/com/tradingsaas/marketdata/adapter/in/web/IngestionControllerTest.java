@@ -19,7 +19,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @WebMvcTest(controllers = IngestionController.class)
 @Import(SecurityConfig.class)
 @TestPropertySource(properties = {
-        "market-data.cors.allowed-origins=http://localhost:3000"
+        "market-data.cors.allowed-origins=http://localhost:3000",
+        "market-data.internal-secret=test-secret"
 })
 class IngestionControllerTest {
 
@@ -31,7 +32,8 @@ class IngestionControllerTest {
 
     @Test
     void triggerStartsIngestionAsynchronously() throws Exception {
-        mockMvc.perform(post("/api/v1/ingestion/trigger"))
+        mockMvc.perform(post("/api/v1/ingestion/trigger")
+                        .header("X-Internal-Secret", "test-secret"))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.status").value("TRIGGERED"))
                 .andExpect(jsonPath("$.message").value("Ingestion started asynchronously for all tracked symbols"))
