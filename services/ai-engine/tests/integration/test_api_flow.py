@@ -6,6 +6,8 @@ from fastapi.testclient import TestClient
 
 import ai_engine.adapters.in_.prediction as prediction_router
 import ai_engine.adapters.in_.training as training_router
+import ai_engine.adapters.out.db_adapter as db_adapter
+import ai_engine.config as config_module
 import ai_engine.main as ai_main
 from ai_engine.core.use_cases.prediction_service import PredictionResult
 
@@ -81,14 +83,10 @@ def test_training_flow_completes(client, monkeypatch):
     import numpy as np
     import pandas as pd
 
-    import ai_engine.adapters.out.db_adapter as db_adapter
-    import ai_engine.config as config_module
-    import ai_engine.adapters.in_.training as training_module
-
     monkeypatch.setenv("INTERNAL_SECRET", "test-secret")
     config_module._settings = None
 
-    training_module.upsert_training_run = lambda *a, **kw: None
+    training_router.upsert_training_run = lambda *a, **kw: None
 
     n = 200
     dates = pd.date_range("2023-01-01", periods=n, freq="D")
@@ -108,6 +106,8 @@ def test_training_flow_completes(client, monkeypatch):
         )
 
     db_adapter.load_ohlcv = lambda symbols=None, min_rows=200: {"AAPL": _make_ohlcv(), "MSFT": _make_ohlcv()}
+    db_adapter.upsert_model_version = lambda *a, **kw: None
+    training_router.load_training_run = lambda run_id: training_router._runs.get(run_id)
 
     response = client.post(
         "/api/v1/models/train",
@@ -127,7 +127,7 @@ def test_training_flow_completes(client, monkeypatch):
     status = None
     for _ in range(20):
         status = client.get(f"/api/v1/models/train/{run_id}")
-        if status.json()["status"] == "COMPLETED":
+        if status.json().get("status") == "COMPLETED":
             break
 
     assert status is not None
