@@ -52,6 +52,7 @@ def test_health_and_ready_endpoints(client):
     assert not_ready.json()["status"] == "not ready"
 
     ai_main.app.state.model_loaded = True
+    ai_main.app.state.consumers_ready = True
     ready = client.get("/ready")
     assert ready.status_code == 200
     assert ready.json() == {"status": "ready"}
@@ -82,9 +83,12 @@ def test_training_flow_completes(client, monkeypatch):
 
     import ai_engine.adapters.out.db_adapter as db_adapter
     import ai_engine.config as config_module
+    import ai_engine.adapters.in_.training as training_module
 
     monkeypatch.setenv("INTERNAL_SECRET", "test-secret")
     config_module._settings = None
+
+    training_module.upsert_training_run = lambda *a, **kw: None
 
     n = 200
     dates = pd.date_range("2023-01-01", periods=n, freq="D")
@@ -103,13 +107,7 @@ def test_training_flow_completes(client, monkeypatch):
             index=dates,
         )
 
-    monkeypatch.setattr(
-        db_adapter,
-        "load_ohlcv",
-        lambda symbols=None, min_rows=200: {"AAPL": _make_ohlcv(), "MSFT": _make_ohlcv()},
-    )
-    monkeypatch.setattr(db_adapter, "upsert_training_run", lambda *a, **kw: None)
-    monkeypatch.setattr(db_adapter, "upsert_model_version", lambda *a, **kw: None)
+    db_adapter.load_ohlcv = lambda symbols=None, min_rows=200: {"AAPL": _make_ohlcv(), "MSFT": _make_ohlcv()}
 
     response = client.post(
         "/api/v1/models/train",
