@@ -1,22 +1,24 @@
 package com.tradingsaas.marketdata.adapter.out.messaging;
 
-import java.time.LocalDate;
+import java.util.List;
 import java.util.Objects;
 
+/**
+ * Shared contract consumed by the AI engine's MarketDataEventConsumer.
+ * Payload: {"event":"market-data.prices.updated","symbols":["AAPL",...]}
+ */
 public record MarketDataPricesUpdatedEvent(
-        String symbol,
-        String timeFrame,
-        LocalDate from,
-        LocalDate to,
-        int count) {
+        String event,
+        List<String> symbols) {
+
+    public static final String EVENT_TYPE = "market-data.prices.updated";
 
     public MarketDataPricesUpdatedEvent {
-        symbol = Objects.requireNonNull(symbol, "symbol must not be null");
-        timeFrame = Objects.requireNonNull(timeFrame, "timeFrame must not be null");
-        from = Objects.requireNonNull(from, "from must not be null");
-        to = Objects.requireNonNull(to, "to must not be null");
-        if (count < 0) {
-            throw new IllegalArgumentException("count must not be negative");
-        }
+        Objects.requireNonNull(event, "event must not be null");
+        Objects.requireNonNull(symbols, "symbols must not be null");
+    }
+
+    public static MarketDataPricesUpdatedEvent of(String symbol) {
+        return new MarketDataPricesUpdatedEvent(EVENT_TYPE, List.of(symbol));
     }
 }

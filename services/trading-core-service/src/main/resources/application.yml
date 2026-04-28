@@ -80,8 +80,8 @@ management:
       base-path: /actuator
   endpoint:
     health:
-      show-details: always
-      show-components: always
+      show-details: never
+      show-components: never
   health:
     db:
       enabled: true
@@ -95,6 +95,10 @@ management:
 trading-core:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
+  rate-limit:
+    free-per-minute: ${RATE_LIMIT_FREE_PER_MINUTE:5}
+    basic-per-minute: ${RATE_LIMIT_BASIC_PER_MINUTE:50}
+    premium-per-minute: ${RATE_LIMIT_PREMIUM_PER_MINUTE:500}
   jwt:
     secret: ${JWT_SECRET:changeme-use-a-256-bit-secret-in-production}
     access-token-expiry: ${JWT_ACCESS_TOKEN_EXPIRY:900}

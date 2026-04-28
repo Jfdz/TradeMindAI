@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MarketDataOutboxJpaRepository extends JpaRepository<MarketDataOutboxJpaEntity, Long> {
 
-    List<MarketDataOutboxJpaEntity> findTop50ByPublishedAtIsNullOrderByCreatedAtAsc();
+    List<MarketDataOutboxJpaEntity> findTop50ByPublishedAtIsNullAndAttemptCountLessThanOrderByCreatedAtAsc(int maxAttempts);
 }

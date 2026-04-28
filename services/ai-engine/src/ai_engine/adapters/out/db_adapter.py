@@ -34,24 +34,26 @@ def load_ohlcv(symbols: list[str] | None = None, min_rows: int = 200) -> dict[st
     engine = _make_engine()
     try:
         if symbols:
-            placeholders = ", ".join(f"'{s}'" for s in symbols)
-            sql = f"""
+            sql = text("""
                 SELECT symbol_ticker, trade_date,
                        open, high, low, close, volume
                 FROM market_data.stock_prices
-                WHERE symbol_ticker IN ({placeholders})
+                WHERE symbol_ticker = ANY(:symbols)
                   AND time_frame = 'DAILY'
                 ORDER BY symbol_ticker, trade_date ASC
-            """
+            """)
+            with engine.connect() as conn:
+                df_all = pd.read_sql(sql, conn, params={"symbols": symbols})
         else:
-            sql = """
+            sql = text("""
                 SELECT symbol_ticker, trade_date,
                        open, high, low, close, volume
                 FROM market_data.stock_prices
                 WHERE time_frame = 'DAILY'
                 ORDER BY symbol_ticker, trade_date ASC
-            """
-        df_all = pd.read_sql(sql, engine)
+            """)
+            with engine.connect() as conn:
+                df_all = pd.read_sql(sql, conn)
     finally:
         engine.dispose()
 
