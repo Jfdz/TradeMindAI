@@ -15,6 +15,9 @@ describe("authOptions", () => {
       vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({ accessToken: "access-123" }),
+        headers: {
+          get: vi.fn().mockReturnValue("refresh_token=refresh-123; Path=/api/v1/auth; HttpOnly"),
+        },
       }),
     );
 
@@ -36,6 +39,7 @@ describe("authOptions", () => {
       email: "user@example.com",
       name: "user@example.com",
       accessToken: "access-123",
+      refreshToken: "refresh-123",
     });
   });
 
@@ -58,8 +62,7 @@ describe("authOptions", () => {
     expect(user).toBeNull();
   });
 
-  it("returns demo user in non-production when backend is unreachable", async () => {
-    process.env.NODE_ENV = "development";
+  it("returns null when backend is unreachable", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
 
     const { authOptions } = await import("./auth");
@@ -68,11 +71,7 @@ describe("authOptions", () => {
       password: "secret",
     });
 
-    expect(user).toEqual({
-      id: "demo-user",
-      email: "demo@example.com",
-      name: "Demo User",
-    });
+    expect(user).toBeNull();
   });
 });
 

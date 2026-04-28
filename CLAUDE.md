@@ -143,6 +143,7 @@ None.
 ---
 
 ## Next In Development
+Tracker note (2026-04-28): `S10-14`, `S10-17`, `S10-18`, `S10-19`, and `S10-24` are completed in the working tree below. The remaining active sprint item is `S10-10`, followed by `S10-11`.
 
 **PBI:** `S10-01` — AI engine: add auth middleware on training/model routes
 **Branch:** `fix/sprint10-flaw-remediation`
@@ -177,17 +178,17 @@ Second Codex audit found 26 flaws. Branch: `fix/sprint10-flaw-remediation`
 | S10-11 | High | Proxy backend `Set-Cookie` refresh token through Next.js route handler | `web-app/lib/auth.ts:31-62`, `AuthController.java:63-66,111-117` | To Do |
 | S10-12 | High | Fix `APP_CORS_ALLOWED_ORIGINS` interpolation in `docker-compose.prod.yml` | `docker-compose.prod.yml:115` | Done |
 | S10-13 | High | Remove `.env` with real credentials from version control | `.env:21,42-43,73,77,190-192` | Done (already untracked) |
-| S10-14 | High | Persist AI engine training run state in shared DB | `adapters/in_/training.py:13,40-51`, `k8s/base/ai-engine.yml:11` | To Do |
+| S10-14 | High | Persist AI engine training run state in shared DB | `adapters/in_/training.py:13,40-51`, `k8s/base/ai-engine.yml:11` | Done |
 | S10-15 | High | Fix backend/frontend contract for backtest symbol availability | `BacktestController.java:40-43`, `api-client.ts:259-265` | Done |
 | S10-16 | High | Add retry cap + dead-letter queue to outbox relay | `MarketDataOutboxRelay.java:22-41`, `MarketDataOutboxService.java:42-45,66-83` | Done |
-| S10-17 | Medium | Add TanStack Query; replace all `useEffect` server-state fetches | `web-app/package.json`, `dashboard/page.tsx:237-347`, `signals/page.tsx:126-164` | To Do |
-| S10-18 | Medium | Add `error.tsx` and `loading.tsx` to all route segments | `dashboard/page.tsx:366-395`, `signal-detail-client.tsx:195-225` | To Do |
-| S10-19 | Medium | Batch per-symbol dashboard requests server-side | `dashboard/page.tsx:242-307` | To Do |
+| S10-17 | Medium | Add TanStack Query; replace all `useEffect` server-state fetches | `web-app/package.json`, `dashboard/page.tsx:237-347`, `signals/page.tsx:126-164` | Done |
+| S10-18 | Medium | Add `error.tsx` and `loading.tsx` to all route segments | `dashboard/page.tsx:366-395`, `signal-detail-client.tsx:195-225` | Done |
+| S10-19 | Medium | Batch per-symbol dashboard requests server-side | `dashboard/page.tsx:242-307` | Done |
 | S10-20 | Medium | Remove `unsafe-inline`/`unsafe-eval` from CSP | `next.config.mjs:35-37` | Done |
 | S10-21 | Medium | Fix JWT env var name mismatch between K8s ConfigMap and Spring | `k8s/base/configmaps.yml:30-31`, `trading-core/application.yml:99-101` | Done |
 | S10-22 | Medium | Pin immutable image tags in all K8s and Compose files | K8s base YAMLs, `docker-compose.yml`, `docker-compose.prod.yml` | Done |
 | S10-23 | Medium | Drive rate-limit tiers from config; fix refill window to per-minute | `RateLimitFilter.java:28-31,66-73` | Done |
-| S10-24 | Medium | Add controller tests for auth cookie handling and user/profile endpoints | `trading-core-service/src/test/java` | To Do |
+| S10-24 | Medium | Add controller tests for auth cookie handling and user/profile endpoints | `trading-core-service/src/test/java` | Done |
 | S10-25 | Medium | Remove demo data fallbacks from production API client paths | `web-app/lib/api-client.ts:245-406` | Done |
 | S10-26 | Low | Extract shared signal-formatting utilities | `dashboard/page.tsx:89-147`, `signals/page.tsx:60-118`, `signal-detail-client.tsx:47-63` | Done |
 

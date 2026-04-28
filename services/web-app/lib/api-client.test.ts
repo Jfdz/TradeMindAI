@@ -45,29 +45,21 @@ describe("apiClient", () => {
     );
   });
 
-  it("falls back to demo backtest when submitBacktest request fails", async () => {
-    vi.spyOn(Date, "now").mockReturnValue(1234567890);
+  it("surfaces backtest submission failures", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("backend down")));
     const { apiClient } = await import("./api-client");
 
-    const result = await apiClient.submitBacktest({
-      symbol: "NVDA",
-      from: "2026-04-01",
-      to: "2026-04-16",
-      quantity: 5,
-    });
-
-    expect(result.id).toBe("demo-1234567890");
-    expect(result.status).toBe("COMPLETED");
-    expect(result.request).toEqual({
-      symbol: "NVDA",
-      from: "2026-04-01",
-      to: "2026-04-16",
-      quantity: 5,
-    });
+    await expect(
+      apiClient.submitBacktest({
+        symbol: "NVDA",
+        from: "2026-04-01",
+        to: "2026-04-16",
+        quantity: 5,
+      }),
+    ).rejects.toThrow("backend down");
   });
 
-  it("derives a demo current user from the session when the profile request fails", async () => {
+  it("surfaces current user request failures", async () => {
     getSessionMock.mockResolvedValue({
       user: {
         id: "user-1",
@@ -84,17 +76,7 @@ describe("apiClient", () => {
     );
     const { apiClient } = await import("./api-client");
 
-    const user = await apiClient.getCurrentUser();
-
-    expect(user).toEqual(
-      expect.objectContaining({
-        id: "user-1",
-        email: "user@example.com",
-        firstName: "Ada",
-        lastName: "Lovelace",
-        plan: "FREE",
-      }),
-    );
+    await expect(apiClient.getCurrentUser()).rejects.toThrow("Request failed with status 500");
   });
 
   it("returns null when no demo latest price exists and the request fails", async () => {

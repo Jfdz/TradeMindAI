@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import numpy as np
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 
 from ai_engine.adapters.in_.auth import require_internal_secret
@@ -37,20 +37,40 @@ class TrainResponse(BaseModel):
 async def trigger_training(body: TrainRequest, background_tasks: BackgroundTasks):
     """Trigger an async CNN training run. Returns 202 with run_id immediately."""
     import uuid
+    from ai_engine.adapters.out.db_adapter import upsert_training_run
+
     run_id = str(uuid.uuid4())
-    started_at = datetime.now(timezone.utc).isoformat()
-    _runs[run_id] = {"status": "PENDING", "started_at": started_at, "params": body.model_dump()}
-    background_tasks.add_task(_run_training, run_id, body, datetime.now(timezone.utc))
-    return TrainResponse(run_id=run_id, status="PENDING", started_at=started_at)
+    started_at = datetime.now(timezone.utc)
+    params_dict = body.model_dump()
+
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: upsert_training_run(
+                run_id=run_id,
+                status="PENDING",
+                hyperparameters=params_dict,
+                started_at=started_at,
+            ),
+        )
+    except Exception as exc:
+        logger.exception("[%s] Could not persist initial training run state", run_id, exc_info=exc)
+        raise HTTPException(status_code=503, detail="Training run could not be persisted")
+
+    _runs[run_id] = {"status": "PENDING", "started_at": started_at.isoformat(), "params": params_dict}
+    background_tasks.add_task(_run_training, run_id, body, started_at)
+    return TrainResponse(run_id=run_id, status="PENDING", started_at=started_at.isoformat())
 
 
 @router.get("/train/{run_id}", tags=["training"], dependencies=[Depends(require_internal_secret)])
 async def get_training_status(run_id: str):
-    """Poll the status of a training run."""
-    if run_id not in _runs:
-        from fastapi import HTTPException
+    """Poll the status of a training run. Reads from DB for cross-replica consistency."""
+    from ai_engine.adapters.out.db_adapter import load_training_run
+
+    db_run = await asyncio.get_event_loop().run_in_executor(None, lambda: load_training_run(run_id))
+    if db_run is None:
         raise HTTPException(status_code=404, detail="Run not found")
-    return _runs[run_id]
+    return db_run
 
 
 # ── real pipeline ─────────────────────────────────────────────────────────────

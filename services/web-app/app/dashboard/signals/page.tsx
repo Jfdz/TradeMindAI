@@ -1,25 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 
-import { apiClient, type SignalResponse } from "@/lib/api-client";
-import { buildSignalReasoning, formatConfidence, formatSignalAge } from "@/lib/signal-utils";
 import { Button } from "@/components/ui/button";
+import { fetchSignalsPageData } from "@/lib/dashboard/client-data";
+import { formatConfidence } from "@/lib/signal-utils";
 import { cn } from "@/lib/utils";
 
 type FilterValue = "ALL" | "BUY" | "SELL" | "HOLD";
-
-type ResolvedSignal = SignalResponse & {
-  latestPrice: number | null;
-  entry: number | null;
-  takeProfit: number | null;
-  stopLoss: number | null;
-  live: boolean;
-  status: "LIVE" | "PENDING";
-  age: string;
-  generatedLabel: string;
-  reasoning: string;
-};
 
 const filterOptions: FilterValue[] = ["ALL", "BUY", "SELL", "HOLD"];
 
@@ -35,96 +24,12 @@ function formatPrice(value: number | null) {
   });
 }
 
-
-function deriveSignal(signal: SignalResponse, latestPrice: number | null): ResolvedSignal {
-  const entry = latestPrice;
-  const takeProfit =
-    signal.type === "BUY"
-      ? signal.takeProfitPct != null && entry != null
-        ? entry * (1 + signal.takeProfitPct / 100)
-        : null
-      : signal.type === "SELL"
-        ? signal.takeProfitPct != null && entry != null
-          ? entry * (1 - signal.takeProfitPct / 100)
-          : null
-        : entry;
-  const stopLoss =
-    signal.type === "BUY"
-      ? signal.stopLossPct != null && entry != null
-        ? entry * (1 - signal.stopLossPct / 100)
-        : null
-      : signal.type === "SELL"
-        ? signal.stopLossPct != null && entry != null
-          ? entry * (1 + signal.stopLossPct / 100)
-          : null
-        : entry;
-  const live = Date.now() - new Date(signal.generatedAt).getTime() < 1000 * 60 * 60 * 24;
-
-  return {
-    ...signal,
-    latestPrice,
-    entry,
-    takeProfit,
-    stopLoss,
-    live,
-    status: live ? "LIVE" : "PENDING",
-    age: formatSignalAge(signal.generatedAt),
-    generatedLabel: new Date(signal.generatedAt).toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }),
-    reasoning: buildSignalReasoning(signal, latestPrice),
-  };
-}
-
 export default function SignalsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterValue>("ALL");
-  const [signals, setSignals] = useState<ResolvedSignal[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadSignals() {
-      try {
-        const response = await apiClient.getSignals();
-        const content = response.content ?? [];
-        const uniqueSymbols = Array.from(new Set(content.map((signal) => signal.symbol)));
-        const latestPriceBySymbol = new Map<string, number | null>();
-
-        await Promise.all(
-          uniqueSymbols.map(async (symbol) => {
-            const latest = await apiClient.getLatestPrice(symbol);
-            latestPriceBySymbol.set(symbol, latest?.adjustedClose ?? latest?.ohlcv.close ?? null);
-          })
-        );
-
-        if (!mounted) {
-          return;
-        }
-
-        setSignals(content.map((signal) => deriveSignal(signal, latestPriceBySymbol.get(signal.symbol) ?? null)));
-      } catch (requestError) {
-        if (mounted) {
-          setError(requestError instanceof Error ? requestError.message : "Unable to load signals");
-        }
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    loadSignals();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const { data: signals = [], isLoading, error } = useQuery({
+    queryKey: ["signals"],
+    queryFn: fetchSignalsPageData,
+  });
 
   const filteredSignals = useMemo(() => {
     if (activeFilter === "ALL") {
@@ -175,7 +80,7 @@ export default function SignalsPage() {
           </div>
         ) : error ? (
           <div className="rounded-2xl border border-red/30 bg-red/10 p-4 text-sm text-red">
-            {error}
+            {error instanceof Error ? error.message : "Unable to load signals"}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -220,12 +125,8 @@ export default function SignalsPage() {
                     </td>
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">{signal.timeframe}</td>
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatPrice(signal.entry)}</td>
-                    <td className="border-t border-border px-4 py-4 font-mono text-green">
-                      {formatPrice(signal.takeProfit)}
-                    </td>
-                    <td className="border-t border-border px-4 py-4 font-mono text-red">
-                      {formatPrice(signal.stopLoss)}
-                    </td>
+                    <td className="border-t border-border px-4 py-4 font-mono text-green">{formatPrice(signal.takeProfit)}</td>
+                    <td className="border-t border-border px-4 py-4 font-mono text-red">{formatPrice(signal.stopLoss)}</td>
                     <td className="border-t border-border px-4 py-4">
                       <div className="w-44">
                         <div className="flex items-center justify-between text-xs text-text-2">

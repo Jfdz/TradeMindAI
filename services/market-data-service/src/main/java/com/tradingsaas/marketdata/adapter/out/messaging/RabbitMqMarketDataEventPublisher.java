@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class RabbitMqMarketDataEventPublisher implements MarketDataEventPublisher {
 
-    static final String PRICES_EXCHANGE = "market-data.prices";
+    public static final String PRICES_EXCHANGE = "market-data.prices";
 
     private final RabbitTemplate rabbitTemplate;
 
