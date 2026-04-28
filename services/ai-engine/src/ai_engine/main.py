@@ -50,6 +50,7 @@ async def _apply_migrations() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.model_loaded = False
+    app.state.model_registry = None
     app.state.prediction_service = None
     app.state.consumers = []
 
@@ -84,6 +85,7 @@ async def _start_consumers(app: FastAPI) -> None:
         settings = get_settings()
 
         registry = ModelRegistry(settings.model_path)
+        app.state.model_registry = registry
         svc = PredictionService(registry)
         app.state.prediction_service = svc
 
