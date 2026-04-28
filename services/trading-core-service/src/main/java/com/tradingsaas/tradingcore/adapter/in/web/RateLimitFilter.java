@@ -18,22 +18,23 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
+import java.time.Instant;
 import java.util.Map;
 
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final String KEY_PREFIX = "trading-core:rate-limit:";
-    private static final Map<SubscriptionPlan, Long> PLAN_LIMITS = Map.of(
-            SubscriptionPlan.FREE, 5L,
-            SubscriptionPlan.BASIC, 50L
-    );
 
     private final LettuceBasedProxyManager<String> proxyManager;
+    private final Map<SubscriptionPlan, Long> planLimits;
 
-    public RateLimitFilter(LettuceBasedProxyManager<String> proxyManager) {
+    public RateLimitFilter(LettuceBasedProxyManager<String> proxyManager, long freePm, long basicPm, long premiumPm) {
         this.proxyManager = proxyManager;
+        this.planLimits = Map.of(
+                SubscriptionPlan.FREE, freePm,
+                SubscriptionPlan.BASIC, basicPm,
+                SubscriptionPlan.PREMIUM, premiumPm
+        );
     }
 
     @Override
@@ -57,28 +58,23 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
 
         SubscriptionPlan plan = SubscriptionPlan.valueOf(claims.subscriptionPlan());
-        if (plan == SubscriptionPlan.PREMIUM) {
-            chain.doFilter(request, response);
-            return;
-        }
+        long limit = planLimits.getOrDefault(plan, planLimits.get(SubscriptionPlan.FREE));
 
-        long limit = PLAN_LIMITS.get(plan);
-        String today = LocalDate.now(ZoneOffset.UTC).toString();
-        String key = KEY_PREFIX + claims.userId() + ":" + today;
+        // Per-minute bucket key — rolls over automatically when a new bucket is created
+        String minuteKey = KEY_PREFIX + claims.userId() + ":" + (Instant.now().getEpochSecond() / 60);
 
         BucketConfiguration config = BucketConfiguration.builder()
                 .addLimit(Bandwidth.builder()
                         .capacity(limit)
-                        .refillGreedy(limit, Duration.ofDays(1))
+                        .refillGreedy(limit, Duration.ofMinutes(1))
                         .build())
                 .build();
 
-        Bucket bucket = proxyManager.builder().build(key, () -> config);
+        Bucket bucket = proxyManager.builder().build(minuteKey, () -> config);
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
 
         long remaining = Math.max(0, probe.getRemainingTokens());
-        long resetEpoch = LocalDate.now(ZoneOffset.UTC)
-                .plusDays(1).atStartOfDay(ZoneOffset.UTC).toEpochSecond();
+        long resetEpoch = (Instant.now().getEpochSecond() / 60 + 1) * 60;
 
         response.setHeader("X-RateLimit-Limit", String.valueOf(limit));
         response.setHeader("X-RateLimit-Remaining", String.valueOf(remaining));
