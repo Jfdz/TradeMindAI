@@ -9,9 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import org.springframework.stereotype.Service;
 
-@Service
 class InMemoryBacktestJobStore implements BacktestJobStore {
 
     private final ConcurrentMap<UUID, BacktestJob> jobs = new ConcurrentHashMap<>();

@@ -23,4 +23,6 @@ public interface StockPriceRepository {
     Optional<StockPrice> findLatest(Symbol symbol, TimeFrame timeFrame);
 
     Optional<StockPrice> findLatestByTicker(String ticker, TimeFrame timeFrame);
+
+    List<StockPrice> findLatestByTickers(List<String> tickers, TimeFrame timeFrame);
 }

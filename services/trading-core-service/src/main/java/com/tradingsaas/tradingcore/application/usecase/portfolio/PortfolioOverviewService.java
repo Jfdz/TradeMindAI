@@ -3,14 +3,12 @@ package com.tradingsaas.tradingcore.application.usecase.portfolio;
 import com.tradingsaas.tradingcore.adapter.out.persistence.PortfolioJpaRepository;
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.PortfolioJpaEntity;
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.PortfolioPositionJpaEntity;
-import com.tradingsaas.tradingcore.domain.model.backtest.OhlcvBar;
 import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,10 +36,16 @@ public class PortfolioOverviewService {
         List<PortfolioHoldingOverview> holdings = new ArrayList<>();
         BigDecimal costBasis = BigDecimal.ZERO;
         BigDecimal marketValue = BigDecimal.ZERO;
+        List<PortfolioPositionJpaEntity> openPositions = portfolio.getPositions().stream()
+                .filter(p -> !"CLOSED".equals(p.getStatus()))
+                .toList();
+        Map<String, BigDecimal> latestPrices = historicalMarketDataPort.loadLatestPrices(openPositions.stream()
+                .map(PortfolioPositionJpaEntity::getSymbolTicker)
+                .distinct()
+                .toList());
 
-        for (PortfolioPositionJpaEntity position : portfolio.getPositions().stream()
-                .filter(p -> !"CLOSED".equals(p.getStatus())).toList()) {
-            BigDecimal currentPrice = latestPrice(position.getSymbolTicker()).orElse(position.getEntryPrice());
+        for (PortfolioPositionJpaEntity position : openPositions) {
+            BigDecimal currentPrice = latestPrices.getOrDefault(position.getSymbolTicker(), position.getEntryPrice());
             BigDecimal positionCost = position.getEntryPrice().multiply(position.getQuantity());
             BigDecimal positionValue = currentPrice.multiply(position.getQuantity());
             BigDecimal pnl = positionValue.subtract(positionCost);
@@ -106,15 +110,6 @@ public class PortfolioOverviewService {
                 winRate,
                 normalizedHoldings
         );
-    }
-
-    private java.util.Optional<BigDecimal> latestPrice(String symbol) {
-        LocalDate to = LocalDate.now(ZoneOffset.UTC);
-        List<OhlcvBar> bars = historicalMarketDataPort.loadHistoricalBars(symbol, to.minusDays(14), to);
-        if (bars.isEmpty()) {
-            return java.util.Optional.empty();
-        }
-        return java.util.Optional.of(BigDecimal.valueOf(bars.get(0).close()));
     }
 
     private static BigDecimal defaultCapitalForPlan(String plan) {

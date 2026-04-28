@@ -8,6 +8,7 @@ import com.tradingsaas.marketdata.domain.model.TimeFrame;
 import com.tradingsaas.marketdata.domain.port.in.GetHistoricalPricesUseCase;
 import com.tradingsaas.marketdata.domain.port.in.GetLatestPriceUseCase;
 import java.time.LocalDate;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -73,6 +74,16 @@ public class StockPricesController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/latest")
+    public ResponseEntity<LatestPricesResponse> getLatestBatch(
+            @RequestParam List<String> tickers,
+            @RequestParam(defaultValue = "DAILY") TimeFrame timeframe) {
+        List<StockPriceResponse> prices = getLatestPriceUseCase.getLatestPrices(tickers, timeframe).stream()
+                .map(this::toResponse)
+                .toList();
+        return ResponseEntity.ok(new LatestPricesResponse(prices));
+    }
+
     private StockPriceResponse toResponse(StockPrice price) {
         return new StockPriceResponse(
                 price.symbol().ticker(),
@@ -86,4 +97,6 @@ public class StockPricesController {
                         price.ohlcv().volume()),
                 price.adjustedClose());
     }
+
+    public record LatestPricesResponse(List<StockPriceResponse> prices) {}
 }
