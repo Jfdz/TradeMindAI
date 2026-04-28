@@ -2,7 +2,6 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from alembic import command as alembic_command
 from alembic.config import Config as AlembicConfig
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,6 +13,7 @@ from ai_engine.adapters.in_.health import router as health_router
 from ai_engine.adapters.in_.models import router as models_router
 from ai_engine.adapters.in_.prediction import router as prediction_router
 from ai_engine.adapters.in_.training import router as training_router
+from alembic import command as alembic_command
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,7 @@ async def _apply_migrations() -> None:
 async def lifespan(app: FastAPI):
     app.state.model_loaded = False
     app.state.consumers_ready = False
+    app.state.model_registry = None
     app.state.prediction_service = None
     app.state.consumers = []
 
@@ -89,6 +90,7 @@ async def _start_consumers(app: FastAPI) -> None:
         settings = get_settings()
 
         registry = ModelRegistry(settings.model_path)
+        app.state.model_registry = registry
         svc = PredictionService(registry)
         app.state.prediction_service = svc
 

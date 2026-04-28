@@ -75,7 +75,37 @@ def test_predict_endpoint_returns_service_output(client, monkeypatch):
     assert ai_main.app.state.prediction_service.calls[0][0] == "AAPL"
 
 
-def test_training_flow_completes(client):
+def test_training_flow_completes(client, monkeypatch):
+    import numpy as np
+    import pandas as pd
+
+    import ai_engine.adapters.out.db_adapter as db_adapter
+
+    n = 200
+    dates = pd.date_range("2023-01-01", periods=n, freq="D")
+    rng = np.random.default_rng(42)
+
+    def _make_ohlcv():
+        close = rng.uniform(100, 200, size=n).astype(np.float32)
+        return pd.DataFrame(
+            {
+                "open": close * 0.99,
+                "high": close * 1.01,
+                "low": close * 0.98,
+                "close": close,
+                "volume": rng.uniform(1e6, 1e7, size=n),
+            },
+            index=dates,
+        )
+
+    monkeypatch.setattr(
+        db_adapter,
+        "load_ohlcv",
+        lambda symbols=None, min_rows=200: {"AAPL": _make_ohlcv(), "MSFT": _make_ohlcv()},
+    )
+    monkeypatch.setattr(db_adapter, "upsert_training_run", lambda *a, **kw: None)
+    monkeypatch.setattr(db_adapter, "upsert_model_version", lambda *a, **kw: None)
+
     response = client.post(
         "/api/v1/models/train",
         json={
