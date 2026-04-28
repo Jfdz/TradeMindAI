@@ -1,0 +1,26 @@
+name: Seed Market Data
+
+on:
+  workflow_dispatch:
+
+jobs:
+  seed:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Python dependencies
+        run: pip3 install --quiet yfinance psycopg2-binary pandas numpy
+
+      - name: Start port-forward
+        run: |
+          kubectl port-forward svc/postgres 5433:5432 -n trading-saas &
+          echo $! > /tmp/pf.pid
+          sleep 3
+
+      - name: Run seed script
+        run: python3 scripts/seed_market_data.py
+
+      - name: Stop port-forward
+        if: always()
+        run: kill $(cat /tmp/pf.pid) 2>/dev/null || true
