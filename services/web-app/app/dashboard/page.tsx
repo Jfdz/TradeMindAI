@@ -8,6 +8,7 @@ import { CandlestickChart } from "@/components/charts/CandlestickChart";
 import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
 import { apiClient, type MarketPriceResponse, type MarketSymbolResponse, type PortfolioHoldingResponse, type PortfolioOverviewResponse, type SignalResponse } from "@/lib/api-client";
+import { buildSignalReasoning, formatConfidence, signalTypeColor } from "@/lib/signal-utils";
 import { cn } from "@/lib/utils";
 
 type FilteredSignal = SignalResponse & {
@@ -53,10 +54,6 @@ function formatSignedMoney(value: number) {
   return value >= 0 ? `+${formatted}` : `-${formatted}`;
 }
 
-function formatConfidence(value: number) {
-  return `${(value * 100).toFixed(1)}%`;
-}
-
 function formatAge(value: string) {
   const generatedAt = new Date(value).getTime();
   if (Number.isNaN(generatedAt)) {
@@ -86,21 +83,6 @@ function toBusinessDay(value: string): BusinessDay {
   };
 }
 
-function buildReasoning(signal: SignalResponse, latestPrice: number | null) {
-  const predicted = signal.predictedChangePct ?? 0;
-  const move = `${Math.abs(predicted).toFixed(1)}%`;
-  const priceText = latestPrice == null ? "the latest market price" : formatMoney(latestPrice);
-
-  if (signal.type === "BUY") {
-    return `Bullish continuation setup around ${priceText} with ${move} projected upside and ${formatConfidence(signal.confidence)} confidence.`;
-  }
-
-  if (signal.type === "SELL") {
-    return `Bearish breakdown setup around ${priceText} with ${move} projected downside and ${formatConfidence(signal.confidence)} confidence.`;
-  }
-
-  return `Neutral setup near ${priceText} while the model waits for a stronger directional edge.`;
-}
 
 function deriveSignal(signal: SignalResponse, latestPrice: number | null): FilteredSignal {
   const entry = latestPrice;
@@ -142,7 +124,7 @@ function deriveSignal(signal: SignalResponse, latestPrice: number | null): Filte
       hour: "numeric",
       minute: "2-digit",
     }),
-    reasoning: buildReasoning(signal, latestPrice),
+    reasoning: buildSignalReasoning(signal, latestPrice),
   };
 }
 
@@ -312,7 +294,7 @@ export default function DashboardHomePage() {
             marker = {
               time: lastCandle.time,
               position: signalType === "SELL" ? "aboveBar" : "belowBar",
-              color: signalType === "SELL" ? "#ff4d6a" : signalType === "BUY" ? "#00d68f" : "#e8b84b",
+              color: signalTypeColor(signalType as "BUY" | "SELL" | "HOLD"),
               shape: signalType === "SELL" ? "arrowDown" : signalType === "BUY" ? "arrowUp" : "circle",
               text: targetSignal?.symbol ?? targetSymbol,
             };

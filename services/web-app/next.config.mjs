@@ -33,7 +33,7 @@ const securityHeaders = [
       "object-src 'none'",
       "img-src 'self' data: blob: https:",
       "style-src 'self' 'unsafe-inline'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "script-src 'self'",
       `connect-src 'self' ${apiOrigin ?? "http://localhost:8082"} ws: wss: http://localhost:* http://127.0.0.1:*`,
     ].join("; "),
   },

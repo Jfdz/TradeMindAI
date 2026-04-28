@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { apiClient, type SignalResponse } from "@/lib/api-client";
+import { buildSignalReasoning, formatConfidence, formatSignalAge } from "@/lib/signal-utils";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -34,44 +35,6 @@ function formatPrice(value: number | null) {
   });
 }
 
-function formatConfidence(value: number) {
-  return `${(value * 100).toFixed(1)}%`;
-}
-
-function formatAge(value: string) {
-  const generatedAt = new Date(value).getTime();
-  if (Number.isNaN(generatedAt)) {
-    return "recently";
-  }
-
-  const diffMinutes = Math.max(Math.round((Date.now() - generatedAt) / 60000), 0);
-  if (diffMinutes < 60) {
-    return `${Math.max(diffMinutes, 1)}m ago`;
-  }
-
-  const diffHours = Math.round(diffMinutes / 60);
-  if (diffHours < 24) {
-    return `${diffHours}h ago`;
-  }
-
-  return `${Math.max(Math.round(diffHours / 24), 1)}d ago`;
-}
-
-function buildReasoning(signal: SignalResponse, latestPrice: number | null) {
-  const predicted = signal.predictedChangePct ?? 0;
-  const move = `${Math.abs(predicted).toFixed(1)}%`;
-  const priceText = latestPrice == null ? "the latest market price" : formatPrice(latestPrice);
-
-  if (signal.type === "BUY") {
-    return `Bullish continuation setup around ${priceText} with ${move} projected upside and ${formatConfidence(signal.confidence)} confidence.`;
-  }
-
-  if (signal.type === "SELL") {
-    return `Bearish breakdown setup around ${priceText} with ${move} projected downside and ${formatConfidence(signal.confidence)} confidence.`;
-  }
-
-  return `Neutral setup near ${priceText} while the model waits for a stronger directional edge.`;
-}
 
 function deriveSignal(signal: SignalResponse, latestPrice: number | null): ResolvedSignal {
   const entry = latestPrice;
@@ -105,7 +68,7 @@ function deriveSignal(signal: SignalResponse, latestPrice: number | null): Resol
     stopLoss,
     live,
     status: live ? "LIVE" : "PENDING",
-    age: formatAge(signal.generatedAt),
+    age: formatSignalAge(signal.generatedAt),
     generatedLabel: new Date(signal.generatedAt).toLocaleString("en-US", {
       month: "short",
       day: "numeric",
@@ -113,7 +76,7 @@ function deriveSignal(signal: SignalResponse, latestPrice: number | null): Resol
       hour: "numeric",
       minute: "2-digit",
     }),
-    reasoning: buildReasoning(signal, latestPrice),
+    reasoning: buildSignalReasoning(signal, latestPrice),
   };
 }
 
