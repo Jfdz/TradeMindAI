@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -8,6 +9,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 
 from ai_engine.adapters.in_.auth import require_internal_secret
+from ai_engine.adapters.out.db_adapter import upsert_training_run
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/models", tags=["training"])
@@ -33,12 +35,14 @@ class TrainResponse(BaseModel):
     started_at: str
 
 
-@router.post("/train", status_code=202, response_model=TrainResponse, dependencies=[Depends(require_internal_secret)])
+@router.post(
+    "/train",
+    status_code=202,
+    response_model=TrainResponse,
+    dependencies=[Depends(require_internal_secret)]
+)
 async def trigger_training(body: TrainRequest, background_tasks: BackgroundTasks):
     """Trigger an async CNN training run. Returns 202 with run_id immediately."""
-    import uuid
-    from ai_engine.adapters.out.db_adapter import upsert_training_run
-
     run_id = str(uuid.uuid4())
     started_at = datetime.now(timezone.utc)
     params_dict = body.model_dump()
@@ -57,7 +61,11 @@ async def trigger_training(body: TrainRequest, background_tasks: BackgroundTasks
         logger.exception("[%s] Could not persist initial training run state", run_id, exc_info=exc)
         raise HTTPException(status_code=503, detail="Training run could not be persisted")
 
-    _runs[run_id] = {"status": "PENDING", "started_at": started_at.isoformat(), "params": params_dict}
+    _runs[run_id] = {
+        "status": "PENDING",
+        "started_at": started_at.isoformat(),
+        "params": params_dict,
+    }
     background_tasks.add_task(_run_training, run_id, body, started_at)
     return TrainResponse(run_id=run_id, status="PENDING", started_at=started_at.isoformat())
 
