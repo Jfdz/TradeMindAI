@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 
 import { apiClient } from "@/lib/api-client";
+import { fetchSettingsPageData } from "@/lib/dashboard/client-data";
 import { Button } from "@/components/ui/button";
 import { pricingPlans } from "@/lib/trademind-content";
 import { cn } from "@/lib/utils";
@@ -23,6 +25,7 @@ type NotificationKey = (typeof notificationRows)[number]["key"];
 
 export default function SettingsPage() {
   const { data: session } = useSession();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
   const [name, setName] = useState(session?.user?.name ?? "TradeMind Operator");
   const [email, setEmail] = useState(session?.user?.email ?? "user@tradermind.ai");
@@ -38,45 +41,29 @@ export default function SettingsPage() {
     weeklyRecap: true,
   });
 
+  const { data, error } = useQuery({
+    queryKey: ["settings"],
+    queryFn: fetchSettingsPageData,
+  });
+
   useEffect(() => {
-    let mounted = true;
-
-    async function loadAccountSettings() {
-      try {
-        const [profile, prefs] = await Promise.all([
-          apiClient.getCurrentUser(),
-          apiClient.getNotificationPreferences(),
-        ]);
-
-        if (!mounted) {
-          return;
-        }
-
-        setName(`${profile.firstName} ${profile.lastName}`.trim());
-        setEmail(profile.email);
-        setTimezone(profile.timezone);
-        setCurrentPlan(profile.plan);
-        setNotifications({
-          signalDigest: prefs.signalDigest,
-          liveAlerts: prefs.liveAlerts,
-          riskWarnings: prefs.riskWarnings,
-          strategyChanges: prefs.strategyChanges,
-          weeklyRecap: prefs.weeklyRecap,
-        });
-        setMessage("Account settings loaded from the backend.");
-      } catch {
-        if (mounted) {
-          setMessage("Using local defaults until the account API responds.");
-        }
-      }
+    if (data) {
+      setName(`${data.profile.firstName} ${data.profile.lastName}`.trim());
+      setEmail(data.profile.email);
+      setTimezone(data.profile.timezone);
+      setCurrentPlan(data.profile.plan);
+      setNotifications({
+        signalDigest: data.preferences.signalDigest,
+        liveAlerts: data.preferences.liveAlerts,
+        riskWarnings: data.preferences.riskWarnings,
+        strategyChanges: data.preferences.strategyChanges,
+        weeklyRecap: data.preferences.weeklyRecap,
+      });
+      setMessage("Account settings loaded from the backend.");
+    } else if (error) {
+      setMessage("Using local defaults until the account API responds.");
     }
-
-    loadAccountSettings();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  }, [data, error]);
 
   async function handleSaveProfile() {
     setIsSaving(true);
@@ -95,6 +82,7 @@ export default function SettingsPage() {
       setEmail(updated.email);
       setTimezone(updated.timezone);
       setCurrentPlan(updated.plan);
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
       setMessage("Profile changes saved to the backend.");
     } catch {
       setMessage("Unable to save profile changes right now.");
@@ -109,6 +97,7 @@ export default function SettingsPage() {
 
     try {
       await apiClient.updateNotificationPreferences(notifications);
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
       setMessage("Notification preferences saved to the backend.");
     } catch {
       setMessage("Unable to save notification preferences right now.");

@@ -80,8 +80,8 @@ management:
       base-path: /actuator
   endpoint:
     health:
-      show-details: always
-      show-components: always
+      show-details: never
+      show-components: never
   health:
     db:
       enabled: true
@@ -95,6 +95,7 @@ management:
 market-data:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
+  internal-secret: ${MARKET_DATA_INTERNAL_SECRET:}
   yahoo:
     base-url: https://query1.finance.yahoo.com
     timeout-seconds: 10

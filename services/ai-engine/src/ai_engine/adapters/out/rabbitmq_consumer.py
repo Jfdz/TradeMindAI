@@ -106,6 +106,12 @@ class MarketDataEventConsumer:
         dlq = await channel.declare_queue("dlq.market-data.prices", durable=True)
         await dlq.bind(dlx, routing_key="dead")
 
+        prices_exchange = await channel.declare_exchange(
+            "market-data.prices",
+            ExchangeType.FANOUT,
+            durable=True,
+        )
+
         queue = await channel.declare_queue(
             MARKET_DATA_QUEUE,
             durable=True,
@@ -114,6 +120,7 @@ class MarketDataEventConsumer:
                 "x-dead-letter-routing-key": "dead",
             },
         )
+        await queue.bind(prices_exchange)
 
         async def on_message(msg: IncomingMessage) -> None:
             async with msg.process(requeue=False):

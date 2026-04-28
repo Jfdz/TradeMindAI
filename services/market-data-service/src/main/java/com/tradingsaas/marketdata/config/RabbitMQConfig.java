@@ -1,5 +1,7 @@
 package com.tradingsaas.marketdata.config;
 
+import com.tradingsaas.marketdata.adapter.out.messaging.RabbitMqMarketDataEventPublisher;
+import org.springframework.amqp.core.FanoutExchange;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -34,6 +36,11 @@ public class RabbitMQConfig {
         RabbitTemplate rabbitTemplate = new RabbitTemplate(rabbitConnectionFactory);
         rabbitTemplate.setMessageConverter(rabbitMessageConverter);
         return rabbitTemplate;
+    }
+
+    @Bean
+    public FanoutExchange marketDataPricesExchange() {
+        return new FanoutExchange(RabbitMqMarketDataEventPublisher.PRICES_EXCHANGE, true, false);
     }
 
     @Bean

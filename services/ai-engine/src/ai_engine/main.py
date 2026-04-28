@@ -38,23 +38,28 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 async def _apply_migrations() -> None:
-    try:
-        ini_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "alembic.ini")
-        alembic_cfg = AlembicConfig(ini_path)
-        alembic_command.upgrade(alembic_cfg, "head")
-        logger.info("Alembic migrations applied")
-    except Exception:
-        logger.warning("Could not apply Alembic migrations (non-fatal)", exc_info=True)
+    ini_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "alembic.ini")
+    alembic_cfg = AlembicConfig(ini_path)
+    alembic_command.upgrade(alembic_cfg, "head")
+    logger.info("Alembic migrations applied")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.model_loaded = False
+    app.state.consumers_ready = False
     app.state.model_registry = None
     app.state.prediction_service = None
     app.state.consumers = []
 
-    await _apply_migrations()
+    try:
+        await _apply_migrations()
+    except Exception:
+        logger.error("Alembic migrations failed — service will not accept traffic", exc_info=True)
+        # Do not raise: let the app start so K8s readiness probe can return 503
+        yield
+        return
+
     await _start_consumers(app)
 
     yield
@@ -111,10 +116,11 @@ async def _start_consumers(app: FastAPI) -> None:
 
         await pred_consumer.start()
         await mde_consumer.start()
+        app.state.consumers_ready = True
         logger.info("RabbitMQ consumers started")
     except Exception:
-        logger.warning(
-            "RabbitMQ consumers not started (config missing or broker unreachable)",
+        logger.error(
+            "RabbitMQ consumers failed to start — readiness probe will return 503",
             exc_info=True,
         )
 

@@ -54,23 +54,22 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
+          // Extract refresh_token from Set-Cookie so it can be stored in the NextAuth
+          // JWT and used for token refresh. The backend sets it as an HTTP-only cookie,
+          // but NextAuth's authorize runs server-side and cannot forward it automatically.
+          const setCookie = response.headers.get("set-cookie") ?? "";
+          const refreshTokenMatch = setCookie.match(/refresh_token=([^;]+)/);
+          const refreshToken = refreshTokenMatch?.[1] ?? undefined;
+
           return {
             id: email,
             email,
             name: email,
             accessToken: data.accessToken,
-          } satisfies AuthUser;
+            refreshToken,
+          } as AuthUser & { refreshToken?: string };
         } catch (err) {
           console.error("[auth] Failed to reach backend at", API_BASE_URL, err);
-
-          if (process.env.NODE_ENV !== "production") {
-            return {
-              id: "demo-user",
-              email,
-              name: "Demo User",
-            } satisfies AuthUser;
-          }
-
           return null;
         }
       },
@@ -86,6 +85,8 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email;
         token.name = user.name;
         token.accessToken = (user as AuthUser).accessToken;
+        const u = user as AuthUser & { refreshToken?: string };
+        if (u.refreshToken) token.refreshToken = u.refreshToken;
       }
 
       return token;

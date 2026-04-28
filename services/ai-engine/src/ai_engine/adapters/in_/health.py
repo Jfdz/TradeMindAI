@@ -11,6 +11,11 @@ async def health():
 
 @router.get("/ready")
 async def ready(request: Request):
+    if not getattr(request.app.state, "consumers_ready", False):
+        return JSONResponse(
+            status_code=503,
+            content={"status": "not ready", "reason": "consumers not started"},
+        )
     if not request.app.state.model_loaded:
         return JSONResponse(
             status_code=503,
