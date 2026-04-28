@@ -28,7 +28,7 @@ class _PredictionService:
 @pytest.fixture(autouse=True)
 def reset_app_state(monkeypatch):
     monkeypatch.setattr(ai_main, "_start_consumers", AsyncMock(return_value=None))
-    monkeypatch.setattr(ai_main, "_apply_migrations", lambda: None)
+    monkeypatch.setattr(ai_main, "_apply_migrations", AsyncMock(return_value=None))
     ai_main.app.state.model_loaded = False
     ai_main.app.state.prediction_service = None
     training_router._runs.clear()
@@ -81,7 +81,10 @@ def test_training_flow_completes(client, monkeypatch):
     import pandas as pd
 
     import ai_engine.adapters.out.db_adapter as db_adapter
-    from ai_engine.config import get_settings
+    import ai_engine.config as config_module
+
+    monkeypatch.setenv("INTERNAL_SECRET", "test-secret")
+    config_module._settings = None
 
     n = 200
     dates = pd.date_range("2023-01-01", periods=n, freq="D")
@@ -107,7 +110,6 @@ def test_training_flow_completes(client, monkeypatch):
     )
     monkeypatch.setattr(db_adapter, "upsert_training_run", lambda *a, **kw: None)
     monkeypatch.setattr(db_adapter, "upsert_model_version", lambda *a, **kw: None)
-    monkeypatch.setattr(get_settings, "internal_secret", "test-secret")
 
     response = client.post(
         "/api/v1/models/train",
