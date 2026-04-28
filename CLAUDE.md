@@ -45,52 +45,108 @@ Update after every completed PBI: record the last done task and the next in deve
 
 All Sprint 8 PBIs delivered. EPIC-6 (Production & DevOps) is fully done.
 
-**Last completed PBI:** `E6-F22-PBI-03` - Production deploy pipeline
-**Jira:** `SCRUM-310` -> `Listo`
-**Branch:** `claude/review-deployment-plan-MFCwx`
-**Completed:** 2026-04-24
+---
+
+## Sprint 9 — Security & Quality Hardening (Closed)
+
+Codex full-repo audit (2026-04-28) found 21 flaws across 3 severity tiers. This sprint fixes them all.
+Branch: `fix/security-quality-hardening`
+
+### Done Tasks
+
+| ID | Severity | Title | Status |
+|---|---|---|---|
+| FIX-01 | Critical | Purge committed secrets — `.env` confirmed untracked; real `JIRA_API_TOKEN` redacted locally. **Action required: revoke old token at id.atlassian.com** | Done |
+| FIX-02 | Critical | Strip refresh tokens from response bodies & session state | Done |
+| FIX-03 | Critical | Add ownership check to backtest jobs | Done |
+| FIX-04 | High | Add `InternalSecretFilter` — `/api/v1/ingestion/**` requires `X-Internal-Secret` header | Done |
+| FIX-05 | High | Restrict actuator `show-details`/`show-components` to `never` in both services | Done |
+| FIX-06 | High | Replace JPQL `LIMIT 1` with `Pageable`-based query in `StockPriceJpaRepository` | Done |
+| FIX-07 | High | Fix broken `APP_CORS_ALLOWED_ORIGINS` env interpolation in `docker-compose.prod.yml` | Done |
+| FIX-08 | High | Grafana prod credentials now mandatory (`:?` syntax — fail startup if unset) | Done |
+| FIX-09 | High | Remove all demo data fallbacks from `api-client.ts` — errors propagate to UI | Done |
+| FIX-10 | High | Add `services.market-data.url` to `trading-core` `application.yml` mapped from env var | Done |
 
 ---
 
-## Last Completed Task
+| FIX-11 | High | Persist backtest jobs in DB via JPA/Flyway; in-memory store kept for tests only | Done |
+| FIX-12 | Medium | Extract `ManagePortfolioPositionUseCase` — JPA entity no longer in controller | Done |
+| FIX-13 | Medium | Batch latest-price API added; portfolio valuation now uses one batched lookup | Done |
+| FIX-14 | Medium | Save + outbox insert now transactional; cache is after-commit; scheduled relay publishes pending events | Done |
+| FIX-15 | Medium | Clamp negative `page` param in `StockPricesController` | Done |
+| FIX-16 | Medium | Map `DataIntegrityViolationException` → 409 in `GlobalExceptionHandler` | Done |
+| FIX-17 | Medium | Validate backtest `from ≤ to` and max 5-year window | Done |
+| FIX-18 | Medium | Cap pageable `max-page-size: 100` via Spring config for signals/strategies | Done |
+| FIX-19 | Medium | Vitest coverage added for middleware, auth, and api-client fallback flows | Done |
+| FIX-20 | Low | K8s kustomization `images` block centralizes tag overrides; `imagePullPolicy: IfNotPresent` | Done |
+| FIX-21 | Low | Remove `unsafe-eval` from CSP; narrow `connect-src` to exact origins | Done |
 
-**PBI:** `E6-F22-PBI-03` - Production deploy pipeline
-**Feature:** FEAT-22: CI/CD Pipelines
+---
+
+### Sprint 9 — CLOSED
+
+All critical and high fixes merged. FIX-11, FIX-13, FIX-14, and FIX-19 are now completed. No deferred FIX items remain.
+
+### Remaining Tasks
+
+None.
+
+### Next To Do
+
+1. Open PR from `fix/security-quality-hardening` -> `develop`.
+
+Open PR from `fix/security-quality-hardening` -> `develop`.
+| FIX-03 | Critical | Add ownership check to backtest jobs | `BacktestController.java:53-63`, `InMemoryBacktestJobStore.java:17-27` |
+| FIX-04 | High | Require ADMIN auth on ingestion endpoints | `SecurityConfig.java:37-38`, `IngestionController.java:28-31` |
+| FIX-05 | High | Restrict actuator exposure (no public full-details) | `application.yml:83-84` (both services) |
+| FIX-06 | High | Fix `LIMIT 1` in JPQL query | `StockPriceJpaRepository.java:43-49` |
+| FIX-07 | High | Fix broken env var interpolation in prod compose | `docker-compose.prod.yml:115` |
+| FIX-08 | High | Remove hardcoded `admin/admin` Grafana credentials | `docker-compose.prod.yml:311-312` |
+| FIX-09 | High | Remove demo data fallbacks from API client | `web-app/lib/api-client.ts:169-301,327-409` |
+| FIX-10 | High | Fix `market-data.url` property wiring | `MarketDataServiceAdapter.java:21`, all service YAMLs |
+| FIX-11 | High | Replace unbounded thread pool; persist backtest jobs to DB | `DefaultBacktestExecutionService.java:24,41,51-52` |
+| FIX-12 | Medium | Remove JPA entity from PortfolioController | `PortfolioController.java:3-4,41,82-89,96-123` |
+| FIX-13 | Medium | Batch N+1 market-data calls in portfolio valuation | `PortfolioOverviewService.java:42-44,111-117` |
+| FIX-14 | Medium | Wrap save+cache+publish in transaction / outbox | `FetchMarketDataUseCaseImpl.java:36-40` |
+| FIX-15 | Medium | Validate `page` param; standardize error bodies in StockPricesController | `StockPricesController.java:45,49,53,60,73` |
+| FIX-16 | Medium | Handle email uniqueness race condition → 409 | `RegisterUserService.java:28-50`, `GlobalExceptionHandler.java:42-45,91-94` |
+| FIX-17 | Medium | Validate backtest date range (`from ≤ to`, max window) | `BacktestController.java:75-79` |
+| FIX-18 | Medium | Cap page size on signals & strategies endpoints | `SignalController.java:30`, `StrategyController.java:37-39` |
+| FIX-19 | Medium | Add frontend tests (middleware, auth, api-client) | `services/web-app/` |
+| FIX-20 | Low | Pin versioned image tags in K8s manifests | `infrastructure/k8s/base/*.yml:26-27` |
+| FIX-21 | Low | Remove `unsafe-eval` from CSP; narrow `connect-src` | `next.config.mjs:36-37` |
+
+---
+
+## Last Completed Task (Sprint 9)
+
+**PBI:** `FIX-19` - Frontend tests for middleware, auth, and api-client
+**Feature:** FEAT-24: Security Hardening
 **Epic:** EPIC-6: Production & DevOps
-**Sprint:** S8
-**Jira:** SCRUM-310 -> `Listo`
-**Branch:** `claude/review-deployment-plan-MFCwx`
-**Completed:** 2026-04-24
+**Sprint:** S9
+**Jira:** `Closed`
+**Branch:** `fix/security-quality-hardening`
+**Completed:** 2026-04-28
 
-### What was built (full FEAT-22 PBI-03)
+### What was completed
 
 | Acceptance criterion | Status |
 |---|---|
-| Manual approval gate via `environment: production` in GitHub Actions | Listo |
-| `verify-images` job checks all 4 images at exact DEPLOY_SHA before any deploy | Listo |
-| Rolling deploy steps for market-data-service, trading-core-service, ai-engine, web-app | Listo |
-| Smoke tests: frontend 200, `/actuator/health` 200, auth endpoint 401 | Listo |
-| Automatic `kubectl rollout undo` for all services on any failure | Listo |
-| Release git tag `prod-YYYYMMDD-HHMM-SHA` on success | Listo |
+| Vitest is configured in `web-app` and wired to `npm test` | Closed |
+| Middleware, auth credential flow, and api-client fallback/header behavior are covered by unit tests | Closed |
+| Frontend unit test suite passes locally | Closed |
 
-### Also completed in this epic cycle
+### Remaining Tasks
 
-| PBI | Jira | What was built | Status |
-|---|---|---|---|
-| E6-F21-PBI-01 | SCRUM-302 | Deployment + Service for all 4 services with liveness/readiness probes, resource limits, non-root securityContext | Listo |
-| E6-F21-PBI-02 | SCRUM-303 | HPA for trading-core and ai-engine — CPU 70%, min 2, max 10, scale-up/down behavior tuned | Listo |
-| E6-F21-PBI-03 | SCRUM-304 | Ingress with TLS, path-based routing to microservices, cert-manager ClusterIssuer for Let's Encrypt | Listo |
-| E6-F21-PBI-04 | SCRUM-305 | NetworkPolicies — default deny-all, explicit allowlist per service, web-app blocked from ai-engine | Listo |
-| E6-F21-PBI-05 | SCRUM-306 | ConfigMaps per service, secrets-template.yml with REPLACE_ME placeholders, kustomization.yml | Listo |
-| E6-F22-PBI-01 | SCRUM-308 | GitHub Actions CI per service — build, test, OWASP, Trivy, GHCR push | Listo |
-| E6-F22-PBI-02 | SCRUM-309 | Staging deploy pipeline — image verify, rolling deploy, smoke tests | Listo |
-| In-cluster infra | — | postgres.yml, redis.yml, rabbitmq.yml StatefulSets/Deployments for Oracle Always Free K3s | Listo |
+None.
 
 ---
 
 ## Next In Development
 
-**Sprint 9 planning required.** All Sprint 8 items are complete. EPIC-6 is delivered.
+None.
+
+Next to do: open PR from `fix/security-quality-hardening` -> `develop`.
 
 
 ## Backlog Queue (Sprint 8)
@@ -115,3 +171,11 @@ All Sprint 8 PBIs delivered. EPIC-6 (Production & DevOps) is fully done.
 | E6-F24-PBI-02 | Security headers | Listo |
 | E6-F24-PBI-03 | CORS configuration | Listo |
 | E6-F24-PBI-04 | Load testing with k6 | Listo |
+
+
+
+
+
+
+
+

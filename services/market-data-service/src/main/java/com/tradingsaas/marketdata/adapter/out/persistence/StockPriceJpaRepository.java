@@ -49,4 +49,19 @@ interface StockPriceJpaRepository extends JpaRepository<StockPriceEntity, Long> 
     Optional<StockPriceEntity> findLatestByTickerAndTimeFrame(
             @Param("ticker") String ticker,
             @Param("timeFrame") TimeFrame timeFrame);
+
+    @Query("""
+            SELECT s FROM StockPriceEntity s JOIN FETCH s.symbol
+            WHERE s.symbol.ticker IN :tickers
+            AND s.timeFrame = :timeFrame
+            AND s.date = (
+                SELECT MAX(innerS.date)
+                FROM StockPriceEntity innerS
+                WHERE innerS.symbol.ticker = s.symbol.ticker
+                AND innerS.timeFrame = s.timeFrame
+            )
+            """)
+    List<StockPriceEntity> findLatestByTickersAndTimeFrame(
+            @Param("tickers") List<String> tickers,
+            @Param("timeFrame") TimeFrame timeFrame);
 }

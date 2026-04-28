@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -69,7 +71,7 @@ class UserController {
         if (principal instanceof TokenClaims claims) {
             return claims;
         }
-        throw new IllegalStateException("Invalid authentication principal");
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
     }
 
     record UpdateUserProfileRequest(

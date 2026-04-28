@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -83,6 +84,11 @@ class BacktestControllerTest {
         @Override
         public List<OhlcvBar> loadHistoricalBars(String symbol, java.time.LocalDate from, java.time.LocalDate to) {
             return List.of();
+        }
+
+        @Override
+        public Map<String, BigDecimal> loadLatestPrices(List<String> symbols) {
+            return Map.of();
         }
 
         @Override
