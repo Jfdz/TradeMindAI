@@ -9,6 +9,7 @@ import ai_engine.adapters.in_.training as training_router
 import ai_engine.adapters.out.db_adapter as db_adapter
 import ai_engine.config as config_module
 import ai_engine.main as ai_main
+from ai_engine.adapters.in_.auth import require_internal_secret
 from ai_engine.core.use_cases.prediction_service import PredictionResult
 
 
@@ -29,12 +30,20 @@ class _PredictionService:
 
 @pytest.fixture(autouse=True)
 def reset_app_state(monkeypatch):
-    monkeypatch.setattr(ai_main, "_start_consumers", AsyncMock(return_value=None))
     monkeypatch.setattr(ai_main, "_apply_migrations", AsyncMock(return_value=None))
+
+    async def _mock_start_consumers(app):
+        app.state.consumers_ready = True
+
+    monkeypatch.setattr(ai_main, "_start_consumers", _mock_start_consumers)
+    monkeypatch.setattr(training_router, "upsert_training_run", lambda *a, **kw: None)
+
+    ai_main.app.dependency_overrides[require_internal_secret] = lambda: None
     ai_main.app.state.model_loaded = False
     ai_main.app.state.prediction_service = None
     training_router._runs.clear()
     yield
+    ai_main.app.dependency_overrides.pop(require_internal_secret, None)
     training_router._runs.clear()
 
 
