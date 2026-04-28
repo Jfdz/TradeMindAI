@@ -113,14 +113,21 @@ def test_training_flow_completes(client, monkeypatch):
             "run_id": run_id,
             "model_version_id": stored.get("version_id"),
             "status": stored.get("status", "PENDING"),
-            "hyperparameters": {},
+            "hyperparameters": stored.get("params", {}),
             "metrics": stored.get("metrics", {}),
             "started_at": stored.get("started_at"),
             "finished_at": stored.get("finished_at"),
-            "created_at": None,
+            "created_at": stored.get("started_at"),
         }
 
-    monkeypatch.setitem(db_adapter.__dict__, "load_ohlcv", lambda symbols=None, min_rows=200: {"AAPL": _make_ohlcv(), "MSFT": _make_ohlcv()})
+    monkeypatch.setitem(
+        db_adapter.__dict__,
+        "load_ohlcv",
+        lambda symbols=None, min_rows=200: {
+            "AAPL": _make_ohlcv(),
+            "MSFT": _make_ohlcv(),
+        },
+    )
     monkeypatch.setitem(db_adapter.__dict__, "upsert_model_version", lambda *a, **kw: None)
     monkeypatch.setitem(db_adapter.__dict__, "load_training_run", _mock_load_training_run)
 
