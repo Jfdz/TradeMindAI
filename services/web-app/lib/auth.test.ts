@@ -76,7 +76,7 @@ describe("authOptions", () => {
   });
 });
 
-function credentialsProvider(authOptions: any) {
+function credentialsProvider(authOptions: { providers: unknown[] }) {
   const provider = authOptions.providers[0] as {
     authorize?: (credentials?: Record<string, string>) => Promise<unknown>;
     options?: {
