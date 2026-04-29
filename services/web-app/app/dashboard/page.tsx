@@ -61,6 +61,9 @@ export default function DashboardHomePage() {
   const holdings = data?.holdings ?? EMPTY_HOLDINGS;
   const chartCandles = data?.chartCandles ?? [];
   const chartMarker = data?.chartMarker ?? null;
+  const chartMarkers = useMemo(() => {
+    return chartMarker ? [chartMarker] : undefined;
+  }, [chartMarker]);
 
   const summaryCards = useMemo(() => {
     if (!portfolio) {
@@ -170,7 +173,7 @@ export default function DashboardHomePage() {
 
           <div className="mt-6 rounded-[22px] border border-border bg-bg-0/70 p-3">
             {chartCandles.length > 0 ? (
-              <CandlestickChart candles={chartCandles} markers={chartMarker ? [chartMarker] : undefined} showVolume={false} height={320} />
+              <CandlestickChart candles={chartCandles} markers={chartMarkers} showVolume={false} height={320} />
             ) : (
               <div className="flex h-[320px] items-center justify-center rounded-[18px] border border-dashed border-border text-sm text-text-2">
                 No chart data available yet.

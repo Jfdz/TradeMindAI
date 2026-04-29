@@ -41,6 +41,8 @@ type CandlestickChartProps = {
   showVolume?: boolean;
 };
 
+const EMPTY_OVERLAYS: OverlayDefinition[] = [];
+
 function computeSma(candles: CandlePoint[], period: number) {
   return candles.map((candle, index) => {
     if (index + 1 < period) {
@@ -82,7 +84,7 @@ function formatVolume(value: number) {
 export function CandlestickChart({
   candles,
   markers,
-  overlays = [],
+  overlays = EMPTY_OVERLAYS,
   height = 360,
   showVolume = true,
 }: CandlestickChartProps) {
