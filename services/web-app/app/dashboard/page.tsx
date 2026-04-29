@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useMemo } from "react";
 
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
@@ -29,6 +30,10 @@ function formatSignedMoney(value: number) {
 }
 
 function Sparkline({ values, color }: { values: number[]; color: string }) {
+  if (values.length === 0) {
+    return null;
+  }
+
   const min = Math.min(...values);
   const max = Math.max(...values);
   const width = 120;
@@ -51,9 +56,12 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
 }
 
 export default function DashboardHomePage() {
+  const { data: session } = useSession();
   const { data, isLoading, error } = useQuery({
     queryKey: ["dashboard"],
     queryFn: fetchDashboardPageData,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const portfolio = data?.portfolio ?? null;
@@ -64,6 +72,11 @@ export default function DashboardHomePage() {
   const chartMarkers = useMemo(() => {
     return chartMarker ? [chartMarker] : undefined;
   }, [chartMarker]);
+
+  const greeting = useMemo(() => {
+    const name = session?.user?.name?.split(" ")[0] ?? "Trader";
+    return `Good morning, ${name}`;
+  }, [session?.user?.name]);
 
   const summaryCards = useMemo(() => {
     if (!portfolio) {
@@ -123,7 +136,7 @@ export default function DashboardHomePage() {
           <div>
             <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Overview</div>
             <h2 className="mt-3 font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
-              Good morning, Alex
+              {greeting}
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-text-2">
               You have {signals.length} signals in the backend feed, {holdings.length} open positions, and a live book

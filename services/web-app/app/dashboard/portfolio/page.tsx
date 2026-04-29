@@ -26,6 +26,10 @@ function formatSignedMoney(value: number) {
 }
 
 function Sparkline({ values, color }: { values: number[]; color: string }) {
+  if (values.length === 0) {
+    return null;
+  }
+
   const min = Math.min(...values);
   const max = Math.max(...values);
   const width = 120;
@@ -152,6 +156,8 @@ export default function PortfolioPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["portfolio"],
     queryFn: fetchPortfolioPageData,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
   const portfolio = data?.portfolio ?? null;
   const holdings = data?.holdings ?? EMPTY_HOLDINGS;
