@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import {
   CandlestickSeries,
+  ColorType,
   createChart,
   createSeriesMarkers,
   HistogramSeries,
@@ -40,6 +41,8 @@ type CandlestickChartProps = {
   height?: number;
   showVolume?: boolean;
 };
+
+const EMPTY_OVERLAYS: OverlayDefinition[] = [];
 
 function computeSma(candles: CandlePoint[], period: number) {
   return candles.map((candle, index) => {
@@ -82,7 +85,7 @@ function formatVolume(value: number) {
 export function CandlestickChart({
   candles,
   markers,
-  overlays = [],
+  overlays = EMPTY_OVERLAYS,
   height = 360,
   showVolume = true,
 }: CandlestickChartProps) {
@@ -109,12 +112,14 @@ export function CandlestickChart({
     }
 
     const container = chartRef.current;
+    if (container.clientWidth === 0) {
+      return;
+    }
     const chart = createChart(container, {
-      autoSize: false,
-      width: container.clientWidth,
+      autoSize: true,
       height,
       layout: {
-        background: { color: "transparent" },
+        background: { type: ColorType.Solid, color: "rgba(0,0,0,0)" },
         textColor: "#dbe4f0",
       },
       grid: {
@@ -176,16 +181,8 @@ export function CandlestickChart({
 
     chart.timeScale().fitContent();
 
-    const resizeObserver = new ResizeObserver(() => {
-      chart.applyOptions({ width: container.clientWidth });
-      chart.timeScale().fitContent();
-    });
-
-    resizeObserver.observe(container);
-
     return () => {
       markerPlugin?.detach();
-      resizeObserver.disconnect();
       chart.remove();
       overlayLineSeries.length = 0;
     };

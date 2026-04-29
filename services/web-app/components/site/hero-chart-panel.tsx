@@ -53,6 +53,7 @@ const frameSeries = {
 export function HeroChartPanel() {
   const [selectedFrame, setSelectedFrame] = useState<(typeof timeframes)[number]>("4H");
   const data = useMemo(() => frameSeries[selectedFrame], [selectedFrame]);
+  const markers = useMemo(() => [data.marker], [data.marker]);
 
   return (
     <div className="overflow-hidden rounded-[28px] border border-border bg-[linear-gradient(180deg,rgba(17,23,32,0.96),rgba(12,16,24,0.95))] shadow-glow">
@@ -93,7 +94,7 @@ export function HeroChartPanel() {
       <div className="grid gap-0 lg:grid-cols-[1fr_220px]">
         <div className="p-4 sm:p-5">
           <div className="rounded-[22px] border border-border bg-bg-0/70 p-3">
-            <CandlestickChart candles={data.candles} markers={[data.marker]} height={340} overlays={[]} showVolume={false} />
+            <CandlestickChart candles={data.candles} markers={markers} height={340} showVolume={false} />
           </div>
         </div>
 
