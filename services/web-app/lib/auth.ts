@@ -5,6 +5,10 @@ import CredentialsProvider from "next-auth/providers/credentials";
 // Server-side only — never exposed to the browser bundle
 const API_BASE_URL = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
 
+const ADMIN_EMAILS = new Set(
+  (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)
+);
+
 type AuthUser = {
   id: string;
   email: string;
@@ -12,6 +16,7 @@ type AuthUser = {
   accessToken?: string;
   refreshToken?: string;
   accessTokenExpires?: number;
+  isAdmin?: boolean;
 };
 
 async function refreshAccessToken(token: JWT): Promise<JWT> {
@@ -109,6 +114,7 @@ export const authOptions: NextAuthOptions = {
             accessToken: data.accessToken,
             refreshToken,
             accessTokenExpires: Date.now() + (data.expiresIn ?? 900) * 1000,
+            isAdmin: ADMIN_EMAILS.has(email.toLowerCase()),
           } as AuthUser;
         } catch (err) {
           console.error("[auth] Failed to reach backend at", API_BASE_URL, err);
@@ -131,6 +137,7 @@ export const authOptions: NextAuthOptions = {
         token.accessToken = u.accessToken;
         token.refreshToken = u.refreshToken;
         token.accessTokenExpires = u.accessTokenExpires;
+        token.isAdmin = u.isAdmin ?? false;
         return token;
       }
 
@@ -150,6 +157,7 @@ export const authOptions: NextAuthOptions = {
       }
       session.accessToken = typeof token.accessToken === "string" ? token.accessToken : undefined;
       session.error = token.error as "RefreshAccessTokenError" | undefined;
+      session.isAdmin = token.isAdmin === true;
       return session;
     },
   },
