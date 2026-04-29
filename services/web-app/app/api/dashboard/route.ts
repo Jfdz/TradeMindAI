@@ -161,7 +161,7 @@ export async function GET() {
 
     const symbolMap = new Map((symbolResponse.content ?? []).map((symbol) => [symbol.ticker, symbol]));
     const signalSymbols = (signalResponse.content ?? []).map((signal) => signal.symbol);
-    const holdingSymbols = portfolio.holdings.map((holding) => holding.symbol);
+    const holdingSymbols = (portfolio.holdings ?? []).map((holding) => holding.symbol);
     const uniqueSymbols = Array.from(new Set([...signalSymbols, ...holdingSymbols]));
 
     const latestPriceParams = new URLSearchParams();
@@ -183,7 +183,7 @@ export async function GET() {
       .sort((left, right) => new Date(right.generatedAt).getTime() - new Date(left.generatedAt).getTime());
 
     const holdings: EnrichedHolding[] = await Promise.all(
-      portfolio.holdings.map(async (holding, index) => {
+      (portfolio.holdings ?? []).map(async (holding, index) => {
         const from = new Date();
         from.setUTCDate(from.getUTCDate() - 10);
         const history = await backendJson<PagedResponse<MarketPriceResponse>>(
@@ -224,14 +224,14 @@ export async function GET() {
         : synthesizeCandles(latestPrice ?? 100, targetSignal?.generatedAt ?? new Date().toISOString());
 
       const lastCandle = chartCandles[chartCandles.length - 1];
-      if (lastCandle) {
-        const signalType = targetSignal?.type ?? "BUY";
+      if (lastCandle && targetSignal) {
+        const signalType = targetSignal.type;
         chartMarker = {
           time: lastCandle.time,
           position: signalType === "SELL" ? "aboveBar" : "belowBar",
           color: signalTypeColor(signalType),
           shape: signalType === "SELL" ? "arrowDown" : signalType === "BUY" ? "arrowUp" : "circle",
-          text: targetSignal?.symbol ?? targetSymbol,
+          text: targetSignal.symbol,
         };
       }
     }

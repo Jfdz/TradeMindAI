@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -8,6 +8,7 @@ import { apiClient, type AddPositionPayload } from "@/lib/api-client";
 
 export default function AddPositionPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { data: symbols = [] } = useQuery({
@@ -58,6 +59,7 @@ export default function AddPositionPage() {
     setIsSubmitting(true);
     try {
       await apiClient.addPosition(payload);
+      await queryClient.invalidateQueries({ queryKey: ["portfolio"] });
       router.push("/dashboard/portfolio");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add position");
