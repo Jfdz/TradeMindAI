@@ -51,123 +51,6 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
 }
 
 export default function DashboardHomePage() {
-  const [portfolio, setPortfolio] = useState<PortfolioOverviewResponse | null>(null);
-  const [signals, setSignals] = useState<FilteredSignal[]>([]);
-  const [holdings, setHoldings] = useState<EnrichedHolding[]>([]);
-  const [chartCandles, setChartCandles] = useState<DashboardCandle[]>([]);
-  const [chartMarker, setChartMarker] = useState<SeriesMarker<Time> | null>(null);
-  const chartMarkers = useMemo(() => {
-    return chartMarker ? [chartMarker] : undefined;
-  }, [chartMarker]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadDashboard() {
-      try {
-        const [portfolioResponse, signalResponse, symbolResponse] = await Promise.all([
-          apiClient.getPortfolio(),
-          apiClient.getSignals(),
-          apiClient.getSymbols(),
-        ]);
-
-        const symbolMap = new Map(symbolResponse.content.map((symbol: MarketSymbolResponse) => [symbol.ticker, symbol]));
-        const latestPriceBySymbol = new Map<string, number | null>();
-
-        const signalSymbols = signalResponse.content.map((signal) => signal.symbol);
-        const holdingSymbols = portfolioResponse.holdings.map((holding) => holding.symbol);
-        const uniqueSymbols = Array.from(new Set([...signalSymbols, ...holdingSymbols]));
-
-        await Promise.all(
-          uniqueSymbols.map(async (symbol) => {
-            const latest = await apiClient.getLatestPrice(symbol);
-            latestPriceBySymbol.set(symbol, latest?.adjustedClose ?? latest?.ohlcv.close ?? null);
-          })
-        );
-
-        const resolvedSignals = signalResponse.content
-          .map((signal) => deriveSignal(signal, latestPriceBySymbol.get(signal.symbol) ?? null))
-          .sort((left, right) => new Date(right.generatedAt).getTime() - new Date(left.generatedAt).getTime());
-
-        const enrichedHoldings = await Promise.all(
-          portfolioResponse.holdings.map(async (holding, index) => {
-            const symbol = symbolMap.get(holding.symbol);
-            const from = new Date();
-            from.setUTCDate(from.getUTCDate() - 10);
-            const history = await apiClient.getHistoricalPrices(
-              holding.symbol,
-              from.toISOString().slice(0, 10),
-              new Date().toISOString().slice(0, 10),
-              12
-            );
-
-            return {
-              ...holding,
-              name: symbol?.name ?? holding.symbol,
-              sector: symbol?.sector ?? "Portfolio holding",
-              color: palette[index % palette.length],
-              trend: buildHoldingTrend(history.content, holding.lastPrice),
-            };
-          })
-        );
-
-        const targetSignal = resolvedSignals[0] ?? null;
-        const targetHolding = enrichedHoldings[0] ?? null;
-        const targetSymbol = targetSignal?.symbol ?? targetHolding?.symbol ?? null;
-
-        let candles: DashboardCandle[] = [];
-        let marker: SeriesMarker<Time> | null = null;
-
-        if (targetSymbol) {
-          const from = new Date();
-          from.setUTCDate(from.getUTCDate() - 8);
-          const latestPrice = latestPriceBySymbol.get(targetSymbol);
-          const history = await apiClient.getHistoricalPrices(
-            targetSymbol,
-            from.toISOString().slice(0, 10),
-            new Date().toISOString().slice(0, 10),
-            24
-          );
-          candles = history.content.length
-            ? convertPricesToCandles(history.content)
-            : synthesizeCandles(latestPrice ?? 100, targetSignal?.generatedAt ?? new Date().toISOString());
-
-          const lastCandle = candles[candles.length - 1];
-          if (lastCandle) {
-            const signalType = targetSignal?.type ?? "BUY";
-            marker = {
-              time: lastCandle.time,
-              position: signalType === "SELL" ? "aboveBar" : "belowBar",
-              color: signalType === "SELL" ? "#ff4d6a" : signalType === "BUY" ? "#00d68f" : "#e8b84b",
-              shape: signalType === "SELL" ? "arrowDown" : signalType === "BUY" ? "arrowUp" : "circle",
-              text: targetSignal?.symbol ?? targetSymbol,
-            };
-          }
-        }
-
-        if (!mounted) {
-          return;
-        }
-
-        setPortfolio(portfolioResponse);
-        setSignals(resolvedSignals);
-        setHoldings(enrichedHoldings);
-        setChartCandles(candles);
-        setChartMarker(marker);
-      } catch (requestError) {
-        if (mounted) {
-          setError(requestError instanceof Error ? requestError.message : "Unable to load dashboard");
-        }
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    loadDashboard();
   const { data, isLoading, error } = useQuery({
     queryKey: ["dashboard"],
     queryFn: fetchDashboardPageData,
@@ -178,6 +61,9 @@ export default function DashboardHomePage() {
   const holdings = data?.holdings ?? EMPTY_HOLDINGS;
   const chartCandles = data?.chartCandles ?? [];
   const chartMarker = data?.chartMarker ?? null;
+  const chartMarkers = useMemo(() => {
+    return chartMarker ? [chartMarker] : undefined;
+  }, [chartMarker]);
 
   const summaryCards = useMemo(() => {
     if (!portfolio) {
