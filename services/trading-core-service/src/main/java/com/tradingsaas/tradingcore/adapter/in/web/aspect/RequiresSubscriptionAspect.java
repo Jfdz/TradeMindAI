@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 
 @Aspect
 @Component
-class RequiresSubscriptionAspect {
+public class RequiresSubscriptionAspect {
 
     @Around("@annotation(requiresSubscription)")
     public Object checkSubscription(ProceedingJoinPoint pjp,

@@ -8,6 +8,8 @@ import com.tradingsaas.tradingcore.adapter.in.web.dto.StrategyResponse;
 import com.tradingsaas.tradingcore.domain.model.RiskParameters;
 import com.tradingsaas.tradingcore.domain.model.Strategy;
 import com.tradingsaas.tradingcore.domain.model.TokenClaims;
+import com.tradingsaas.tradingcore.domain.exception.InsufficientSubscriptionException;
+import com.tradingsaas.tradingcore.domain.model.SubscriptionPlan;
 import com.tradingsaas.tradingcore.domain.exception.StrategyNotFoundException;
 import com.tradingsaas.tradingcore.domain.port.in.ManageStrategiesUseCase;
 import java.math.BigDecimal;
@@ -44,6 +46,15 @@ class StrategyControllerTest {
                 controller.deleteStrategy(new TokenClaims(UUID.randomUUID(), "user@example.com", "FREE"), UUID.randomUUID()));
     }
 
+    @Test
+    void propagatesSubscriptionFailureOnCreate() {
+        StrategyController controller = new StrategyController(new StubUseCase(null, true));
+
+        assertThrows(InsufficientSubscriptionException.class, () -> controller.createStrategy(
+                new TokenClaims(UUID.randomUUID(), "user@example.com", "FREE"),
+                new StrategyRequest("Trend", "desc", new BigDecimal("2.00"), new BigDecimal("5.00"), new BigDecimal("10.00"), true)));
+    }
+
     private static Strategy strategy() {
         UUID userId = UUID.fromString("22222222-2222-2222-2222-222222222222");
         return new Strategy(
@@ -59,9 +70,15 @@ class StrategyControllerTest {
 
     private static final class StubUseCase implements ManageStrategiesUseCase {
         private final Strategy strategy;
+        private final boolean rejectCreation;
 
         private StubUseCase(Strategy strategy) {
+            this(strategy, false);
+        }
+
+        private StubUseCase(Strategy strategy, boolean rejectCreation) {
             this.strategy = strategy;
+            this.rejectCreation = rejectCreation;
         }
 
         @Override
@@ -70,12 +87,15 @@ class StrategyControllerTest {
         }
 
         @Override
-        public Strategy createStrategy(UUID userId, StrategyCommand command) {
+        public Strategy createStrategy(UUID userId, String subscriptionPlan, StrategyCommand command) {
+            if (rejectCreation) {
+                throw new InsufficientSubscriptionException(SubscriptionPlan.BASIC);
+            }
             return strategy;
         }
 
         @Override
-        public Strategy updateStrategy(UUID userId, UUID strategyId, StrategyCommand command) {
+        public Strategy updateStrategy(UUID userId, String subscriptionPlan, UUID strategyId, StrategyCommand command) {
             return strategy;
         }
 

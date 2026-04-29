@@ -47,6 +47,7 @@ class StrategyController {
             @Valid @RequestBody StrategyRequest request) {
         Strategy created = manageStrategiesUseCase.createStrategy(
                 claims.userId(),
+                claims.subscriptionPlan(),
                 request.toCommand()
         );
         return StrategyResponse.fromDomain(created);
@@ -57,7 +58,7 @@ class StrategyController {
             @AuthenticationPrincipal TokenClaims claims,
             @PathVariable UUID id,
             @Valid @RequestBody StrategyRequest request) {
-        Strategy updated = manageStrategiesUseCase.updateStrategy(claims.userId(), id, request.toCommand());
+        Strategy updated = manageStrategiesUseCase.updateStrategy(claims.userId(), claims.subscriptionPlan(), id, request.toCommand());
         return StrategyResponse.fromDomain(updated);
     }
 

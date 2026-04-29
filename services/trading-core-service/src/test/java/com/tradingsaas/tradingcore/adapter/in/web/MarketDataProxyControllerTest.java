@@ -24,7 +24,8 @@ import org.springframework.http.ResponseEntity;
 class MarketDataProxyControllerTest {
 
     private final MarketDataServiceAdapter adapter = mock(MarketDataServiceAdapter.class);
-    private final MarketDataProxyController controller = new MarketDataProxyController(adapter);
+    private final SubscriptionAccessGuard subscriptionAccessGuard = mock(SubscriptionAccessGuard.class);
+    private final MarketDataProxyController controller = new MarketDataProxyController(adapter, subscriptionAccessGuard);
 
     @Test
     void returnsLatestPriceFromInternalMarketDataService() {
@@ -71,6 +72,7 @@ class MarketDataProxyControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(100, response.getBody().size());
+        verify(subscriptionAccessGuard).requireHistoricalPriceAccess(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 4, 29));
     }
 
     @Test

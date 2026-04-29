@@ -1,8 +1,10 @@
 package com.tradingsaas.tradingcore.application.usecase;
 
+import com.tradingsaas.tradingcore.domain.exception.InsufficientSubscriptionException;
 import com.tradingsaas.tradingcore.domain.exception.StrategyNotFoundException;
 import com.tradingsaas.tradingcore.domain.model.RiskParameters;
 import com.tradingsaas.tradingcore.domain.model.Strategy;
+import com.tradingsaas.tradingcore.domain.model.SubscriptionPlan;
 import com.tradingsaas.tradingcore.domain.port.in.ManageStrategiesUseCase;
 import com.tradingsaas.tradingcore.domain.port.out.StrategyRepository;
 import java.time.Instant;
@@ -29,7 +31,8 @@ class StrategyManagementService implements ManageStrategiesUseCase {
 
     @Override
     @Transactional
-    public Strategy createStrategy(UUID userId, StrategyCommand command) {
+    public Strategy createStrategy(UUID userId, String subscriptionPlan, StrategyCommand command) {
+        enforceActiveStrategyLimit(userId, subscriptionPlan, command.active());
         Instant now = Instant.now();
         Strategy strategy = new Strategy(
                 UUID.randomUUID(),
@@ -46,9 +49,10 @@ class StrategyManagementService implements ManageStrategiesUseCase {
 
     @Override
     @Transactional
-    public Strategy updateStrategy(UUID userId, UUID strategyId, StrategyCommand command) {
+    public Strategy updateStrategy(UUID userId, String subscriptionPlan, UUID strategyId, StrategyCommand command) {
         Strategy existing = strategyRepository.findByIdAndUserId(strategyId, userId)
                 .orElseThrow(() -> new StrategyNotFoundException("Strategy not found: " + strategyId));
+        enforceActiveStrategyLimit(userId, subscriptionPlan, !existing.isActive() && command.active());
 
         Strategy updated = new Strategy(
                 existing.getId(),
@@ -73,5 +77,34 @@ class StrategyManagementService implements ManageStrategiesUseCase {
 
     private RiskParameters toRiskParameters(StrategyCommand command) {
         return new RiskParameters(command.stopLossPct(), command.takeProfitPct(), command.maxPositionPct());
+    }
+
+    private void enforceActiveStrategyLimit(UUID userId, String subscriptionPlan, boolean activatingStrategy) {
+        if (!activatingStrategy) {
+            return;
+        }
+
+        SubscriptionPlan plan = SubscriptionPlan.valueOf(subscriptionPlan == null ? "FREE" : subscriptionPlan.toUpperCase());
+        long activeStrategies = strategyRepository.countActiveByUserId(userId);
+        long limit = activeStrategyLimit(plan);
+
+        if (limit != Long.MAX_VALUE && activeStrategies >= limit) {
+            throw new InsufficientSubscriptionException(nextTier(plan));
+        }
+    }
+
+    private long activeStrategyLimit(SubscriptionPlan plan) {
+        return switch (plan) {
+            case FREE -> 1L;
+            case BASIC -> 5L;
+            case PREMIUM -> Long.MAX_VALUE;
+        };
+    }
+
+    private SubscriptionPlan nextTier(SubscriptionPlan plan) {
+        return switch (plan) {
+            case FREE -> SubscriptionPlan.BASIC;
+            case BASIC, PREMIUM -> SubscriptionPlan.PREMIUM;
+        };
     }
 }
