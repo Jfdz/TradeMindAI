@@ -47,13 +47,13 @@ class SecurityConfigTest {
 
     @Test
     void rejectsInternalApiWithoutSecret() throws Exception {
-        mockMvc.perform(get("/api/v1/prices/AAPL/latest").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/test").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void allowsInternalApiWithSecret() throws Exception {
-        mockMvc.perform(get("/api/v1/prices/AAPL/latest")
+        mockMvc.perform(get("/api/v1/test")
                         .header("X-Internal-Secret", "test-secret")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
@@ -66,8 +66,8 @@ class SecurityConfigTest {
             return "ok";
         }
 
-        @GetMapping("/api/v1/prices/AAPL/latest")
-        String latestPrice() {
+        @GetMapping("/api/v1/test")
+        String internalApi() {
             return "ok";
         }
     }
