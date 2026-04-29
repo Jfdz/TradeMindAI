@@ -1,70 +1,158 @@
-# Plan: Fix `test_training_flow_completes` (UndefinedTable on `ai_engine.training_runs`)
+# Plan: Add K8s ConfigMap / Secret Env Vars
 
-## Context
-
-The CI test `test_training_flow_completes` is failing because the training status endpoint was changed to read from the database for cross-replica consistency:
-
-- `services/ai-engine/src/ai_engine/adapters/in_/training.py:73-81` — `GET /api/v1/models/train/{run_id}` now calls `load_training_run(run_id)` instead of reading from the in-memory `_runs` dict.
-- `services/ai-engine/src/ai_engine/adapters/out/db_adapter.py:70-99` — `load_training_run` runs `SELECT … FROM ai_engine.training_runs WHERE id = …`.
-
-The CI test Postgres has no `ai_engine` schema (no migrations run), so the query fails with `psycopg2.errors.UndefinedTable`.
-
-The test fixture already monkeypatches `upsert_training_run` and `upsert_model_version`, but **`load_training_run` is not mocked**, so the test polls a real DB that doesn't exist.
-
-## Fix
-
-Add a single monkeypatch in `test_training_flow_completes` that maps `load_training_run` to read from the in-memory `training_router._runs` dict (which `_run_training` already updates with status / finished_at / version_id / metrics).
-
-### File to modify
-`services/ai-engine/tests/integration/test_api_flow.py` (around line 117, alongside the existing db_adapter monkeypatches)
-
-### Patch (logical change)
-
-Add inside `test_training_flow_completes`, right after the existing `db_adapter.upsert_*` monkeypatches:
-
-```python
-def _mock_load_training_run(run_id):
-    run = training_router._runs.get(run_id)
-    if run is None:
-        return None
-    return {
-        "run_id": run_id,
-        "model_version_id": run.get("version_id"),
-        "status": run.get("status"),
-        "hyperparameters": run.get("params", {}),
-        "metrics": run.get("metrics", {}),
-        "started_at": run.get("started_at"),
-        "finished_at": run.get("finished_at"),
-        "created_at": run.get("started_at"),
-    }
-
-monkeypatch.setattr(db_adapter, "load_training_run", _mock_load_training_run)
-```
-
-### Why this shape
-- `db_adapter.load_training_run` returns a dict with keys `run_id, model_version_id, status, hyperparameters, metrics, started_at, finished_at, created_at`.
-- The `_runs` dict (populated by `_run_training`) holds `status, started_at, params, finished_at, version_id, metrics` — the mock maps these onto the DB-shaped dict.
-- The test only asserts `status == "COMPLETED"` and `"finished_at" in response.json()`, so the mapping is sufficient.
-
-### Why monkeypatch `db_adapter.load_training_run` (not `training_router.load_training_run`)
-The endpoint uses a function-local import: `from ai_engine.adapters.out.db_adapter import load_training_run`. Function-local `from X import Y` resolves to the current attribute on the module each call, so patching the source module is correct.
-
-## Verification
-
-1. Push the fix to `main` to trigger `ci-ai-engine.yml`.
-2. The `Run tests` step should show 16/16 passing.
-3. Locally (if pytest is available):
-   ```bash
-   cd services/ai-engine && pytest tests/integration/test_api_flow.py -v
-   ```
-   `test_training_flow_completes` should pass with COMPLETED status.
-
-## Out of scope
-- No code changes to `training.py`, `db_adapter.py`, or `main.py` — those are correct as written.
-- No new env vars or CI workflow changes.
+**Date:** 2026-04-29
+**Files to modify:** `infrastructure/k8s/base/configmaps.yml`, `infrastructure/k8s/base/secrets-template.yml`, `infrastructure/k8s/base/web-app.yml`, `infrastructure/k8s/base/trading-core-service.yml`
 
 ---
 
-## Previous plan (kept for context, archived)
+## Context
 
-The earlier plan to test the training endpoint manually on the live ai-engine pod has been completed: training succeeded end-to-end and the model now persists to the database. The remaining issue is the unit test mock gap above.
+User wants to add three environment variables to the Kubernetes cluster:
+- `ADMIN_EMAILS=jfdzn28@icloud.com`
+- `INTERNAL_SECRET=<generated-value>`
+- `AI_ENGINE_SERVICE_URL=http://ai-engine:8000`
+
+---
+
+## What Each Variable Means
+
+### INTERNAL_SECRET
+**What it is:** A shared secret string used as the value of the `X-Internal-Secret` HTTP header. This header authenticates service-to-service calls so that internal endpoints (e.g. market-data `/api/v1/ingestion`) cannot be called from the public internet.
+
+**What value to use:** Generate a strong random string on your Ubuntu machine:
+```bash
+openssl rand -hex 32
+```
+Copy that output — that is your `INTERNAL_SECRET`.
+
+**Security:** It is sensitive → must go in a K8s **Secret**, not a ConfigMap.
+
+---
+
+### ADMIN_EMAILS
+**What it is:** A comma-separated list of email addresses that should receive admin privileges in the app.
+
+**Sensitivity:** Not sensitive (it's just an email address) → goes in a **ConfigMap**.
+
+---
+
+### AI_ENGINE_SERVICE_URL
+**What it is:** The internal cluster URL for the AI engine service.
+
+**Important finding:** Based on the codebase, `AI_ENGINE_SERVICE_URL` is read by **trading-core-service** (via `application.yml:109` → `AiEngineProperties.java`), **not** by web-app. The web-app has no code that reads this variable.
+
+**Decision:** Add it to `trading-core-service-config` ConfigMap (where it belongs), and also to `web-app-config` if you need it there for future use. The plan below adds it to both to be safe.
+
+---
+
+## Changes Required
+
+### 1. `infrastructure/k8s/base/configmaps.yml`
+
+**In `web-app-config`** — add:
+```yaml
+  ADMIN_EMAILS: "jfdzn28@icloud.com"
+  AI_ENGINE_SERVICE_URL: "http://ai-engine.trading-saas.svc.cluster.local:8000"
+```
+
+**In `trading-core-service-config`** — add:
+```yaml
+  AI_ENGINE_SERVICE_URL: "http://ai-engine.trading-saas.svc.cluster.local:8000"
+```
+(Note: full cluster DNS name is safer than `http://ai-engine:8000` which relies on same-namespace DNS shorthand — both work but full name is more explicit.)
+
+---
+
+### 2. `infrastructure/k8s/base/secrets-template.yml`
+
+Add a new secret block for `INTERNAL_SECRET`:
+```yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: internal-secret
+  namespace: trading-saas
+type: Opaque
+data:
+  secret: BASE64_ENCODED_VALUE_HERE
+```
+
+> The actual live secret must be applied via `kubectl` with your real value, **not** committed to git.
+
+---
+
+### 3. `infrastructure/k8s/base/web-app.yml`
+
+Mount the new env vars into the web-app container:
+```yaml
+- name: ADMIN_EMAILS
+  valueFrom:
+    configMapKeyRef:
+      name: web-app-config
+      key: ADMIN_EMAILS
+- name: AI_ENGINE_SERVICE_URL
+  valueFrom:
+    configMapKeyRef:
+      name: web-app-config
+      key: AI_ENGINE_SERVICE_URL
+- name: INTERNAL_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: internal-secret
+      key: secret
+```
+
+---
+
+### 4. `infrastructure/k8s/base/trading-core-service.yml`
+
+Mount `AI_ENGINE_SERVICE_URL` into the trading-core container:
+```yaml
+- name: AI_ENGINE_SERVICE_URL
+  valueFrom:
+    configMapKeyRef:
+      name: trading-core-service-config
+      key: AI_ENGINE_SERVICE_URL
+```
+
+---
+
+## Apply Order on the Ubuntu Machine
+
+After committing the manifest changes, apply them with:
+
+```bash
+# 1. Apply the ConfigMap changes
+kubectl apply -f infrastructure/k8s/base/configmaps.yml
+
+# 2. Create the INTERNAL_SECRET secret with the REAL value (NOT from the template)
+#    First generate the value:
+SECRET=$(openssl rand -hex 32)
+echo "Your secret: $SECRET"
+
+#    Then create it in K8s:
+kubectl create secret generic internal-secret \
+  --from-literal=secret="$SECRET" \
+  -n trading-saas \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# 3. Apply the updated deployment manifests
+kubectl apply -f infrastructure/k8s/base/web-app.yml
+kubectl apply -f infrastructure/k8s/base/trading-core-service.yml
+
+# 4. Restart pods to pick up new env vars
+kubectl rollout restart deployment/web-app deployment/trading-core-service -n trading-saas
+
+# 5. Verify env vars are present
+kubectl exec -n trading-saas deployment/web-app -- printenv | grep -E "ADMIN|INTERNAL|AI_ENGINE"
+kubectl exec -n trading-saas deployment/trading-core-service -- printenv | grep "AI_ENGINE"
+```
+
+---
+
+## Verification
+
+- `kubectl exec ... -- printenv` confirms vars are visible inside each pod
+- No pod crash-loops after restart (check `kubectl get pods -n trading-saas`)
+- The `INTERNAL_SECRET` value is **never committed to git** — only the template placeholder is in source control
