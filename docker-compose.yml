@@ -135,6 +135,8 @@ services:
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
       JWT_SECRET: ${JWT_SECRET:-dev-secret-key-change-in-production-min-32-chars}
       AI_ENGINE_SERVICE_URL: http://ai-engine:8000
+      MARKET_DATA_SERVICE_URL: http://market-data-service:8081
+      MARKET_DATA_INTERNAL_SECRET: ${INTERNAL_SECRET:-change-me-in-prod}
     depends_on:
       postgres:
         condition: service_healthy
