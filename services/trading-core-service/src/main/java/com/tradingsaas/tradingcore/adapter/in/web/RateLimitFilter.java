@@ -42,9 +42,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         return path.startsWith("/api/v1/auth/")
                 || path.startsWith("/actuator/")
-                || path.equals("/api/v1/subscriptions/plans")
-                || path.equals("/api/v1/symbols")
-                || path.startsWith("/api/v1/prices/");
+                || path.equals("/api/v1/subscriptions/plans");
     }
 
     @Override

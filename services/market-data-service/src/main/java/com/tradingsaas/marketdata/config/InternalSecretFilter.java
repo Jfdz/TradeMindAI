@@ -14,7 +14,7 @@ import java.io.IOException;
 public class InternalSecretFilter extends OncePerRequestFilter {
 
     private static final String HEADER = "X-Internal-Secret";
-    private static final String INGESTION_PATH = "/api/v1/ingestion";
+    private static final String INTERNAL_API_PATH = "/api/v1/";
 
     private final String internalSecret;
 
@@ -26,7 +26,7 @@ public class InternalSecretFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        if (request.getRequestURI().startsWith(INGESTION_PATH)) {
+        if (request.getRequestURI().startsWith(INTERNAL_API_PATH)) {
             if (internalSecret.isBlank()) {
                 response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, "Internal auth not configured");
                 return;
