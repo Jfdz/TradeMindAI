@@ -113,6 +113,8 @@ async def _start_consumers(app: FastAPI) -> None:
             _make_market_data_trigger(app, settings),
         )
         app.state.consumers = [pred_consumer, mde_consumer]
+        app.state.publish_predictions = _publish_predictions
+        app.state.rabbitmq_url = settings.rabbitmq_url
 
         await pred_consumer.start()
         await mde_consumer.start()
@@ -156,15 +158,32 @@ def _make_sync_predict(app: FastAPI):
     return _predict
 
 
-def _make_market_data_trigger(app: FastAPI, settings):
-    """Return an async trigger callable for MarketDataEventConsumer."""
+async def _publish_predictions(rabbitmq_url: str, payload: dict) -> None:
+    """Publish a prediction result payload to the fanout exchange consumed by trading-core."""
     import json
 
     import aio_pika
     from aio_pika import ExchangeType, Message
 
-    from ai_engine.adapters.out.market_data_client import MarketDataClient
     from ai_engine.adapters.out.rabbitmq_consumer import PREDICTION_RESULT_EXCHANGE
+
+    connection = await aio_pika.connect_robust(rabbitmq_url)
+    async with connection:
+        channel = await connection.channel()
+        exchange = await channel.declare_exchange(
+            PREDICTION_RESULT_EXCHANGE,
+            ExchangeType.FANOUT,
+            durable=True,
+        )
+        await exchange.publish(
+            Message(body=json.dumps(payload).encode(), content_type="application/json"),
+            routing_key="",
+        )
+
+
+def _make_market_data_trigger(app: FastAPI, settings):
+    """Return an async trigger callable for MarketDataEventConsumer."""
+    from ai_engine.adapters.out.market_data_client import MarketDataClient
 
     async def _trigger(symbols: list[str]) -> None:
         if not app.state.model_loaded:
@@ -192,24 +211,13 @@ def _make_market_data_trigger(app: FastAPI, settings):
             logger.exception("Batch prediction failed for symbols: %s", symbols)
             return
 
-        payload = json.dumps({
+        payload = {
             "tickers": symbols,
             "predictions": [r.__dict__ for r in results],
-        }).encode()
+        }
 
         try:
-            connection = await aio_pika.connect_robust(settings.rabbitmq_url)
-            async with connection:
-                channel = await connection.channel()
-                exchange = await channel.declare_exchange(
-                    PREDICTION_RESULT_EXCHANGE,
-                    ExchangeType.FANOUT,
-                    durable=True,
-                )
-                await exchange.publish(
-                    Message(body=payload, content_type="application/json"),
-                    routing_key="",
-                )
+            await _publish_predictions(settings.rabbitmq_url, payload)
             logger.info("Published %d predictions for %s", len(results), symbols)
         except Exception:
             logger.exception("Failed to publish prediction results")

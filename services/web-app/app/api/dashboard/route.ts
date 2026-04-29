@@ -144,6 +144,27 @@ async function backendJson<T>(path: string, token?: string, optional = false): P
   return (await response.json()) as T;
 }
 
+async function backendJsonSafe<T>(
+  path: string,
+  token?: string
+): Promise<{ ok: true; data: T } | { ok: false; status: number }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      headers: {
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      return { ok: false, status: response.status };
+    }
+    return { ok: true, data: (await response.json()) as T };
+  } catch {
+    return { ok: false, status: 503 };
+  }
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   const token = session?.accessToken;
@@ -153,11 +174,25 @@ export async function GET() {
   }
 
   try {
-    const [portfolio, signalResponse, symbolResponse] = await Promise.all([
-      backendJson<PortfolioOverviewResponse>("/api/v1/portfolio", token),
-      backendJson<PagedResponse<SignalResponse>>("/api/v1/signals", token),
+    const [portfolioResult, signalResult, symbolResponse] = await Promise.all([
+      backendJsonSafe<PortfolioOverviewResponse>("/api/v1/portfolio", token),
+      backendJsonSafe<PagedResponse<SignalResponse>>("/api/v1/signals", token),
       backendJson<PagedResponse<MarketSymbolResponse>>("/api/v1/symbols", token, true),
     ]);
+
+    if (!portfolioResult.ok || !signalResult.ok) {
+      const failed = (portfolioResult.ok === false ? portfolioResult : signalResult) as {
+        ok: false;
+        status: number;
+      };
+      if (failed.status === 401) {
+        return NextResponse.json({ message: "Authentication required" }, { status: 401 });
+      }
+      return NextResponse.json({ message: `Upstream error ${failed.status}` }, { status: 502 });
+    }
+
+    const portfolio = portfolioResult.data;
+    const signalResponse = signalResult.data;
 
     const symbolMap = new Map((symbolResponse.content ?? []).map((symbol) => [symbol.ticker, symbol]));
     const signalSymbols = (signalResponse.content ?? []).map((signal) => signal.symbol);
