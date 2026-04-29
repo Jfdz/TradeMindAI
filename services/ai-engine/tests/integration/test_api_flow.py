@@ -140,6 +140,23 @@ def test_training_flow_completes(client, monkeypatch):
     monkeypatch.setitem(db_adapter.__dict__, "upsert_model_version", lambda *a, **kw: None)
     monkeypatch.setitem(db_adapter.__dict__, "load_training_run", _mock_load_training_run)
 
+    def _mock_load_training_run(run_id):
+        run = training_router._runs.get(run_id)
+        if run is None:
+            return None
+        return {
+            "run_id": run_id,
+            "model_version_id": run.get("version_id"),
+            "status": run.get("status"),
+            "hyperparameters": run.get("params", {}),
+            "metrics": run.get("metrics", {}),
+            "started_at": run.get("started_at"),
+            "finished_at": run.get("finished_at"),
+            "created_at": run.get("started_at"),
+        }
+
+    monkeypatch.setattr(db_adapter, "load_training_run", _mock_load_training_run)
+
     response = client.post(
         "/api/v1/models/train",
         headers={"X-Internal-Secret": "test-secret"},
