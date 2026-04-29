@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { apiClient, type AddPositionPayload, type MarketSymbolResponse } from "@/lib/api-client";
+import { apiClient, type AddPositionPayload } from "@/lib/api-client";
 
 export default function AddPositionPage() {
   const router = useRouter();
-  const [symbols, setSymbols] = useState<MarketSymbolResponse[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { data: symbols = [] } = useQuery({
+    queryKey: ["symbols"],
+    queryFn: async () => (await apiClient.getSymbols()).content,
+  });
 
   const [form, setForm] = useState<{
     ticker: string;
@@ -26,10 +30,6 @@ export default function AddPositionPage() {
     fees: "",
     notes: "",
   });
-
-  useEffect(() => {
-    apiClient.getSymbols().then((res) => setSymbols(res.content)).catch(() => {});
-  }, []);
 
   function set(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));

@@ -1,20 +1,16 @@
 "use client";
 
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { apiClient, type MarketSymbolResponse, type PortfolioHoldingResponse, type PortfolioOverviewResponse } from "@/lib/api-client";
+import { apiClient } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
+import type { EnrichedHolding } from "@/lib/dashboard/dashboard-api";
+import { fetchPortfolioPageData } from "@/lib/dashboard/client-data";
 
-type EnrichedHolding = PortfolioHoldingResponse & {
-  name: string;
-  sector: string;
-  color: string;
-  trend: number[];
-};
-
-const palette = ["#e8b84b", "#60a5fa", "#00d68f", "#ff4d6a", "#c084fc", "#f59e0b"];
+const EMPTY_HOLDINGS: EnrichedHolding[] = [];
 
 function formatMoney(value: number) {
   return value.toLocaleString("en-US", {
@@ -49,10 +45,6 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
       <polyline fill="none" points={points} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
-}
-
-function buildFallbackTrend(lastPrice: number) {
-  return Array.from({ length: 10 }, (_, index) => Number((lastPrice * (0.96 + index * 0.01)).toFixed(2)));
 }
 
 const fieldCls =
@@ -155,58 +147,14 @@ function AddPositionPanel({
 }
 
 export default function PortfolioPage() {
-  const [portfolio, setPortfolio] = useState<PortfolioOverviewResponse | null>(null);
-  const [holdings, setHoldings] = useState<EnrichedHolding[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
-
-  async function loadPortfolio() {
-    try {
-      const [overview, symbolResponse] = await Promise.all([
-        apiClient.getPortfolio(),
-        apiClient.getSymbols(),
-      ]);
-
-      const symbolMap = new Map<string, MarketSymbolResponse>(symbolResponse.content.map((symbol) => [symbol.ticker, symbol]));
-      const enriched = await Promise.all(
-        overview.holdings.map(async (holding, index) => {
-          const symbol = symbolMap.get(holding.symbol);
-          const from = new Date();
-          from.setUTCDate(from.getUTCDate() - 10);
-          const history = await apiClient.getHistoricalPrices(
-            holding.symbol,
-            from.toISOString().slice(0, 10),
-            new Date().toISOString().slice(0, 10),
-            12
-          );
-          const trend = history.content.length
-            ? history.content.slice().reverse().map((bar) => bar.adjustedClose ?? bar.ohlcv.close)
-            : buildFallbackTrend(holding.lastPrice);
-
-          return {
-            ...holding,
-            name: symbol?.name ?? holding.symbol,
-            sector: symbol?.sector ?? "Portfolio holding",
-            color: palette[index % palette.length],
-            trend,
-          };
-        })
-      );
-
-      setPortfolio(overview);
-      setHoldings(enriched);
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Unable to load portfolio");
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadPortfolio();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["portfolio"],
+    queryFn: fetchPortfolioPageData,
+  });
+  const portfolio = data?.portfolio ?? null;
+  const holdings = data?.holdings ?? EMPTY_HOLDINGS;
 
   const summary = useMemo(() => {
     if (!portfolio) {
@@ -261,7 +209,9 @@ export default function PortfolioPage() {
         <h2 className="mt-3 font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
           Unable to load portfolio
         </h2>
-        <p className="mt-3 text-sm leading-7 text-text-2">{error ?? "No portfolio records were returned."}</p>
+        <p className="mt-3 text-sm leading-7 text-text-2">
+          {error instanceof Error ? error.message : "No portfolio records were returned."}
+        </p>
       </section>
     );
   }
@@ -272,8 +222,7 @@ export default function PortfolioPage() {
         <AddPositionPanel
           onAdded={() => {
             setShowAddForm(false);
-            setIsLoading(true);
-            loadPortfolio();
+            queryClient.invalidateQueries({ queryKey: ["portfolio"] });
           }}
           onClose={() => setShowAddForm(false)}
         />

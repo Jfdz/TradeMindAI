@@ -33,15 +33,24 @@ class SecurityConfig {
     private final ObjectMapper objectMapper;
     private final LettuceBasedProxyManager<String> rateLimitProxyManager;
     private final String[] allowedCorsOrigins;
+    private final long rateLimitFreePm;
+    private final long rateLimitBasicPm;
+    private final long rateLimitPremiumPm;
 
     SecurityConfig(JwtAuthenticationFilter jwtFilter,
                    ObjectMapper objectMapper,
                    LettuceBasedProxyManager<String> rateLimitProxyManager,
-                   @org.springframework.beans.factory.annotation.Value("${trading-core.cors.allowed-origins}") String[] allowedCorsOrigins) {
+                   @org.springframework.beans.factory.annotation.Value("${trading-core.cors.allowed-origins}") String[] allowedCorsOrigins,
+                   @org.springframework.beans.factory.annotation.Value("${trading-core.rate-limit.free-per-minute:5}") long rateLimitFreePm,
+                   @org.springframework.beans.factory.annotation.Value("${trading-core.rate-limit.basic-per-minute:50}") long rateLimitBasicPm,
+                   @org.springframework.beans.factory.annotation.Value("${trading-core.rate-limit.premium-per-minute:500}") long rateLimitPremiumPm) {
         this.jwtFilter = jwtFilter;
         this.objectMapper = objectMapper;
         this.rateLimitProxyManager = rateLimitProxyManager;
         this.allowedCorsOrigins = allowedCorsOrigins;
+        this.rateLimitFreePm = rateLimitFreePm;
+        this.rateLimitBasicPm = rateLimitBasicPm;
+        this.rateLimitPremiumPm = rateLimitPremiumPm;
     }
 
     @Bean
@@ -51,7 +60,7 @@ class SecurityConfig {
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        RateLimitFilter rateLimitFilter = new RateLimitFilter(rateLimitProxyManager);
+        RateLimitFilter rateLimitFilter = new RateLimitFilter(rateLimitProxyManager, rateLimitFreePm, rateLimitBasicPm, rateLimitPremiumPm);
 
         http
             .csrf(AbstractHttpConfigurer::disable)

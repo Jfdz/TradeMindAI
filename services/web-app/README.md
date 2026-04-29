@@ -60,8 +60,7 @@ Visit http://localhost:3000
 ## Testing
 
 ```bash
-npm test                  # Jest unit tests
-npm run test:e2e          # Playwright E2E tests
+npm test                  # Vitest unit tests for middleware, auth, and api-client
 ```
 
 ## Deployment

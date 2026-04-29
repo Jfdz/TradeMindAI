@@ -1,9 +1,10 @@
 package com.tradingsaas.tradingcore.adapter.in.web;
 
-import com.tradingsaas.tradingcore.adapter.out.persistence.PortfolioPositionJpaRepository;
-import com.tradingsaas.tradingcore.adapter.out.persistence.entity.PortfolioPositionJpaEntity;
 import com.tradingsaas.tradingcore.application.usecase.portfolio.AddPortfolioPositionUseCase;
 import com.tradingsaas.tradingcore.application.usecase.portfolio.AddPortfolioPositionUseCase.AddPositionCommand;
+import com.tradingsaas.tradingcore.application.usecase.portfolio.ManagePortfolioPositionUseCase;
+import com.tradingsaas.tradingcore.application.usecase.portfolio.ManagePortfolioPositionUseCase.CloseCommand;
+import com.tradingsaas.tradingcore.application.usecase.portfolio.ManagePortfolioPositionUseCase.UpdateCommand;
 import com.tradingsaas.tradingcore.application.usecase.portfolio.PortfolioHoldingOverview;
 import com.tradingsaas.tradingcore.application.usecase.portfolio.PortfolioOverview;
 import com.tradingsaas.tradingcore.application.usecase.portfolio.PortfolioOverviewService;
@@ -30,7 +31,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/v1/portfolio")
@@ -38,14 +38,14 @@ class PortfolioController {
 
     private final PortfolioOverviewService portfolioOverviewService;
     private final AddPortfolioPositionUseCase addPositionUseCase;
-    private final PortfolioPositionJpaRepository positionRepository;
+    private final ManagePortfolioPositionUseCase managePositionUseCase;
 
     PortfolioController(PortfolioOverviewService portfolioOverviewService,
                         AddPortfolioPositionUseCase addPositionUseCase,
-                        PortfolioPositionJpaRepository positionRepository) {
+                        ManagePortfolioPositionUseCase managePositionUseCase) {
         this.portfolioOverviewService = portfolioOverviewService;
         this.addPositionUseCase = addPositionUseCase;
-        this.positionRepository = positionRepository;
+        this.managePositionUseCase = managePositionUseCase;
     }
 
     @GetMapping
@@ -79,28 +79,16 @@ class PortfolioController {
                         @Valid @RequestBody UpdatePositionRequest body,
                         Authentication authentication) {
         TokenClaims claims = claims(authentication);
-        PortfolioPositionJpaEntity position = positionRepository
-                .findByIdAndUserId(id, claims.userId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Position not found"));
-        if ("CLOSED".equals(position.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cannot edit a closed position");
-        }
-        position.update(body.quantity(), body.entryPrice(), body.fees(), body.notes(), body.purchaseDate());
-        positionRepository.save(position);
+        managePositionUseCase.update(new UpdateCommand(
+                id, claims.userId(), body.quantity(), body.entryPrice(),
+                body.fees(), body.notes(), body.purchaseDate()));
     }
 
     @DeleteMapping("/positions/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void deletePosition(@PathVariable UUID id, Authentication authentication) {
         TokenClaims claims = claims(authentication);
-        PortfolioPositionJpaEntity position = positionRepository
-                .findByIdAndUserId(id, claims.userId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Position not found"));
-        if ("CLOSED".equals(position.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Cannot delete a closed position — it contributes to realized P&L history");
-        }
-        positionRepository.delete(position);
+        managePositionUseCase.delete(id, claims.userId());
     }
 
     @PostMapping("/positions/{id}/close")
@@ -109,18 +97,8 @@ class PortfolioController {
                        @Valid @RequestBody ClosePositionRequest body,
                        Authentication authentication) {
         TokenClaims claims = claims(authentication);
-        PortfolioPositionJpaEntity position = positionRepository
-                .findByIdAndUserId(id, claims.userId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Position not found"));
-        if ("CLOSED".equals(position.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Position is already closed");
-        }
-        position.close(
-                body.exitPrice(),
-                body.fees(),
-                body.closedAt() != null ? body.closedAt() : Instant.now()
-        );
-        positionRepository.save(position);
+        managePositionUseCase.close(new CloseCommand(id, claims.userId(),
+                body.exitPrice(), body.fees(), body.closedAt()));
     }
 
     // ── request DTOs ─────────────────────────────────────────────────────────

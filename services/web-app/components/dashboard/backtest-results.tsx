@@ -1,13 +1,15 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 import { BenchmarkComparisonChart } from "@/components/charts/BenchmarkComparisonChart";
 import { PerformanceLineChart } from "@/components/charts/PerformanceLineChart";
 import { Button } from "@/components/ui/button";
-import { apiClient, type BacktestJobResponse } from "@/lib/api-client";
+import { fetchBacktest } from "@/lib/dashboard/client-data";
+import type { BacktestJobResponse } from "@/lib/api-client";
 import { demoBenchmarkCurve, demoDrawdownCurve, demoEquityCurve, formatMoney, formatPercent } from "@/lib/dashboard/backtests";
 import { cn } from "@/lib/utils";
 
@@ -64,37 +66,11 @@ function MetricTile({
 }
 
 export function BacktestResults({ backtestId }: BacktestResultsProps) {
-  const [job, setJob] = useState<BacktestJobResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const toastFiredRef = useRef(false);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadBacktest() {
-      try {
-        const response = await apiClient.getBacktest(backtestId);
-        if (mounted) {
-          setJob(response);
-        }
-      } catch (requestError) {
-        if (mounted) {
-          setError(requestError instanceof Error ? requestError.message : "Unable to load backtest");
-        }
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    loadBacktest();
-
-    return () => {
-      mounted = false;
-    };
-  }, [backtestId]);
+  const { data: job, isLoading, error } = useQuery<BacktestJobResponse>({
+    queryKey: ["backtest", backtestId],
+    queryFn: () => fetchBacktest(backtestId),
+  });
 
   useEffect(() => {
     if (job?.status === "FAILED" && !toastFiredRef.current) {
@@ -111,7 +87,7 @@ export function BacktestResults({ backtestId }: BacktestResultsProps) {
   }
 
   if (error || !job) {
-    return <FailedState message={error ?? `No backtest job found for ID ${backtestId}. The job may have expired or the service was restarted.`} />;
+    return <FailedState message={error instanceof Error ? error.message : `No backtest job found for ID ${backtestId}. The job may have expired or the service was restarted.`} />;
   }
 
   if (job.status === "FAILED") {

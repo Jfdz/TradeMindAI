@@ -59,4 +59,16 @@ public class StockPriceRepositoryAdapter implements StockPriceRepository {
         return jpaRepository.findLatestByTickerAndTimeFrame(ticker, timeFrame)
                 .map(mapper::toDomain);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<StockPrice> findLatestByTickers(List<String> tickers, TimeFrame timeFrame) {
+        if (tickers == null || tickers.isEmpty()) {
+            return List.of();
+        }
+        return jpaRepository.findLatestByTickersAndTimeFrame(tickers, timeFrame)
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
 }

@@ -2,7 +2,6 @@ package com.tradingsaas.tradingcore.application.usecase.portfolio;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -11,12 +10,12 @@ import com.tradingsaas.tradingcore.adapter.out.persistence.PortfolioJpaRepositor
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.PortfolioJpaEntity;
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.PortfolioPositionJpaEntity;
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.UserJpaEntity;
-import com.tradingsaas.tradingcore.domain.model.backtest.OhlcvBar;
 import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -54,15 +53,7 @@ class PortfolioOverviewServiceTest {
         portfolio.getPositions().add(closedPosition);
 
         when(portfolioRepository.findByUser_Id(userId)).thenReturn(Optional.of(portfolio));
-        when(marketDataPort.loadHistoricalBars(
-                Mockito.anyString(), any(LocalDate.class), any(LocalDate.class))).thenReturn(List.of(
-                new OhlcvBar(
-                        Instant.parse("2026-04-16T00:00:00Z"),
-                        110.0,
-                        112.0,
-                        109.0,
-                        110.0,
-                        1_000L)));
+        when(marketDataPort.loadLatestPrices(List.of("AAPL"))).thenReturn(Map.of("AAPL", new BigDecimal("110.00")));
 
         PortfolioOverview overview = service.getOverview(userId, "premium");
 
@@ -76,8 +67,8 @@ class PortfolioOverviewServiceTest {
         assertEquals("AAPL", overview.holdings().getFirst().symbol());
         assertEquals(100.0, overview.holdings().getFirst().allocationPct(), 0.0001);
 
-        verify(marketDataPort).loadHistoricalBars(Mockito.eq("AAPL"), any(LocalDate.class), any(LocalDate.class));
-        verify(marketDataPort, never()).loadHistoricalBars(Mockito.eq("MSFT"), any(LocalDate.class), any(LocalDate.class));
+        verify(marketDataPort).loadLatestPrices(List.of("AAPL"));
+        verify(marketDataPort, never()).loadHistoricalBars(Mockito.anyString(), Mockito.any(), Mockito.any());
     }
 
     @Test

@@ -37,9 +37,11 @@ class FlywayMigrationTest {
             assertTrue(tableExists(jdbcTemplate, "symbols"));
             assertTrue(tableExists(jdbcTemplate, "stock_prices"));
             assertTrue(tableExists(jdbcTemplate, "technical_indicators"));
+            assertTrue(tableExists(jdbcTemplate, "market_data_outbox"));
             assertTrue(indexExists(jdbcTemplate, "idx_symbols_active"));
             assertTrue(indexExists(jdbcTemplate, "idx_stock_prices_symbol_date"));
             assertTrue(indexExists(jdbcTemplate, "idx_technical_indicators_symbol_date"));
+            assertTrue(indexExists(jdbcTemplate, "idx_market_data_outbox_unpublished_created_at"));
         }
     }
 

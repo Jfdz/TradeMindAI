@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.tradingsaas.marketdata.config.InternalSecretFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthComponent;
@@ -39,7 +40,8 @@ class ActuatorHealthConfigTest {
 
     @Test
     void actuatorHealthPathIsPermitted() {
-        SecurityConfig config = new SecurityConfig(new String[] { "http://localhost:3000" });
+        InternalSecretFilter filter = mock(InternalSecretFilter.class);
+        SecurityConfig config = new SecurityConfig(new String[]{"http://localhost:3000"}, filter);
         assertNotNull(config);
     }
 }

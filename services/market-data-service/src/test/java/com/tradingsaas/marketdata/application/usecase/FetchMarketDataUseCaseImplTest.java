@@ -11,7 +11,6 @@ import com.tradingsaas.marketdata.domain.model.OHLCV;
 import com.tradingsaas.marketdata.domain.model.StockPrice;
 import com.tradingsaas.marketdata.domain.model.Symbol;
 import com.tradingsaas.marketdata.domain.model.TimeFrame;
-import com.tradingsaas.marketdata.domain.port.out.MarketDataEventPublisher;
 import com.tradingsaas.marketdata.domain.port.out.MarketDataProvider;
 import com.tradingsaas.marketdata.domain.port.out.StockPriceCache;
 import com.tradingsaas.marketdata.domain.port.out.StockPriceRepository;
@@ -27,11 +26,11 @@ class FetchMarketDataUseCaseImplTest {
     void fetchHistoricalDataFetchesStoresAndPublishesInOrder() {
         MarketDataProvider marketDataProvider = mock(MarketDataProvider.class);
         StockPriceRepository stockPriceRepository = mock(StockPriceRepository.class);
-        MarketDataEventPublisher marketDataEventPublisher = mock(MarketDataEventPublisher.class);
+        MarketDataOutboxService marketDataOutboxService = mock(MarketDataOutboxService.class);
         StockPriceCache stockPriceCache = mock(StockPriceCache.class);
 
         FetchMarketDataUseCaseImpl useCase = new FetchMarketDataUseCaseImpl(
-                marketDataProvider, stockPriceRepository, marketDataEventPublisher, stockPriceCache);
+                marketDataProvider, stockPriceRepository, marketDataOutboxService, stockPriceCache);
 
         Symbol symbol = new Symbol("AAPL", "Apple Inc.", "NASDAQ");
         StockPrice stockPrice = new StockPrice(
@@ -54,13 +53,13 @@ class FetchMarketDataUseCaseImplTest {
                 symbol, TimeFrame.DAILY, LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 16));
 
         assertEquals(List.of(stockPrice), result);
-        InOrder order = inOrder(marketDataProvider, stockPriceRepository, stockPriceCache, marketDataEventPublisher);
+        InOrder order = inOrder(marketDataProvider, stockPriceRepository, marketDataOutboxService, stockPriceCache);
         order.verify(marketDataProvider)
                 .fetchHistoricalData(symbol, TimeFrame.DAILY, LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 16));
         order.verify(stockPriceRepository).saveAll(List.of(stockPrice));
+        order.verify(marketDataOutboxService)
+                .enqueuePricesUpdated(symbol, TimeFrame.DAILY, LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 16), 1);
         order.verify(stockPriceCache).cacheLatest(stockPrice);
-        order.verify(marketDataEventPublisher)
-                .publishPricesUpdated(symbol, TimeFrame.DAILY, LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 16), 1);
-        verifyNoMoreInteractions(marketDataProvider, stockPriceRepository, stockPriceCache, marketDataEventPublisher);
+        verifyNoMoreInteractions(marketDataProvider, stockPriceRepository, marketDataOutboxService, stockPriceCache);
     }
 }

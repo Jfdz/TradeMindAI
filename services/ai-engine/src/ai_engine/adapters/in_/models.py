@@ -1,5 +1,7 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
+
+from ai_engine.adapters.in_.auth import require_internal_secret
 
 router = APIRouter(prefix="/api/v1/models", tags=["models"])
 
@@ -25,7 +27,11 @@ def _registry(request: Request):
     return reg
 
 
-@router.get("", response_model=list[ModelVersionResponse])
+@router.get(
+    "",
+    response_model=list[ModelVersionResponse],
+    dependencies=[Depends(require_internal_secret)]
+)
 async def list_models(request: Request):
     """Return metadata for all saved model versions."""
     reg = _registry(request)
@@ -46,7 +52,11 @@ async def list_models(request: Request):
     return versions
 
 
-@router.get("/active", response_model=ModelVersionResponse)
+@router.get(
+    "/active",
+    response_model=ModelVersionResponse,
+    dependencies=[Depends(require_internal_secret)]
+)
 async def get_active_model(request: Request):
     """Return metadata for the currently active model version."""
     reg = _registry(request)
@@ -64,7 +74,11 @@ async def get_active_model(request: Request):
     )
 
 
-@router.post("/{version_id}/activate", response_model=ActivateResponse)
+@router.post(
+    "/{version_id}/activate",
+    response_model=ActivateResponse,
+    dependencies=[Depends(require_internal_secret)]
+)
 async def activate_model(version_id: str, request: Request):
     """Activate a model version and reload the prediction service."""
     reg = _registry(request)

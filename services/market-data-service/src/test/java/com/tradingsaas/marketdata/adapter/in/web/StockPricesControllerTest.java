@@ -68,6 +68,20 @@ class StockPricesControllerTest {
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
     }
 
+    @Test
+    void returnsLatestPricesForBatchRequest() {
+        when(getLatestPriceUseCase.getLatestPrices(List.of("AAPL", "MSFT"), TimeFrame.DAILY))
+                .thenReturn(List.of(price("AAPL", to), price("MSFT", to)));
+
+        ResponseEntity<StockPricesController.LatestPricesResponse> response =
+                controller.getLatestBatch(List.of("AAPL", "MSFT"), TimeFrame.DAILY);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(2, response.getBody().prices().size());
+        assertEquals("AAPL", response.getBody().prices().getFirst().ticker());
+    }
+
     private static StockPrice price(String ticker, LocalDate date) {
         Symbol symbol = new Symbol(ticker, "Apple Inc.", "NASDAQ");
         OHLCV ohlcv = new OHLCV(new BigDecimal("170"), new BigDecimal("175"),

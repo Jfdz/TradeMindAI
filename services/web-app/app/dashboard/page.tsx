@@ -1,44 +1,19 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import type { BusinessDay, SeriesMarker, Time } from "lightweight-charts";
+import { useMemo } from "react";
 
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
 import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
-import { apiClient, type MarketPriceResponse, type MarketSymbolResponse, type PortfolioHoldingResponse, type PortfolioOverviewResponse, type SignalResponse } from "@/lib/api-client";
+import { type EnrichedHolding, type FilteredSignal } from "@/lib/dashboard/dashboard-api";
+import { fetchDashboardPageData } from "@/lib/dashboard/client-data";
+import { formatConfidence } from "@/lib/signal-utils";
 import { cn } from "@/lib/utils";
 
-type FilteredSignal = SignalResponse & {
-  latestPrice: number | null;
-  entry: number | null;
-  takeProfit: number | null;
-  stopLoss: number | null;
-  live: boolean;
-  status: "LIVE" | "PENDING";
-  age: string;
-  generatedLabel: string;
-  reasoning: string;
-};
-
-type EnrichedHolding = PortfolioHoldingResponse & {
-  name: string;
-  sector: string;
-  color: string;
-  trend: number[];
-};
-
-type DashboardCandle = {
-  time: BusinessDay;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-};
-
-const palette = ["#e8b84b", "#60a5fa", "#00d68f", "#ff4d6a", "#c084fc", "#f59e0b"];
+const EMPTY_SIGNALS: FilteredSignal[] = [];
+const EMPTY_HOLDINGS: EnrichedHolding[] = [];
 
 function formatMoney(value: number) {
   return value.toLocaleString("en-US", {
@@ -51,156 +26,6 @@ function formatMoney(value: number) {
 function formatSignedMoney(value: number) {
   const formatted = formatMoney(Math.abs(value));
   return value >= 0 ? `+${formatted}` : `-${formatted}`;
-}
-
-function formatConfidence(value: number) {
-  return `${(value * 100).toFixed(1)}%`;
-}
-
-function formatAge(value: string) {
-  const generatedAt = new Date(value).getTime();
-  if (Number.isNaN(generatedAt)) {
-    return "recently";
-  }
-
-  const diffMinutes = Math.max(Math.round((Date.now() - generatedAt) / 60000), 0);
-  if (diffMinutes < 60) {
-    return `${Math.max(diffMinutes, 1)}m ago`;
-  }
-
-  const diffHours = Math.round(diffMinutes / 60);
-  if (diffHours < 24) {
-    return `${diffHours}h ago`;
-  }
-
-  return `${Math.max(Math.round(diffHours / 24), 1)}d ago`;
-}
-
-function toBusinessDay(value: string): BusinessDay {
-  const date = new Date(value);
-
-  return {
-    year: date.getUTCFullYear(),
-    month: date.getUTCMonth() + 1,
-    day: date.getUTCDate(),
-  };
-}
-
-function buildReasoning(signal: SignalResponse, latestPrice: number | null) {
-  const predicted = signal.predictedChangePct ?? 0;
-  const move = `${Math.abs(predicted).toFixed(1)}%`;
-  const priceText = latestPrice == null ? "the latest market price" : formatMoney(latestPrice);
-
-  if (signal.type === "BUY") {
-    return `Bullish continuation setup around ${priceText} with ${move} projected upside and ${formatConfidence(signal.confidence)} confidence.`;
-  }
-
-  if (signal.type === "SELL") {
-    return `Bearish breakdown setup around ${priceText} with ${move} projected downside and ${formatConfidence(signal.confidence)} confidence.`;
-  }
-
-  return `Neutral setup near ${priceText} while the model waits for a stronger directional edge.`;
-}
-
-function deriveSignal(signal: SignalResponse, latestPrice: number | null): FilteredSignal {
-  const entry = latestPrice;
-  const takeProfit =
-    signal.type === "BUY"
-      ? signal.takeProfitPct != null && entry != null
-        ? entry * (1 + signal.takeProfitPct / 100)
-        : null
-      : signal.type === "SELL"
-        ? signal.takeProfitPct != null && entry != null
-          ? entry * (1 - signal.takeProfitPct / 100)
-          : null
-        : entry;
-  const stopLoss =
-    signal.type === "BUY"
-      ? signal.stopLossPct != null && entry != null
-        ? entry * (1 - signal.stopLossPct / 100)
-        : null
-      : signal.type === "SELL"
-        ? signal.stopLossPct != null && entry != null
-          ? entry * (1 + signal.stopLossPct / 100)
-          : null
-        : entry;
-  const live = Date.now() - new Date(signal.generatedAt).getTime() < 1000 * 60 * 60 * 24;
-
-  return {
-    ...signal,
-    latestPrice,
-    entry,
-    takeProfit,
-    stopLoss,
-    live,
-    status: live ? "LIVE" : "PENDING",
-    age: formatAge(signal.generatedAt),
-    generatedLabel: new Date(signal.generatedAt).toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }),
-    reasoning: buildReasoning(signal, latestPrice),
-  };
-}
-
-function convertPricesToCandles(prices: MarketPriceResponse[]): DashboardCandle[] {
-  return prices
-    .slice()
-    .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime())
-    .map((price) => {
-      const open = price.ohlcv.open;
-      const high = price.ohlcv.high;
-      const low = price.ohlcv.low;
-      const close = price.adjustedClose ?? price.ohlcv.close;
-
-      return {
-        time: toBusinessDay(price.date),
-        open,
-        high,
-        low,
-        close,
-        volume: price.ohlcv.volume,
-      };
-    });
-}
-
-function synthesizeCandles(basePrice: number, generatedAt: string): DashboardCandle[] {
-  return Array.from({ length: 12 }, (_, index) => {
-    const drift = (index - 5) * 1.35;
-    const open = Number((basePrice - 8 + drift).toFixed(2));
-    const close = Number((open + (index % 2 === 0 ? 2.1 : -1.4)).toFixed(2));
-    const high = Number((Math.max(open, close) + 2.3).toFixed(2));
-    const low = Number((Math.min(open, close) - 1.9).toFixed(2));
-    const date = new Date(generatedAt);
-    date.setUTCDate(date.getUTCDate() + index - 6);
-
-    return {
-      time: {
-        year: date.getUTCFullYear(),
-        month: date.getUTCMonth() + 1,
-        day: date.getUTCDate(),
-      },
-      open,
-      high,
-      low,
-      close,
-      volume: 820000 + index * 94000,
-    };
-  });
-}
-
-function buildHoldingTrend(prices: MarketPriceResponse[], lastPrice: number) {
-  if (prices.length === 0) {
-    return Array.from({ length: 10 }, (_, index) => Number((lastPrice * (0.96 + index * 0.01)).toFixed(2)));
-  }
-
-  return prices
-    .slice()
-    .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime())
-    .map((price) => price.adjustedClose ?? price.ohlcv.close);
 }
 
 function Sparkline({ values, color }: { values: number[]; color: string }) {
@@ -344,18 +169,23 @@ export default function DashboardHomePage() {
     }
 
     loadDashboard();
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["dashboard"],
+    queryFn: fetchDashboardPageData,
+  });
 
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const portfolio = data?.portfolio ?? null;
+  const signals = data?.signals ?? EMPTY_SIGNALS;
+  const holdings = data?.holdings ?? EMPTY_HOLDINGS;
+  const chartCandles = data?.chartCandles ?? [];
+  const chartMarker = data?.chartMarker ?? null;
 
   const summaryCards = useMemo(() => {
     if (!portfolio) {
       return [];
     }
 
-    const liveSignals = signals.filter((signal) => signal.live).length;
+    const liveSignals = signals.filter((signal: FilteredSignal) => signal.live).length;
 
     return [
       { label: "Portfolio Value", value: formatMoney(portfolio.equity), detail: "Marked to market", tone: "text-green" },
@@ -394,7 +224,9 @@ export default function DashboardHomePage() {
         <h2 className="mt-3 font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
           Unable to load dashboard
         </h2>
-        <p className="mt-3 text-sm leading-7 text-text-2">{error ?? "No portfolio records were returned."}</p>
+        <p className="mt-3 text-sm leading-7 text-text-2">
+          {error instanceof Error ? error.message : "No portfolio records were returned."}
+        </p>
       </section>
     );
   }
@@ -542,7 +374,7 @@ export default function DashboardHomePage() {
               </tr>
             </thead>
             <tbody>
-              {holdings.map((position, index) => {
+              {holdings.map((position: EnrichedHolding, index: number) => {
                 const pnl = position.unrealizedPnl;
 
                 return (
@@ -557,12 +389,8 @@ export default function DashboardHomePage() {
                       </div>
                     </td>
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">{position.quantity}</td>
-                    <td className="border-t border-border px-4 py-4 font-mono text-text-1">
-                      {formatMoney(position.averageCost)}
-                    </td>
-                    <td className="border-t border-border px-4 py-4 font-mono text-text-1">
-                      {formatMoney(position.lastPrice)}
-                    </td>
+                    <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.averageCost)}</td>
+                    <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.lastPrice)}</td>
                     <td className={`border-t border-border px-4 py-4 font-mono ${pnl >= 0 ? "text-green" : "text-red"}`}>
                       {formatSignedMoney(pnl)}
                     </td>

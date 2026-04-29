@@ -24,8 +24,7 @@ def _conn():
         engine.dispose()
 
 
-# ── reads ─────────────────────────────────────────────────────────────────────
-
+# Reads
 def load_ohlcv(symbols: list[str] | None = None, min_rows: int = 200) -> dict[str, pd.DataFrame]:
     """Return {ticker: DataFrame[open,high,low,close,volume]} from stock_prices.
 
@@ -34,24 +33,30 @@ def load_ohlcv(symbols: list[str] | None = None, min_rows: int = 200) -> dict[st
     engine = _make_engine()
     try:
         if symbols:
-            placeholders = ", ".join(f"'{s}'" for s in symbols)
-            sql = f"""
+            sql = text(
+                """
                 SELECT symbol_ticker, trade_date,
                        open, high, low, close, volume
                 FROM market_data.stock_prices
-                WHERE symbol_ticker IN ({placeholders})
+                WHERE symbol_ticker = ANY(:symbols)
                   AND time_frame = 'DAILY'
                 ORDER BY symbol_ticker, trade_date ASC
-            """
+                """
+            )
+            with engine.connect() as conn:
+                df_all = pd.read_sql(sql, conn, params={"symbols": symbols})
         else:
-            sql = """
+            sql = text(
+                """
                 SELECT symbol_ticker, trade_date,
                        open, high, low, close, volume
                 FROM market_data.stock_prices
                 WHERE time_frame = 'DAILY'
                 ORDER BY symbol_ticker, trade_date ASC
-            """
-        df_all = pd.read_sql(sql, engine)
+                """
+            )
+            with engine.connect() as conn:
+                df_all = pd.read_sql(sql, conn)
     finally:
         engine.dispose()
 
@@ -65,8 +70,46 @@ def load_ohlcv(symbols: list[str] | None = None, min_rows: int = 200) -> dict[st
     return result
 
 
-# ── writes ────────────────────────────────────────────────────────────────────
+def load_training_run(run_id: str) -> dict | None:
+    with _conn() as conn:
+        row = conn.execute(
+            text(
+                """
+                SELECT id,
+                       model_version_id,
+                       status,
+                       hyperparameters,
+                       metrics,
+                       started_at,
+                       finished_at,
+                       created_at
+                FROM ai_engine.training_runs
+                WHERE id = cast(:id as uuid)
+                """
+            ),
+            {"id": run_id},
+        ).mappings().first()
 
+    if row is None:
+        return None
+
+    return {
+        "run_id": str(row["id"]),
+        "model_version_id": (
+            str(row["model_version_id"]) if row["model_version_id"] is not None else None
+        ),
+        "status": row["status"],
+        "hyperparameters": row["hyperparameters"] or {},
+        "metrics": row["metrics"] or {},
+        "started_at": row["started_at"].isoformat() if row["started_at"] is not None else None,
+        "finished_at": row["finished_at"].isoformat() if row["finished_at"] is not None else None,
+        "created_at": (
+            row["created_at"].isoformat() if row["created_at"] is not None else None
+        ),
+    }
+
+
+# Writes
 def upsert_training_run(
     run_id: str,
     status: str,
@@ -77,27 +120,32 @@ def upsert_training_run(
     model_version_id: str | None = None,
 ) -> None:
     with _conn() as conn:
-        conn.execute(text("""
-            INSERT INTO ai_engine.training_runs
-                (id, model_version_id, status, hyperparameters,
-                 metrics, started_at, finished_at, created_at)
-            VALUES
-                (:id, :mv_id, :status, cast(:hp as jsonb),
-                 cast(:metrics as jsonb), :started_at, :finished_at, NOW())
-            ON CONFLICT (id) DO UPDATE SET
-                status           = EXCLUDED.status,
-                metrics          = EXCLUDED.metrics,
-                finished_at      = EXCLUDED.finished_at,
-                model_version_id = EXCLUDED.model_version_id
-        """), {
-            "id":         run_id,
-            "mv_id":      model_version_id,
-            "status":     status,
-            "hp":         json.dumps(hyperparameters),
-            "metrics":    json.dumps(metrics or {}),
-            "started_at": started_at,
-            "finished_at": finished_at,
-        })
+        conn.execute(
+            text(
+                """
+                INSERT INTO ai_engine.training_runs
+                    (id, model_version_id, status, hyperparameters,
+                     metrics, started_at, finished_at, created_at)
+                VALUES
+                    (:id, :mv_id, :status, cast(:hp as jsonb),
+                     cast(:metrics as jsonb), :started_at, :finished_at, NOW())
+                ON CONFLICT (id) DO UPDATE SET
+                    status           = EXCLUDED.status,
+                    metrics          = EXCLUDED.metrics,
+                    finished_at      = EXCLUDED.finished_at,
+                    model_version_id = EXCLUDED.model_version_id
+                """
+            ),
+            {
+                "id": run_id,
+                "mv_id": model_version_id,
+                "status": status,
+                "hp": json.dumps(hyperparameters),
+                "metrics": json.dumps(metrics or {}),
+                "started_at": started_at,
+                "finished_at": finished_at,
+            },
+        )
 
 
 def upsert_model_version(
@@ -109,22 +157,27 @@ def upsert_model_version(
     is_active: bool = False,
 ) -> None:
     with _conn() as conn:
-        conn.execute(text("""
-            INSERT INTO ai_engine.model_versions
-                (id, version_tag, architecture, metrics,
-                 artifact_path, is_active, created_at)
-            VALUES
-                (:id, :tag, :arch, cast(:metrics as jsonb),
-                 :path, :active, NOW())
-            ON CONFLICT (version_tag) DO UPDATE SET
-                metrics    = EXCLUDED.metrics,
-                is_active  = EXCLUDED.is_active,
-                artifact_path = EXCLUDED.artifact_path
-        """), {
-            "id":      version_id,
-            "tag":     version_tag,
-            "arch":    architecture,
-            "metrics": json.dumps(metrics),
-            "path":    artifact_path,
-            "active":  is_active,
-        })
+        conn.execute(
+            text(
+                """
+                INSERT INTO ai_engine.model_versions
+                    (id, version_tag, architecture, metrics,
+                     artifact_path, is_active, created_at)
+                VALUES
+                    (:id, :tag, :arch, cast(:metrics as jsonb),
+                     :path, :active, NOW())
+                ON CONFLICT (version_tag) DO UPDATE SET
+                    metrics       = EXCLUDED.metrics,
+                    is_active     = EXCLUDED.is_active,
+                    artifact_path = EXCLUDED.artifact_path
+                """
+            ),
+            {
+                "id": version_id,
+                "tag": version_tag,
+                "arch": architecture,
+                "metrics": json.dumps(metrics),
+                "path": artifact_path,
+                "active": is_active,
+            },
+        )

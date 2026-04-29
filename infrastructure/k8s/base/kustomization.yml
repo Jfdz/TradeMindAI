@@ -1,6 +1,18 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+# CI overrides these tags via: kustomize edit set image <name>=<digest>
+# Never deploy :latest to production — always set IMAGE_TAG in CI.
+images:
+  - name: ghcr.io/jfdz/trademindai/market-data-service
+    newTag: latest
+  - name: ghcr.io/jfdz/trademindai/trading-core-service
+    newTag: latest
+  - name: ghcr.io/jfdz/trademindai/ai-engine
+    newTag: latest
+  - name: ghcr.io/jfdz/trademindai/web-app
+    newTag: latest
+
 resources:
   - configmaps.yml
   - postgres.yml
