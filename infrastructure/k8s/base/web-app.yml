@@ -46,6 +46,21 @@ spec:
                 configMapKeyRef:
                   name: web-app-config
                   key: api-base-url
+            - name: ADMIN_EMAILS
+              valueFrom:
+                configMapKeyRef:
+                  name: web-app-config
+                  key: ADMIN_EMAILS
+            - name: AI_ENGINE_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: web-app-config
+                  key: AI_ENGINE_SERVICE_URL
+            - name: INTERNAL_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: internal-secret
+                  key: secret
           resources:
             requests:
               cpu: 250m
