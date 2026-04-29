@@ -231,6 +231,10 @@ export default function DashboardHomePage() {
   const [holdings, setHoldings] = useState<EnrichedHolding[]>([]);
   const [chartCandles, setChartCandles] = useState<DashboardCandle[]>([]);
   const [chartMarker, setChartMarker] = useState<SeriesMarker<Time> | null>(null);
+  const chartMarkers = useMemo(
+    () => (chartMarker ? [chartMarker] : undefined),
+    [chartMarker],
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -452,7 +456,7 @@ export default function DashboardHomePage() {
 
           <div className="mt-6 rounded-[22px] border border-border bg-bg-0/70 p-3">
             {chartCandles.length > 0 ? (
-              <CandlestickChart candles={chartCandles} markers={chartMarker ? [chartMarker] : undefined} showVolume={false} height={320} />
+              <CandlestickChart candles={chartCandles} markers={chartMarkers} showVolume={false} height={320} />
             ) : (
               <div className="flex h-[320px] items-center justify-center rounded-[18px] border border-dashed border-border text-sm text-text-2">
                 No chart data available yet.
