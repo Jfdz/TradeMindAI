@@ -1,5 +1,7 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
+
+from ai_engine.adapters.in_.auth import require_internal_secret
 
 router = APIRouter(prefix="/api/v1", tags=["prediction"])
 
@@ -50,6 +52,58 @@ async def predict_batch(body: BatchPredictRequest, request: Request):
         results = svc.predict_batch(pairs)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+    return BatchPredictResponse(predictions=[PredictResponse(**r.__dict__) for r in results])
+
+
+@router.post(
+    "/predict/publish",
+    response_model=BatchPredictResponse,
+    dependencies=[Depends(require_internal_secret)],
+)
+async def predict_and_publish(body: BatchPredictRequest, request: Request):
+    """Run inference for the given tickers and publish results to RabbitMQ.
+
+    Trading-core consumes the published message and persists the signals to the database.
+    Requires X-Internal-Secret header (admin route).
+    """
+    _require_model_loaded(request)
+    svc = _get_service(request)
+
+    pairs: list = []
+    fetch_errors: list[str] = []
+    for ticker in body.tickers:
+        try:
+            ohlcv = _fetch_ohlcv(ticker)
+            pairs.append((ticker, ohlcv))
+        except Exception as exc:
+            fetch_errors.append(f"{ticker}: {exc}")
+
+    if not pairs:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Failed to fetch OHLCV for all tickers. Errors: {fetch_errors}",
+        )
+
+    try:
+        results = svc.predict_batch(pairs)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    publish_fn = getattr(request.app.state, "publish_predictions", None)
+    rabbitmq_url = getattr(request.app.state, "rabbitmq_url", None)
+    if publish_fn is None or rabbitmq_url is None:
+        raise HTTPException(status_code=503, detail="Publisher not initialised — RabbitMQ consumers not started")
+
+    payload = {
+        "tickers": [pair[0] for pair in pairs],
+        "predictions": [r.__dict__ for r in results],
+    }
+
+    try:
+        await publish_fn(rabbitmq_url, payload)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"Failed to publish predictions: {exc}")
+
     return BatchPredictResponse(predictions=[PredictResponse(**r.__dict__) for r in results])
 
 

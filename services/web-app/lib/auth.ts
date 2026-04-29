@@ -1,3 +1,4 @@
+import type { JWT } from "next-auth/jwt";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
@@ -9,7 +10,49 @@ type AuthUser = {
   email: string;
   name?: string;
   accessToken?: string;
+  refreshToken?: string;
+  accessTokenExpires?: number;
 };
+
+async function refreshAccessToken(token: JWT): Promise<JWT> {
+  if (!token.refreshToken) {
+    return { ...token, error: "RefreshAccessTokenError" };
+  }
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Cookie: `refresh_token=${token.refreshToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      return { ...token, error: "RefreshAccessTokenError" };
+    }
+
+    const data = (await response.json()) as { accessToken?: string; expiresIn?: number };
+    if (!data.accessToken) {
+      return { ...token, error: "RefreshAccessTokenError" };
+    }
+
+    // Backend may rotate the refresh token — capture it if present
+    const setCookie = response.headers.get("set-cookie") ?? "";
+    const refreshTokenMatch = setCookie.match(/refresh_token=([^;]+)/);
+    const newRefreshToken = refreshTokenMatch?.[1] ?? (token.refreshToken as string);
+
+    return {
+      ...token,
+      accessToken: data.accessToken,
+      accessTokenExpires: Date.now() + (data.expiresIn ?? 900) * 1000,
+      refreshToken: newRefreshToken,
+      error: undefined,
+    };
+  } catch (err) {
+    console.error("[auth] Token refresh failed:", err);
+    return { ...token, error: "RefreshAccessTokenError" };
+  }
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -54,9 +97,7 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
-          // Extract refresh_token from Set-Cookie so it can be stored in the NextAuth
-          // JWT and used for token refresh. The backend sets it as an HTTP-only cookie,
-          // but NextAuth's authorize runs server-side and cannot forward it automatically.
+          // Extract refresh_token from Set-Cookie — stored in NextAuth JWT for server-side refresh
           const setCookie = response.headers.get("set-cookie") ?? "";
           const refreshTokenMatch = setCookie.match(/refresh_token=([^;]+)/);
           const refreshToken = refreshTokenMatch?.[1] ?? undefined;
@@ -67,7 +108,8 @@ export const authOptions: NextAuthOptions = {
             name: email,
             accessToken: data.accessToken,
             refreshToken,
-          } as AuthUser & { refreshToken?: string };
+            accessTokenExpires: Date.now() + (data.expiresIn ?? 900) * 1000,
+          } as AuthUser;
         } catch (err) {
           console.error("[auth] Failed to reach backend at", API_BASE_URL, err);
           return null;
@@ -80,23 +122,34 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
+      // Initial sign-in — populate all fields from the user object
       if (user) {
-        token.sub = user.id;
-        token.email = user.email;
-        token.name = user.name;
-        token.accessToken = (user as AuthUser).accessToken;
-        const u = user as AuthUser & { refreshToken?: string };
-        if (u.refreshToken) token.refreshToken = u.refreshToken;
+        const u = user as AuthUser;
+        token.sub = u.id;
+        token.email = u.email;
+        token.name = u.name;
+        token.accessToken = u.accessToken;
+        token.refreshToken = u.refreshToken;
+        token.accessTokenExpires = u.accessTokenExpires;
+        return token;
       }
 
-      return token;
+      // Token still valid (60s buffer before real expiry)
+      const expires = typeof token.accessTokenExpires === "number" ? token.accessTokenExpires : 0;
+      if (Date.now() < expires - 60_000) {
+        return token;
+      }
+
+      // Access token expired — attempt silent refresh
+      return refreshAccessToken(token);
     },
+
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub ?? "";
       }
-
       session.accessToken = typeof token.accessToken === "string" ? token.accessToken : undefined;
+      session.error = token.error as "RefreshAccessTokenError" | undefined;
       return session;
     },
   },
