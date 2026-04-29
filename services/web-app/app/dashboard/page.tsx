@@ -56,10 +56,9 @@ export default function DashboardHomePage() {
   const [holdings, setHoldings] = useState<EnrichedHolding[]>([]);
   const [chartCandles, setChartCandles] = useState<DashboardCandle[]>([]);
   const [chartMarker, setChartMarker] = useState<SeriesMarker<Time> | null>(null);
-  const chartMarkers = useMemo(
-    () => (chartMarker ? [chartMarker] : undefined),
-    [chartMarker],
-  );
+  const chartMarkers = useMemo(() => {
+    return chartMarker ? [chartMarker] : undefined;
+  }, [chartMarker]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
