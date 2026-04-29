@@ -60,7 +60,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: internal-secret
-                  key: secret
+                  key: secret                   
           resources:
             requests:
               cpu: 250m

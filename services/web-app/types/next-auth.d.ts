@@ -5,6 +5,9 @@ declare module "next-auth" {
   interface User {
     id: string;
     accessToken?: string;
+    refreshToken?: string;
+    accessTokenExpires?: number;
+    isAdmin?: boolean;
   }
 
   interface Session {
@@ -17,6 +20,8 @@ declare module "next-auth" {
     accessToken?: string;
     tokenType?: string;
     expiresIn?: number;
+    error?: "RefreshAccessTokenError";
+    isAdmin?: boolean;
   }
 }
 
@@ -25,5 +30,9 @@ declare module "next-auth/jwt" {
     accessToken?: string;
     tokenType?: string;
     expiresIn?: number;
+    refreshToken?: string;
+    accessTokenExpires?: number;
+    error?: "RefreshAccessTokenError";
+    isAdmin?: boolean;
   }
 }
