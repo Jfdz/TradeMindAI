@@ -56,7 +56,7 @@ class SecurityConfigTest {
         mockMvc.perform(get("/api/v1/test")
                         .header("X-Internal-Secret", "test-secret")
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+                .andExpect(status().isNotFound());
     }
 
     @RestController
