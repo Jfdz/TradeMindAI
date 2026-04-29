@@ -75,8 +75,6 @@ class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints
                 .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/prometheus", "/actuator/metrics", "/actuator/metrics/**").permitAll()
-                .requestMatchers("/api/v1/symbols").permitAll()
-                .requestMatchers("/api/v1/prices/**").permitAll()
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/subscriptions/plans").permitAll()
                 .requestMatchers("/api/v1/backtests/symbols/*/available").permitAll()

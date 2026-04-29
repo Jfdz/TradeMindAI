@@ -16,9 +16,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @WebMvcTest(controllers = SecurityConfigTest.TestController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, InternalSecretFilter.class})
 @TestPropertySource(properties = {
-        "market-data.cors.allowed-origins=https://trading-saas.example.com"
+        "market-data.cors.allowed-origins=https://trading-saas.example.com",
+        "market-data.internal-secret=test-secret"
 })
 class SecurityConfigTest {
 
@@ -44,10 +45,29 @@ class SecurityConfigTest {
                 .andExpect(header().string("Access-Control-Allow-Origin", "https://trading-saas.example.com"));
     }
 
+    @Test
+    void rejectsInternalApiWithoutSecret() throws Exception {
+        mockMvc.perform(get("/api/v1/prices/AAPL/latest").accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void allowsInternalApiWithSecret() throws Exception {
+        mockMvc.perform(get("/api/v1/prices/AAPL/latest")
+                        .header("X-Internal-Secret", "test-secret")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+    }
+
     @RestController
     static class TestController {
         @GetMapping("/test")
         String test() {
+            return "ok";
+        }
+
+        @GetMapping("/api/v1/prices/AAPL/latest")
+        String latestPrice() {
             return "ok";
         }
     }
