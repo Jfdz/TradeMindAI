@@ -1,5 +1,6 @@
 package com.tradingsaas.tradingcore.adapter.in.web;
 
+import com.tradingsaas.tradingcore.adapter.in.web.annotation.RequiresSubscription;
 import com.tradingsaas.tradingcore.application.usecase.backtest.BacktestExecutionService;
 import com.tradingsaas.tradingcore.domain.model.backtest.BacktestJob;
 import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort;
@@ -8,6 +9,7 @@ import com.tradingsaas.tradingcore.domain.model.backtest.BacktestResult;
 import com.tradingsaas.tradingcore.domain.model.backtest.BacktestTrade;
 import com.tradingsaas.tradingcore.domain.model.backtest.PortfolioPosition;
 import com.tradingsaas.tradingcore.domain.model.backtest.PortfolioSnapshot;
+import com.tradingsaas.tradingcore.domain.model.SubscriptionPlan;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -27,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/backtests")
-class BacktestController {
+public class BacktestController {
 
     private final BacktestExecutionService backtestExecutionService;
     private final HistoricalMarketDataPort historicalMarketDataPort;
@@ -44,7 +46,8 @@ class BacktestController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.ACCEPTED)
-    BacktestJobResponse submitBacktest(@Valid @RequestBody BacktestSubmissionRequest request) {
+    @RequiresSubscription(SubscriptionPlan.BASIC)
+    public BacktestJobResponse submitBacktest(@Valid @RequestBody BacktestSubmissionRequest request) {
         UUID jobId = backtestExecutionService.submit(request.toDomain());
         return BacktestJobResponse.from(backtestExecutionService.getJob(jobId));
     }

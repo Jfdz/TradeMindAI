@@ -17,14 +17,17 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1")
-class MarketDataProxyController {
+public class MarketDataProxyController {
 
     private static final int MAX_PAGE_SIZE = 100;
 
     private final MarketDataServiceAdapter marketDataServiceAdapter;
+    private final SubscriptionAccessGuard subscriptionAccessGuard;
 
-    MarketDataProxyController(MarketDataServiceAdapter marketDataServiceAdapter) {
+    MarketDataProxyController(MarketDataServiceAdapter marketDataServiceAdapter,
+                              SubscriptionAccessGuard subscriptionAccessGuard) {
         this.marketDataServiceAdapter = marketDataServiceAdapter;
+        this.subscriptionAccessGuard = subscriptionAccessGuard;
     }
 
     @GetMapping("/prices/{ticker}/latest")
@@ -54,6 +57,7 @@ class MarketDataProxyController {
         if (from.isAfter(to)) {
             return ResponseEntity.badRequest().build();
         }
+        subscriptionAccessGuard.requireHistoricalPriceAccess(from, to);
         int clampedSize = Math.min(Math.max(1, size), MAX_PAGE_SIZE);
         return ResponseEntity.ok(marketDataServiceAdapter.fetchHistoricalPrices(ticker, timeframe, from, to, page, clampedSize));
     }

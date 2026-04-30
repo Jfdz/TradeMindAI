@@ -14,5 +14,7 @@ public interface StrategyRepository {
 
     Optional<Strategy> findByIdAndUserId(UUID id, UUID userId);
 
+    long countActiveByUserId(UUID userId);
+
     void delete(Strategy strategy);
 }

@@ -23,7 +23,7 @@ import java.util.Map;
 class GlobalExceptionHandler {
 
     record ErrorResponse(int status, String error, String message,
-                         List<Map<String, String>> details, Instant timestamp, String path) {}
+                         List<Map<String, String>> details, String requiredTier, Instant timestamp, String path) {}
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
@@ -36,62 +36,62 @@ class GlobalExceptionHandler {
                 })
                 .toList();
         return new ErrorResponse(400, "Bad Request", "Validation failed", details,
-                Instant.now(), req.getRequestURI());
+                null, Instant.now(), req.getRequestURI());
     }
 
     @ExceptionHandler(EmailAlreadyExistsException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     ErrorResponse handleEmailExists(EmailAlreadyExistsException ex, HttpServletRequest req) {
         return new ErrorResponse(409, "Conflict", ex.getMessage(), List.of(),
-                Instant.now(), req.getRequestURI());
+                null, Instant.now(), req.getRequestURI());
     }
 
     @ExceptionHandler(InvalidCredentialsException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     ErrorResponse handleInvalidCredentials(InvalidCredentialsException ex, HttpServletRequest req) {
         return new ErrorResponse(401, "Unauthorized", "Invalid email or password", List.of(),
-                Instant.now(), req.getRequestURI());
+                null, Instant.now(), req.getRequestURI());
     }
 
     @ExceptionHandler(TokenBlacklistedException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     ErrorResponse handleTokenBlacklisted(TokenBlacklistedException ex, HttpServletRequest req) {
         return new ErrorResponse(401, "Unauthorized", "Token has been revoked", List.of(),
-                Instant.now(), req.getRequestURI());
+                null, Instant.now(), req.getRequestURI());
     }
 
     @ExceptionHandler(InsufficientSubscriptionException.class)
-    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ResponseStatus(HttpStatus.PAYMENT_REQUIRED)
     ErrorResponse handleInsufficientSubscription(InsufficientSubscriptionException ex, HttpServletRequest req) {
-        return new ErrorResponse(403, "Forbidden", ex.getMessage(), List.of(),
-                Instant.now(), req.getRequestURI());
+        return new ErrorResponse(402, "Payment Required", ex.getMessage(), List.of(),
+                ex.getRequired().name().toLowerCase(), Instant.now(), req.getRequestURI());
     }
 
     @ExceptionHandler(SignalNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     ErrorResponse handleSignalNotFound(SignalNotFoundException ex, HttpServletRequest req) {
         return new ErrorResponse(404, "Not Found", ex.getMessage(), List.of(),
-                Instant.now(), req.getRequestURI());
+                null, Instant.now(), req.getRequestURI());
     }
 
     @ExceptionHandler(StrategyNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     ErrorResponse handleStrategyNotFound(StrategyNotFoundException ex, HttpServletRequest req) {
         return new ErrorResponse(404, "Not Found", ex.getMessage(), List.of(),
-                Instant.now(), req.getRequestURI());
+                null, Instant.now(), req.getRequestURI());
     }
 
     @ExceptionHandler(UserNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     ErrorResponse handleUserNotFound(UserNotFoundException ex, HttpServletRequest req) {
         return new ErrorResponse(404, "Not Found", ex.getMessage(), List.of(),
-                Instant.now(), req.getRequestURI());
+                null, Instant.now(), req.getRequestURI());
     }
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     ErrorResponse handleUnexpected(Exception ex, HttpServletRequest req) {
         return new ErrorResponse(500, "Internal Server Error", "An unexpected error occurred",
-                List.of(), Instant.now(), req.getRequestURI());
+                List.of(), null, Instant.now(), req.getRequestURI());
     }
 }

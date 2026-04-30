@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 @Configuration
-class SecurityConfig {
+public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
     private final ObjectMapper objectMapper;

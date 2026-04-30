@@ -10,9 +10,9 @@ public interface ManageStrategiesUseCase {
 
     Page<Strategy> getStrategies(UUID userId, Pageable pageable);
 
-    Strategy createStrategy(UUID userId, StrategyCommand command);
+    Strategy createStrategy(UUID userId, String subscriptionPlan, StrategyCommand command);
 
-    Strategy updateStrategy(UUID userId, UUID strategyId, StrategyCommand command);
+    Strategy updateStrategy(UUID userId, String subscriptionPlan, UUID strategyId, StrategyCommand command);
 
     void deleteStrategy(UUID userId, UUID strategyId);
 
