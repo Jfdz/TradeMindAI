@@ -7,9 +7,12 @@ Update after every completed PBI: record the last done task and the next in deve
 
 ## Environment Notes
 
-- Maven launcher: `C:\Users\fakdu\tools\apache-maven-3.9.10\bin\mvn.cmd`
+- Maven resolution rule: prefer repo-local Maven first if visible and runnable (`mvnw.cmd`, `mvnw`, or other repository-provided wrapper/script). Use the installed Maven path below only as fallback when the repository does not provide its own Maven entrypoint.
+- Maven fallback launcher: `C:\Users\JFERNANDEZ\tools\apache-maven-3.9.10\bin\mvn.cmd`
 - JDK 21 home: `C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot`
 - Use `JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot` when running Maven in this shell.
+- Add Maven for current shell before running tests:
+  `$env:Path='C:\Users\JFERNANDEZ\tools\apache-maven-3.9.10\bin;' + $env:JAVA_HOME + '\bin;' + $env:Path`
 
 --
 
@@ -37,9 +40,9 @@ None.
 
 | ID | Title | Status | Notes |
 |---|---|---|---|
-| S11-01 | Make market-data internal-only | Done - pending local Maven verification | `market-data-service` now requires `X-Internal-Secret` for all `/api/v1/**`; health/actuator stays public. Docker Compose already had no host port. K8s service remains `ClusterIP`; ingress no longer routes prices/symbols to market-data. |
-| S11-02 | Move market-data calls into trading-core | In Development | Added trading-core proxy endpoints for `/api/v1/prices/**` and `/api/v1/symbols`; trading-core adapter sends `X-Internal-Secret`; frontend already uses only `NEXT_PUBLIC_API_BASE_URL`. |
-| S11-03 | Subscription tier enforcement at every paid endpoint | Next | Implement `@RequireTier` or equivalent interceptor, ledger table, and tests after S11-02 test verification passes. |
+| S11-01 | Make market-data internal-only | Done | `market-data-service` now requires `X-Internal-Secret` for all `/api/v1/**`; health/actuator stays public. Docker Compose already had no host port. K8s service remains `ClusterIP`; ingress no longer routes prices/symbols to market-data. |
+| S11-02 | Move market-data calls into trading-core | Done | Added trading-core proxy endpoints for `/api/v1/prices/**` and `/api/v1/symbols`; trading-core adapter sends `X-Internal-Secret`; auth and rate-limit integration coverage now passes locally for proxy routes. |
+| S11-03 | Subscription tier enforcement at every paid endpoint | In Progress | Historical price windows, backtest submission, and active strategy quotas now enforce tier access in trading-core. A subscription usage ledger now records allowed/denied requests for the gated history, backtest, and strategy mutation flows. Next: finish the remaining S11-03 durability gap by reconciling Redis hot-path counters with the ledger and extend the same pattern to any newly introduced paid endpoints. |
 
 ### Completed This Session
 
@@ -50,6 +53,11 @@ None.
 | Removed direct K8s ingress access to market-data price/symbol APIs | `infrastructure/k8s/base/ingress.yml` |
 | Wired internal market-data service config/secrets for Compose and K8s | `docker-compose.yml`, `configmaps.yml`, service deployment YAMLs, `internal-service-secret-template.yml` |
 | Added focused tests for new Sprint 11 code | `MarketDataServiceAdapterTest.java`, `MarketDataProxyControllerTest.java`, updated `SecurityConfigTest.java` |
+| Added trading-core auth/rate-limit integration coverage for market-data proxy routes | `MarketDataProxySecurityTest.java` |
+| Added first subscription-tier enforcement slice for historical market-data access | `SubscriptionAccessGuard.java`, `GlobalExceptionHandler.java`, `MarketDataProxyController.java`, `SubscriptionAccessGuardTest.java`, updated `MarketDataProxyControllerTest.java`, updated `MarketDataProxySecurityTest.java` |
+| Enforced BASIC+ access for backtest submission with aspect-backed MVC coverage | `BacktestController.java`, `RequiresSubscriptionAspect.java`, `SecurityConfig.java`, `BacktestSubscriptionSecurityTest.java` |
+| Enforced active-strategy quotas by plan and covered the strategy create path in MVC/security tests | `StrategyManagementService.java`, `StrategyRepository.java`, `StrategyJpaRepository.java`, `StrategyRepositoryAdapter.java`, `ManageStrategiesUseCase.java`, `StrategyManagementServiceTest.java`, `StrategySubscriptionSecurityTest.java`, updated `StrategyControllerTest.java` |
+| Added durable subscription usage ledger tracking for gated entitlement routes | `V11__create_subscription_usage_ledger_table.sql`, `SubscriptionUsageLedgerJpaEntity.java`, `SubscriptionUsageLedgerJpaRepository.java`, `SubscriptionUsageLedgerService.java`, `SubscriptionUsageLedgerInterceptor.java`, `SubscriptionUsageLedgerWebConfig.java`, `SubscriptionUsageLedgerServiceTest.java`, updated `MarketDataProxySecurityTest.java`, updated `BacktestSubscriptionSecurityTest.java`, updated `StrategySubscriptionSecurityTest.java` |
 
 ### Verification
 
@@ -57,12 +65,21 @@ None.
 |---|---|
 | Static check: frontend has no `NEXT_PUBLIC_MARKET_DATA_URL` references | Passed |
 | Static check: K8s ingress has no `market-data-service` route for `/api/v1/prices` or `/api/v1/symbols` | Passed |
-| Targeted Maven tests | Blocked locally - no `mvn`, `mvn.cmd`, or `mvnw.cmd` found on this machine; documented Maven path under `C:\Users\fakdu\...` does not exist for current user. |
+| Tooling install | Passed - installed Temurin 21 and Maven 3.9.10 on current machine |
+| Targeted market-data tests | Passed - `SecurityConfigTest`, `InternalSecretFilterTest`, `IngestionControllerTest` |
+| Targeted trading-core tests | Passed - `MarketDataServiceAdapterTest`, `MarketDataProxyControllerTest` |
+| Trading-core proxy auth/rate-limit integration tests | Passed - `MarketDataProxySecurityTest` |
+| Trading-core subscription access tests | Passed - `SubscriptionAccessGuardTest`, updated `MarketDataProxySecurityTest`, updated `MarketDataProxyControllerTest` |
+| Trading-core backtest subscription tests | Passed - `BacktestSubscriptionSecurityTest`, `BacktestControllerTest` |
+| Trading-core strategy quota tests | Passed - `StrategyManagementServiceTest`, `StrategyControllerTest`, `StrategySubscriptionSecurityTest` |
+| Trading-core subscription usage ledger tests | Passed - `SubscriptionUsageLedgerServiceTest`, updated `MarketDataProxySecurityTest`, updated `BacktestSubscriptionSecurityTest`, updated `StrategySubscriptionSecurityTest` |
+| Trading-core Flyway migration validation for usage ledger | Added - `FlywayMigrationTest` is assumption-guarded and skipped locally when Docker is unavailable |
+| Maven local cache recovery | Passed - removed two corrupted `.m2` POM directories and re-ran successfully |
 
 ### Next In Development
 
-**PBI:** `S11-02` - finish verification and harden proxy/rate-limit behavior
-**Immediate next task:** Install or point to a valid Maven executable, run targeted tests, then add integration coverage for authenticated price/symbol rate limiting before moving to `S11-03`.
+**PBI:** `S11-03` - subscription tier enforcement at every paid endpoint
+**Immediate next task:** Finish the remaining `S11-03` durability work by reconciling Redis hot-path counters with `subscription_usage_ledger`, and keep applying the same entitlement + ledger pattern to any newly added paid endpoints before moving to `S11-04`.
 
 ---
 
