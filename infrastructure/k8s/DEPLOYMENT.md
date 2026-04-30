@@ -13,7 +13,7 @@ See `base/secrets-template.yml.example` for the complete list of required keys. 
 PG_PASS=$(openssl rand -base64 24)
 kubectl create secret generic postgres-credentials -n trading-saas \
   --from-literal=host=postgres.trading-saas.svc.cluster.local \
-  --from-literal=username=trading_user \
+  --from-literal=username=tradinguser \
   --from-literal=password="$PG_PASS" \
   --from-literal=market-data-db=trading_saas \
   --from-literal=trading-core-db=trading_saas \
@@ -31,10 +31,10 @@ kubectl create secret generic redis-credentials -n trading-saas \
 RABBIT_PASS=$(openssl rand -base64 24)
 kubectl create secret generic rabbitmq-credentials -n trading-saas \
   --from-literal=host=rabbitmq.trading-saas.svc.cluster.local \
-  --from-literal=username=trading_user \
+  --from-literal=username=tradinguser \
   --from-literal=password="$RABBIT_PASS"
 # Set on server after first deploy:
-# kubectl exec -n trading-saas rabbitmq-0 -- rabbitmqctl change_password trading_user "$RABBIT_PASS"
+# kubectl exec -n trading-saas rabbitmq-0 -- rabbitmqctl change_password tradinguser "$RABBIT_PASS"
 
 # JWT
 kubectl create secret generic jwt-secret -n trading-saas \
@@ -89,7 +89,7 @@ kubectl logs <pod-name> -n trading-saas --previous
 kubectl logs <pod-name> -n trading-saas -c <init-container-name>
 
 # 5. Database connection failure
-kubectl exec -n trading-saas postgres-0 -- psql -U trading_user -d trading_saas -c '\du'
+kubectl exec -n trading-saas postgres-0 -- psql -U tradinguser -d trading_saas -c '\du'
 ```
 
 ---
