@@ -102,12 +102,30 @@ jobs:
           kubectl apply -f infrastructure/k8s/namespaces/trading-saas.yml
           kubectl apply -k infrastructure/k8s/base/
 
+      - name: Verify secrets are real (not REPLACE_ME placeholders)
+        run: |
+          set -euo pipefail
+          REQUIRED_SECRETS="postgres-credentials redis-credentials rabbitmq-credentials jwt-secret nextauth-secret internal-secret"
+          for s in $REQUIRED_SECRETS; do
+            if ! kubectl get secret "$s" -n trading-saas >/dev/null 2>&1; then
+              echo "❌ Secret $s does not exist — create it before deploying"
+              exit 1
+            fi
+            if kubectl get secret "$s" -n trading-saas \
+                -o go-template='{{range $k,$v := .data}}{{$v | base64decode}} {{end}}' \
+                | grep -q REPLACE_ME; then
+              echo "❌ Secret $s contains REPLACE_ME placeholder — refusing to deploy"
+              exit 1
+            fi
+            echo "✅ $s"
+          done
+
       - name: Wait for infrastructure to be ready
         run: |
           set -euo pipefail
           echo "Waiting for postgres..."
           kubectl rollout status statefulset/postgres -n trading-saas --timeout=3m
-          kubectl exec -n trading-saas postgres-0 -- pg_isready -h 127.0.0.1 -p 5432 -U tradinguser
+          kubectl exec -n trading-saas postgres-0 -- pg_isready -h 127.0.0.1 -p 5432 -U trading_user
           echo "Waiting for redis..."
           kubectl rollout status deployment/redis -n trading-saas --timeout=2m
           echo "Waiting for rabbitmq..."
