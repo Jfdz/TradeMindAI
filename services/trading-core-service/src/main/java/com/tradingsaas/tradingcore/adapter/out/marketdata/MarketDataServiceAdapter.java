@@ -4,6 +4,7 @@ import com.tradingsaas.tradingcore.domain.model.backtest.OhlcvBar;
 import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.math.BigDecimal;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -19,6 +20,7 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
 
     private final WebClient webClient;
 
+    @Autowired
     public MarketDataServiceAdapter(
             @Value("${services.market-data.url:http://localhost:8081}") String baseUrl) {
         this.webClient = WebClient.builder().baseUrl(baseUrl).build();

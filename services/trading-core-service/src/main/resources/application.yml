@@ -108,3 +108,7 @@ trading-core:
   ai-engine:
     service-url: ${AI_ENGINE_SERVICE_URL:http://localhost:8000}
     timeout: ${AI_ENGINE_TIMEOUT:5s}
+
+services:
+  market-data:
+    url: ${SERVICES_MARKET_DATA_URL:http://localhost:8081}
