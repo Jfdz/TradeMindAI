@@ -111,4 +111,5 @@ trading-core:
 
 services:
   market-data:
-    url: ${SERVICES_MARKET_DATA_URL:http://localhost:8081}
+    url: ${MARKET_DATA_SERVICE_URL:http://localhost:8081}
+    internal-secret: ${MARKET_DATA_INTERNAL_SECRET:}

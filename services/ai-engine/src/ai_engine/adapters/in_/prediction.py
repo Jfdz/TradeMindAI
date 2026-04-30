@@ -92,7 +92,10 @@ async def predict_and_publish(body: BatchPredictRequest, request: Request):
     publish_fn = getattr(request.app.state, "publish_predictions", None)
     rabbitmq_url = getattr(request.app.state, "rabbitmq_url", None)
     if publish_fn is None or rabbitmq_url is None:
-        raise HTTPException(status_code=503, detail="Publisher not initialised — RabbitMQ consumers not started")
+        raise HTTPException(
+            status_code=503,
+            detail="Publisher not initialised — RabbitMQ consumers not started",
+        )
 
     payload = {
         "tickers": [pair[0] for pair in pairs],
