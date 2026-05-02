@@ -126,9 +126,12 @@ public class PortfolioOverviewService {
 
         BigDecimal equity = (pricedPositionCount > 0) ? totalMarketValue : ZERO;
 
-        // Persist the recomputed totalCapital to the database
-        portfolio.setTotalCapital(totalMarketValue);
-        portfolioJpaRepository.save(portfolio);
+        // Only persist totalCapital when prices were actually fetched to avoid overwriting
+        // a previously correct value with 0 when market data is unavailable
+        if (pricedPositionCount > 0) {
+            portfolio.setTotalCapital(totalMarketValue);
+            portfolioJpaRepository.save(portfolio);
+        }
 
         return new PortfolioOverview(
                 portfolio.getUser().getId(),

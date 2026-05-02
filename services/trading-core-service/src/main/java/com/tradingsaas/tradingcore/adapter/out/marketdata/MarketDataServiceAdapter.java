@@ -4,10 +4,13 @@ import com.tradingsaas.tradingcore.domain.model.backtest.OhlcvBar;
 import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.math.BigDecimal;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -19,6 +22,7 @@ import reactor.core.publisher.Mono;
 @Component
 public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
 
+    private static final Logger log = LoggerFactory.getLogger(MarketDataServiceAdapter.class);
     private static final String INTERNAL_SECRET_HEADER = "X-Internal-Secret";
 
     private final WebClient webClient;
@@ -76,31 +80,35 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
             return Map.of();
         }
 
-        LatestPricesResponse response = webClient.get()
-                .uri(uri -> uri.path("/api/v1/prices/latest")
-                        .queryParam("tickers", symbols.toArray())
-                        .build())
-                .headers(this::addInternalSecret)
-                .retrieve()
-                .onStatus(
-                        status -> status.is4xxClientError() || status.is5xxServerError(),
-                        res -> Mono.empty()
-                )
-                .bodyToMono(LatestPricesResponse.class)
-                .defaultIfEmpty(new LatestPricesResponse(List.of()))
-                .block();
+        try {
+            LatestPricesResponse response = webClient.get()
+                    .uri(uri -> uri.path("/api/v1/prices/latest")
+                            .queryParam("tickers", symbols.toArray())
+                            .build())
+                    .headers(this::addInternalSecret)
+                    .retrieve()
+                    .bodyToMono(LatestPricesResponse.class)
+                    .block();
 
-        if (response == null || response.prices() == null) {
+            if (response == null || response.prices() == null || response.prices().isEmpty()) {
+                log.warn("Market data unavailable for symbols: {}. Response was: {}", symbols, response);
+                return Map.of();
+            }
+
+            return response.prices().stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                            MarketPriceResponse::ticker,
+                            entry -> BigDecimal.valueOf(entry.ohlcv().close()),
+                            (left, right) -> right,
+                            java.util.LinkedHashMap::new
+                    ));
+        } catch (WebClientResponseException e) {
+            log.error("Market data service returned error for symbols {}: {} {}", symbols, e.getStatusCode(), e.getStatusText());
+            return Map.of();
+        } catch (Exception e) {
+            log.error("Failed to fetch latest prices for symbols {}: {}", symbols, e.getMessage());
             return Map.of();
         }
-
-        return response.prices().stream()
-                .collect(java.util.stream.Collectors.toMap(
-                        MarketPriceResponse::ticker,
-                        entry -> BigDecimal.valueOf(entry.ohlcv().close()),
-                        (left, right) -> right,
-                        java.util.LinkedHashMap::new
-                ));
     }
 
     @Override
