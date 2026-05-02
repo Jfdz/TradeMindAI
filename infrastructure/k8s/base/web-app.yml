@@ -46,6 +46,11 @@ spec:
                 configMapKeyRef:
                   name: web-app-config
                   key: api-base-url
+            - name: API_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: web-app-config
+                  key: api-base-url-internal
             - name: ADMIN_EMAILS
               valueFrom:
                 configMapKeyRef:
