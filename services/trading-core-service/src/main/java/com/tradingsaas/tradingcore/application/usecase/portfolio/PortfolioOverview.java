@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public record PortfolioOverview(
         UUID userId,
-        BigDecimal initialCapital,
+        BigDecimal totalCapital,
         BigDecimal cash,
         BigDecimal realizedPnl,
         BigDecimal unrealizedPnl,
@@ -15,14 +15,14 @@ public record PortfolioOverview(
         List<PortfolioHoldingOverview> holdings
 ) {
 
-    public static PortfolioOverview empty(UUID userId, BigDecimal initialCapital) {
+    public static PortfolioOverview empty(UUID userId, boolean hasPortfolio) {
         return new PortfolioOverview(
                 userId,
-                initialCapital,
-                initialCapital,
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
-                initialCapital,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
                 0.0,
                 List.of()
         );

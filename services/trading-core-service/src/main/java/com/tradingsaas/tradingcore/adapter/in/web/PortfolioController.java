@@ -127,7 +127,7 @@ class PortfolioController {
 
     record PortfolioOverviewResponse(
             UUID userId,
-            BigDecimal initialCapital,
+            BigDecimal totalCapital,
             BigDecimal cash,
             BigDecimal realizedPnl,
             BigDecimal unrealizedPnl,
@@ -138,7 +138,7 @@ class PortfolioController {
         static PortfolioOverviewResponse from(PortfolioOverview overview) {
             return new PortfolioOverviewResponse(
                     overview.userId(),
-                    overview.initialCapital(),
+                    overview.totalCapital(),
                     overview.cash(),
                     overview.realizedPnl(),
                     overview.unrealizedPnl(),

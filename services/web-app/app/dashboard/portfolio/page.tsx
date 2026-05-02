@@ -25,6 +25,13 @@ function formatSignedMoney(value: number) {
   return value >= 0 ? `+${formatted}` : `-${formatted}`;
 }
 
+function getDonutTextClass(value: number) {
+  const length = formatMoney(value).length;
+  if (length <= 8) return "mt-3 font-display text-3xl font-bold tracking-[-0.05em] text-white";
+  if (length <= 11) return "mt-3 font-display text-2xl font-bold tracking-[-0.05em] text-white";
+  return "mt-3 font-display text-xl font-bold tracking-[-0.05em] text-white";
+}
+
 function Sparkline({ values, color }: { values: number[]; color: string }) {
   if (values.length === 0) {
     return null;
@@ -161,20 +168,44 @@ export default function PortfolioPage() {
   });
   const portfolio = data?.portfolio ?? null;
   const holdings = data?.holdings ?? EMPTY_HOLDINGS;
+  const totalValue = holdings.reduce((sum, h) => sum + (h.marketValue ?? 0), 0);
 
   const summary = useMemo(() => {
     if (!portfolio) {
       return null;
     }
 
-    const costBasis = portfolio.initialCapital - portfolio.cash;
+    const totalCost = holdings.reduce((sum, h) => sum + (h.quantity * h.averageCost), 0);
+    const unpricedCount = holdings.filter((h) => h.lastPrice == null).length;
+
+    const unrealizedPnl = holdings.reduce(
+      (sum, h) => sum + (h.unrealizedPnl ?? 0),
+      0
+    );
+
     return [
-      { label: "Total Value", value: formatMoney(portfolio.equity), detail: "Marked to market" },
-      { label: "Total Cost Basis", value: formatMoney(costBasis), detail: "Weighted entry cost" },
-      { label: "Unrealized P&L", value: formatSignedMoney(portfolio.unrealizedPnl), detail: "Open position gains" },
-      { label: "Win Rate", value: `${Math.round(portfolio.winRate * 100)}%`, detail: "Position-level" },
+      {
+        label: "Total Value",
+        value: totalValue > 0 ? formatMoney(totalValue) : "—",
+        detail: unpricedCount > 0 ? `${unpricedCount} unpriced` : "Marked to market",
+      },
+      {
+        label: "Total Cost Basis",
+        value: totalCost > 0 ? formatMoney(totalCost) : "—",
+        detail: "Weighted entry cost",
+      },
+      {
+        label: "Unrealized P&L",
+        value: formatSignedMoney(unrealizedPnl),
+        detail: "Open position gains",
+      },
+      {
+        label: "Win Rate",
+        value: `${Math.round(portfolio.winRate * 100)}%`,
+        detail: "Position-level",
+      },
     ];
-  }, [portfolio]);
+  }, [portfolio, holdings, totalValue]);
 
   const allocationGradient = useMemo(() => {
     if (!holdings.length) {
@@ -250,13 +281,15 @@ export default function PortfolioPage() {
           <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">Allocation donut</h3>
 
           <div className="mt-8 flex items-center justify-center">
-            <div className="relative h-48 w-48 rounded-full" style={{ background: `conic-gradient(${allocationGradient})` }}>
-              <div className="absolute inset-5 rounded-full border border-border bg-bg-0/95 p-5 text-center">
+            <div className="relative h-56 w-56 rounded-full" style={{ background: `conic-gradient(${allocationGradient})` }}>
+              <div className="absolute inset-4 rounded-full border border-border bg-bg-0/95 p-3 text-center">
                 <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Portfolio</div>
-                <div className="mt-4 font-display text-3xl font-bold tracking-[-0.05em] text-white">
-                  {formatMoney(portfolio.equity)}
+                <div className={getDonutTextClass(totalValue)}>
+                  {totalValue > 0 ? formatMoney(totalValue) : "—"}
                 </div>
-                <div className="mt-2 text-sm text-text-2">Realized {formatSignedMoney(portfolio.realizedPnl)}</div>
+                <div className="mt-2 text-sm text-text-2 whitespace-nowrap">
+                  Realized {formatSignedMoney(portfolio.realizedPnl)}
+                </div>
               </div>
             </div>
           </div>
@@ -312,9 +345,9 @@ export default function PortfolioPage() {
               </thead>
               <tbody>
                 {holdings.map((position, index) => {
-                  const pnl = position.unrealizedPnl;
+                  const pnl = position.unrealizedPnl ?? null;
                   const costBasis = position.quantity * position.averageCost;
-                  const pnlPct = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
+                  const pnlPct = costBasis > 0 && pnl != null ? (pnl / costBasis) * 100 : null;
 
                   return (
                     <tr key={position.symbol} className={index % 2 === 0 ? "bg-white/[0.015]" : ""}>
@@ -329,13 +362,14 @@ export default function PortfolioPage() {
                       </td>
                       <td className="border-t border-border px-4 py-4 font-mono text-text-1">{position.quantity}</td>
                       <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.averageCost)}</td>
-                      <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.lastPrice)}</td>
-                      <td className={`border-t border-border px-4 py-4 font-mono ${pnl >= 0 ? "text-green" : "text-red"}`}>
-                        {formatSignedMoney(pnl)}
+                      <td className="border-t border-border px-4 py-4 font-mono text-text-1">
+                        {position.lastPrice != null ? formatMoney(position.lastPrice) : "—"}
                       </td>
-                      <td className={`border-t border-border px-4 py-4 font-mono ${pnlPct >= 0 ? "text-green" : "text-red"}`}>
-                        {pnlPct >= 0 ? "+" : ""}
-                        {pnlPct.toFixed(2)}%
+                      <td className={`border-t border-border px-4 py-4 font-mono ${pnl != null && pnl >= 0 ? "text-green" : pnl != null && pnl < 0 ? "text-red" : "text-text-3"}`}>
+                        {position.lastPrice != null ? formatSignedMoney(pnl) : "—"}
+                      </td>
+                      <td className={`border-t border-border px-4 py-4 font-mono ${pnlPct != null && pnlPct >= 0 ? "text-green" : pnlPct != null && pnlPct < 0 ? "text-red" : "text-text-3"}`}>
+                        {position.lastPrice != null ? (pnlPct != null && pnlPct >= 0 ? "+" : "") + (pnlPct?.toFixed(2) ?? "0.00") + "%" : "—"}
                       </td>
                       <td className="border-t border-border px-4 py-4">
                         <Sparkline values={position.trend} color={position.color} />
