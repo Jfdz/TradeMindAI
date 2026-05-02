@@ -37,11 +37,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Normalize image reference
+        id: normalize
+        run: echo "image-ref=$(echo '${{ inputs.image-ref }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
       - name: Install Trivy
         env:
           TRIVY_VERSION: 0.69.3
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
             | sh -s -- -b /usr/local/bin "v${TRIVY_VERSION}"
           trivy --version
@@ -54,16 +58,23 @@ jobs:
           DOCKER_BUILDKIT: "0"
         run: |
           set -euxo pipefail
+          pwd
+          docker version
           docker build -t "$IMAGE_REF" -f "$DOCKERFILE" "$CONTEXT"
           docker images "$IMAGE_REF"
           docker save "$IMAGE_REF" -o "$SCAN_TAR"
           ls -lh "$SCAN_TAR"
           test -s "$SCAN_TAR"
 
-      - name: Trivy scan (SARIF)
+      - name: Pre-scan sanity
         run: |
           set -euxo pipefail
           ls -lh "$SCAN_TAR"
+          file "$SCAN_TAR" || true
+
+      - name: Trivy scan (SARIF)
+        run: |
+          set -euxo pipefail
           trivy image --input "$SCAN_TAR" \
             --format sarif --output trivy-results.sarif \
             --exit-code 0 --ignore-unfixed \
@@ -81,10 +92,9 @@ jobs:
       - name: Trivy scan (table, gating)
         if: always()
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           trivy image --input "$SCAN_TAR" \
-            --format table \
-            --exit-code 1 --ignore-unfixed \
+            --format table --exit-code 1 --ignore-unfixed \
             --pkg-types os,library --severity CRITICAL,HIGH \
             --ignorefile .trivyignore --skip-version-check
 
