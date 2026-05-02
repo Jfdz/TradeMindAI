@@ -121,7 +121,7 @@ export type ClosePositionPayload = {
 
 export type PortfolioOverviewResponse = {
   userId: string;
-  initialCapital: number;
+  totalCapital: number;
   cash: number;
   realizedPnl: number;
   unrealizedPnl: number;
