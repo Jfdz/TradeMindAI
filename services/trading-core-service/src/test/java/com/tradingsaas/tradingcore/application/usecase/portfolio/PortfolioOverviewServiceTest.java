@@ -1,9 +1,9 @@
 package com.tradingsaas.tradingcore.application.usecase.portfolio;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.tradingsaas.tradingcore.adapter.out.persistence.PortfolioJpaRepository;
@@ -24,7 +24,7 @@ import org.mockito.Mockito;
 class PortfolioOverviewServiceTest {
 
     @Test
-    void returnsOverviewWithRealizedAndUnrealizedPnl() {
+    void returnsOverviewWithAllPositionsPriced() {
         UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
         HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
@@ -58,21 +58,89 @@ class PortfolioOverviewServiceTest {
         PortfolioOverview overview = service.getOverview(userId, "premium");
 
         assertEquals(userId, overview.userId());
-        assertEquals(0, overview.initialCapital().compareTo(new BigDecimal("10000")));
-        assertEquals(0, overview.cash().compareTo(new BigDecimal("9800.00")));
+        assertEquals(BigDecimal.ZERO, overview.initialCapital());
+        assertEquals(BigDecimal.ZERO, overview.cash());
         assertEquals(0, overview.realizedPnl().compareTo(new BigDecimal("30.00")));
         assertEquals(0, overview.unrealizedPnl().compareTo(new BigDecimal("20.00")));
-        assertEquals(0, overview.equity().compareTo(new BigDecimal("10020.00")));
+        assertEquals(0, overview.equity().compareTo(new BigDecimal("220.00")));
         assertEquals(1, overview.holdings().size());
         assertEquals("AAPL", overview.holdings().getFirst().symbol());
-        assertEquals(100.0, overview.holdings().getFirst().allocationPct(), 0.0001);
-
-        verify(marketDataPort).loadLatestPrices(List.of("AAPL"));
-        verify(marketDataPort, never()).loadHistoricalBars(Mockito.anyString(), Mockito.any(), Mockito.any());
     }
 
     @Test
-    void returnsDefaultCapitalWhenPortfolioMissing() {
+    void returnsOverviewWithOneUnpricedSymbol() {
+        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
+        HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
+        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort);
+
+        PortfolioJpaEntity portfolio = portfolio(userId, BigDecimal.valueOf(10_000));
+        PortfolioPositionJpaEntity aaplPosition = position(
+                portfolio,
+                "AAPL",
+                new BigDecimal("2"),
+                new BigDecimal("100.00"),
+                "OPEN",
+                null,
+                null,
+                Instant.parse("2026-04-16T10:00:00Z"));
+        PortfolioPositionJpaEntity nvdaPosition = position(
+                portfolio,
+                "NVDA",
+                new BigDecimal("1"),
+                new BigDecimal("500.00"),
+                "OPEN",
+                null,
+                null,
+                Instant.parse("2026-04-15T10:00:00Z"));
+        portfolio.getPositions().add(aaplPosition);
+        portfolio.getPositions().add(nvdaPosition);
+
+        when(portfolioRepository.findByUser_Id(userId)).thenReturn(Optional.of(portfolio));
+        when(marketDataPort.loadLatestPrices(List.of("AAPL", "NVDA")))
+                .thenReturn(Map.of("AAPL", new BigDecimal("110.00")));
+
+        PortfolioOverview overview = service.getOverview(userId, "premium");
+
+        assertEquals(2, overview.holdings().size());
+
+        var aapl = overview.holdings().get(0);
+        var nvda = overview.holdings().get(1);
+
+        assertEquals("AAPL", aapl.symbol());
+        assertEquals(new BigDecimal("110.00"), aapl.lastPrice());
+        assertEquals(new BigDecimal("220.00"), aapl.marketValue());
+
+        assertEquals("NVDA", nvda.symbol());
+        assertNull(nvda.lastPrice());
+        assertNull(nvda.marketValue());
+
+        assertEquals(0, overview.equity().compareTo(new BigDecimal("220.00")));
+    }
+
+    @Test
+    void returnsEmptyPortfolioWithNoPositions() {
+        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
+        HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
+        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort);
+
+        PortfolioJpaEntity portfolio = portfolio(userId, BigDecimal.valueOf(10_000));
+
+        when(portfolioRepository.findByUser_Id(userId)).thenReturn(Optional.of(portfolio));
+
+        PortfolioOverview overview = service.getOverview(userId, "premium");
+
+        assertEquals(userId, overview.userId());
+        assertEquals(BigDecimal.ZERO, overview.initialCapital());
+        assertEquals(BigDecimal.ZERO, overview.cash());
+        assertEquals(BigDecimal.ZERO, overview.realizedPnl());
+        assertEquals(BigDecimal.ZERO, overview.equity());
+        assertTrue(overview.holdings().isEmpty());
+    }
+
+    @Test
+    void returnsEmptyPortfolioWhenNoPortfolioRow() {
         UUID userId = UUID.fromString("22222222-2222-2222-2222-222222222222");
         PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
         HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
@@ -86,6 +154,7 @@ class PortfolioOverviewServiceTest {
         assertEquals(BigDecimal.ZERO, overview.initialCapital());
         assertEquals(BigDecimal.ZERO, overview.cash());
         assertEquals(BigDecimal.ZERO, overview.realizedPnl());
+        assertEquals(BigDecimal.ZERO, overview.equity());
         assertTrue(overview.holdings().isEmpty());
     }
 

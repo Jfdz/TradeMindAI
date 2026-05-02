@@ -16,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PortfolioOverviewService {
 
+    private static final BigDecimal ZERO = BigDecimal.ZERO;
+
     private final PortfolioJpaRepository portfolioJpaRepository;
     private final HistoricalMarketDataPort historicalMarketDataPort;
 
@@ -29,34 +31,49 @@ public class PortfolioOverviewService {
     public PortfolioOverview getOverview(UUID userId, String plan) {
         return portfolioJpaRepository.findByUser_Id(userId)
                 .map(this::toOverview)
-                .orElseGet(() -> PortfolioOverview.empty(userId, BigDecimal.ZERO));
+                .orElseGet(() -> PortfolioOverview.empty(userId, false));
     }
 
     private PortfolioOverview toOverview(PortfolioJpaEntity portfolio) {
-        List<PortfolioHoldingOverview> holdings = new ArrayList<>();
-        BigDecimal costBasis = BigDecimal.ZERO;
-        BigDecimal marketValue = BigDecimal.ZERO;
         List<PortfolioPositionJpaEntity> openPositions = portfolio.getPositions().stream()
                 .filter(p -> !"CLOSED".equals(p.getStatus()))
                 .toList();
-        Map<String, BigDecimal> latestPrices = historicalMarketDataPort.loadLatestPrices(openPositions.stream()
+
+        if (openPositions.isEmpty()) {
+            return PortfolioOverview.empty(portfolio.getUser().getId(), true);
+        }
+
+        List<String> tickers = openPositions.stream()
                 .map(PortfolioPositionJpaEntity::getSymbolTicker)
                 .distinct()
-                .toList());
+                .toList();
+
+        Map<String, BigDecimal> latestPrices = historicalMarketDataPort.loadLatestPrices(tickers);
+
+        List<PortfolioHoldingOverview> holdings = new ArrayList<>();
+        BigDecimal costBasis = ZERO;
+        BigDecimal marketValue = ZERO;
+        int pricedPositionCount = 0;
 
         for (PortfolioPositionJpaEntity position : openPositions) {
-            BigDecimal currentPrice = latestPrices.getOrDefault(position.getSymbolTicker(), position.getEntryPrice());
-            BigDecimal positionCost = position.getEntryPrice().multiply(position.getQuantity());
-            BigDecimal positionValue = currentPrice.multiply(position.getQuantity());
-            BigDecimal pnl = positionValue.subtract(positionCost);
+            BigDecimal quantity = position.getQuantity();
+            BigDecimal entryPrice = position.getEntryPrice();
+            BigDecimal positionCost = entryPrice.multiply(quantity);
 
+            BigDecimal currentPrice = latestPrices.get(position.getSymbolTicker());
+            BigDecimal positionValue = (currentPrice != null) ? currentPrice.multiply(quantity) : null;
+            BigDecimal pnl = (positionValue != null) ? positionValue.subtract(positionCost) : null;
+
+            if (positionValue != null && currentPrice != null) {
+                marketValue = marketValue.add(positionValue);
+                pricedPositionCount++;
+            }
             costBasis = costBasis.add(positionCost);
-            marketValue = marketValue.add(positionValue);
 
             holdings.add(new PortfolioHoldingOverview(
                     position.getSymbolTicker(),
-                    position.getQuantity(),
-                    position.getEntryPrice(),
+                    quantity,
+                    entryPrice,
                     currentPrice,
                     positionValue,
                     pnl,
@@ -67,30 +84,37 @@ public class PortfolioOverviewService {
             ));
         }
 
-        BigDecimal totalMarketValue = marketValue;
-
         List<PortfolioHoldingOverview> normalizedHoldings = holdings.stream()
-                .map(holding -> new PortfolioHoldingOverview(
-                        holding.symbol(),
-                        holding.quantity(),
-                        holding.averageCost(),
-                        holding.lastPrice(),
-                        holding.marketValue(),
-                        holding.unrealizedPnl(),
-                        percentage(holding.marketValue(), totalMarketValue),
-                        holding.status(),
-                        holding.openedAt(),
-                        holding.closedAt()
-                ))
+                .map(holding -> {
+                    BigDecimal totalValue = marketValue;
+                    BigDecimal mv = holding.marketValue();
+                    Double pct = (totalValue != null && totalValue.signum() > 0 && mv != null)
+                            ? percentage(mv, totalValue)
+                            : 0.0;
+                    return new PortfolioHoldingOverview(
+                            holding.symbol(),
+                            holding.quantity(),
+                            holding.averageCost(),
+                            holding.lastPrice(),
+                            holding.marketValue(),
+                            holding.unrealizedPnl(),
+                            pct,
+                            holding.status(),
+                            holding.openedAt(),
+                            holding.closedAt()
+                    );
+                })
                 .toList();
 
-        BigDecimal cash = portfolio.getInitialCapital().subtract(costBasis);
-        BigDecimal unrealizedPnl = marketValue.subtract(costBasis);
-        BigDecimal equity = cash.add(marketValue);
+        BigDecimal unrealizedPnl = (pricedPositionCount > 0)
+                ? marketValue.subtract(costBasis)
+                : ZERO;
+
         double winRate = normalizedHoldings.isEmpty()
                 ? 0
-                : (double) normalizedHoldings.stream().filter(h -> h.unrealizedPnl().signum() > 0).count()
-                        / normalizedHoldings.size();
+                : (double) normalizedHoldings.stream()
+                        .filter(h -> h.unrealizedPnl() != null && h.unrealizedPnl().signum() > 0)
+                        .count() / normalizedHoldings.size();
 
         BigDecimal realizedPnl = portfolio.getPositions().stream()
                 .filter(p -> "CLOSED".equals(p.getStatus()) && p.getExitPrice() != null)
@@ -98,26 +122,20 @@ public class PortfolioOverviewService {
                         .subtract(p.getEntryPrice())
                         .multiply(p.getQuantity())
                         .subtract(p.getFees()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(ZERO, BigDecimal::add);
+
+        BigDecimal equity = (pricedPositionCount > 0) ? marketValue : ZERO;
 
         return new PortfolioOverview(
                 portfolio.getUser().getId(),
-                portfolio.getInitialCapital(),
-                cash,
+                ZERO,
+                ZERO,
                 realizedPnl,
                 unrealizedPnl,
                 equity,
                 winRate,
                 normalizedHoldings
         );
-    }
-
-    private static BigDecimal defaultCapitalForPlan(String plan) {
-        return switch (plan == null ? "FREE" : plan.toUpperCase()) {
-            case "BASIC" -> BigDecimal.valueOf(25_000);
-            case "PREMIUM" -> BigDecimal.valueOf(100_000);
-            default -> BigDecimal.valueOf(10_000);
-        };
     }
 
     private static double percentage(BigDecimal value, BigDecimal basis) {

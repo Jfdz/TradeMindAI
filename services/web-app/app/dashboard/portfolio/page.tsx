@@ -167,12 +167,36 @@ export default function PortfolioPage() {
       return null;
     }
 
-    const costBasis = portfolio.initialCapital - portfolio.cash;
+    const totalValue = holdings.reduce((sum, h) => sum + (h.marketValue ?? 0), 0);
+    const totalCost = holdings.reduce((sum, h) => sum + (h.quantity * h.averageCost), 0);
+    const unpricedCount = holdings.filter((h) => h.lastPrice == null).length;
+
+    const unrealizedPnl = holdings.reduce(
+      (sum, h) => sum + (h.unrealizedPnl ?? 0),
+      0
+    );
+
     return [
-      { label: "Total Value", value: formatMoney(portfolio.equity), detail: "Marked to market" },
-      { label: "Total Cost Basis", value: formatMoney(costBasis), detail: "Weighted entry cost" },
-      { label: "Unrealized P&L", value: formatSignedMoney(portfolio.unrealizedPnl), detail: "Open position gains" },
-      { label: "Win Rate", value: `${Math.round(portfolio.winRate * 100)}%`, detail: "Position-level" },
+      {
+        label: "Total Value",
+        value: totalValue > 0 ? formatMoney(totalValue) : "—",
+        detail: unpricedCount > 0 ? `${unpricedCount} unpriced` : "Marked to market",
+      },
+      {
+        label: "Total Cost Basis",
+        value: totalCost > 0 ? formatMoney(totalCost) : "—",
+        detail: "Weighted entry cost",
+      },
+      {
+        label: "Unrealized P&L",
+        value: formatSignedMoney(unrealizedPnl),
+        detail: "Open position gains",
+      },
+      {
+        label: "Win Rate",
+        value: `${Math.round(portfolio.winRate * 100)}%`,
+        detail: "Position-level",
+      },
     ];
   }, [portfolio]);
 
@@ -254,9 +278,13 @@ export default function PortfolioPage() {
               <div className="absolute inset-5 rounded-full border border-border bg-bg-0/95 p-5 text-center">
                 <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Portfolio</div>
                 <div className="mt-4 font-display text-3xl font-bold tracking-[-0.05em] text-white">
-                  {formatMoney(portfolio.equity)}
+                  {holdings.reduce((sum, h) => sum + (h.marketValue ?? 0), 0) > 0
+                    ? formatMoney(holdings.reduce((sum, h) => sum + (h.marketValue ?? 0), 0))
+                    : "—"}
                 </div>
-                <div className="mt-2 text-sm text-text-2">Realized {formatSignedMoney(portfolio.realizedPnl)}</div>
+                <div className="mt-2 text-sm text-text-2">
+                  Realized {formatSignedMoney(portfolio.realizedPnl)}
+                </div>
               </div>
             </div>
           </div>
@@ -312,9 +340,9 @@ export default function PortfolioPage() {
               </thead>
               <tbody>
                 {holdings.map((position, index) => {
-                  const pnl = position.unrealizedPnl;
+                  const pnl = position.unrealizedPnl ?? null;
                   const costBasis = position.quantity * position.averageCost;
-                  const pnlPct = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
+                  const pnlPct = costBasis > 0 && pnl != null ? (pnl / costBasis) * 100 : null;
 
                   return (
                     <tr key={position.symbol} className={index % 2 === 0 ? "bg-white/[0.015]" : ""}>
@@ -329,13 +357,14 @@ export default function PortfolioPage() {
                       </td>
                       <td className="border-t border-border px-4 py-4 font-mono text-text-1">{position.quantity}</td>
                       <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.averageCost)}</td>
-                      <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.lastPrice)}</td>
-                      <td className={`border-t border-border px-4 py-4 font-mono ${pnl >= 0 ? "text-green" : "text-red"}`}>
-                        {formatSignedMoney(pnl)}
+                      <td className="border-t border-border px-4 py-4 font-mono text-text-1">
+                        {position.lastPrice != null ? formatMoney(position.lastPrice) : "—"}
                       </td>
-                      <td className={`border-t border-border px-4 py-4 font-mono ${pnlPct >= 0 ? "text-green" : "text-red"}`}>
-                        {pnlPct >= 0 ? "+" : ""}
-                        {pnlPct.toFixed(2)}%
+                      <td className={`border-t border-border px-4 py-4 font-mono ${pnl != null && pnl >= 0 ? "text-green" : pnl != null && pnl < 0 ? "text-red" : "text-text-3"}`}>
+                        {position.lastPrice != null ? formatSignedMoney(pnl) : "—"}
+                      </td>
+                      <td className={`border-t border-border px-4 py-4 font-mono ${pnlPct != null && pnlPct >= 0 ? "text-green" : pnlPct != null && pnlPct < 0 ? "text-red" : "text-text-3"}`}>
+                        {position.lastPrice != null ? (pnlPct != null && pnlPct >= 0 ? "+" : "") + (pnlPct?.toFixed(2) ?? "0.00") + "%" : "—"}
                       </td>
                       <td className="border-t border-border px-4 py-4">
                         <Sparkline values={position.trend} color={position.color} />
