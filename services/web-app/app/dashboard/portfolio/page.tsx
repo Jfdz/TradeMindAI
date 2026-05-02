@@ -292,6 +292,12 @@ export default function PortfolioPage() {
           </div>
 
           <div className="mt-6 overflow-x-auto">
+            {holdings.length === 0 && (
+              <div className="py-12 text-center text-sm text-text-3">
+                No open positions. Use &ldquo;Add Position&rdquo; to track your holdings.
+              </div>
+            )}
+            {holdings.length > 0 && (
             <table className="min-w-[980px] w-full border-separate border-spacing-0">
               <thead className="text-[11px] uppercase tracking-[0.22em] text-text-3">
                 <tr>
@@ -339,6 +345,7 @@ export default function PortfolioPage() {
                 })}
               </tbody>
             </table>
+            )}
           </div>
         </article>
       </section>
