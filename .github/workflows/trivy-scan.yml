@@ -24,6 +24,8 @@ jobs:
   trivy:
     name: Trivy scan — ${{ inputs.image-ref }}
     runs-on: ubuntu-latest
+    env:
+      SCAN_TAR: ${{ github.workspace }}/scan-image.tar
     permissions:
       contents: read
       actions: read
@@ -51,16 +53,18 @@ jobs:
           CONTEXT: ${{ inputs.context }}
           DOCKER_BUILDKIT: "0"
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           docker build -t "$IMAGE_REF" -f "$DOCKERFILE" "$CONTEXT"
-          docker save "$IMAGE_REF" -o "$GITHUB_WORKSPACE/scan-image.tar"
-          ls -lh "$GITHUB_WORKSPACE/scan-image.tar"
+          docker images "$IMAGE_REF"
+          docker save "$IMAGE_REF" -o "$SCAN_TAR"
+          ls -lh "$SCAN_TAR"
+          test -s "$SCAN_TAR"
 
       - name: Trivy scan (SARIF)
         run: |
-          set -euo pipefail
-          trivy image \
-            --input "$GITHUB_WORKSPACE/scan-image.tar" \
+          set -euxo pipefail
+          ls -lh "$SCAN_TAR"
+          trivy image --input "$SCAN_TAR" \
             --format sarif --output trivy-results.sarif \
             --exit-code 0 --ignore-unfixed \
             --pkg-types os,library --severity CRITICAL,HIGH \
@@ -78,8 +82,7 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          trivy image \
-            --input "$GITHUB_WORKSPACE/scan-image.tar" \
+          trivy image --input "$SCAN_TAR" \
             --format table \
             --exit-code 1 --ignore-unfixed \
             --pkg-types os,library --severity CRITICAL,HIGH \
@@ -87,7 +90,7 @@ jobs:
 
       - name: Cleanup tar
         if: always()
-        run: rm -f "$GITHUB_WORKSPACE/scan-image.tar"
+        run: rm -f "$SCAN_TAR"
 
       - name: Set result output
         id: set-result
