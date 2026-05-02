@@ -43,6 +43,8 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
 
       - name: Build image for scanning
         uses: docker/build-push-action@v5
@@ -52,8 +54,12 @@ jobs:
           push: false
           load: true
           tags: ${{ steps.normalize.outputs.image-ref }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+
+      - name: Verify image is loaded into local daemon
+        run: |
+          set -euo pipefail
+          docker image inspect "${{ steps.normalize.outputs.image-ref }}" >/dev/null
+          echo "OK: ${{ steps.normalize.outputs.image-ref }} is present in the local daemon."
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.35.0
