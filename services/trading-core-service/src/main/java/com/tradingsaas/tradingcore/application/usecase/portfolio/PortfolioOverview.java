@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public record PortfolioOverview(
         UUID userId,
-        BigDecimal initialCapital,
+        BigDecimal totalCapital,
         BigDecimal cash,
         BigDecimal realizedPnl,
         BigDecimal unrealizedPnl,

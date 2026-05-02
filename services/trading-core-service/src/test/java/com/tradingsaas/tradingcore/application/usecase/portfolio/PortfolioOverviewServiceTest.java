@@ -58,7 +58,7 @@ class PortfolioOverviewServiceTest {
         PortfolioOverview overview = service.getOverview(userId, "premium");
 
         assertEquals(userId, overview.userId());
-        assertEquals(BigDecimal.ZERO, overview.initialCapital());
+        assertEquals(new BigDecimal("220.00"), overview.totalCapital());
         assertEquals(BigDecimal.ZERO, overview.cash());
         assertEquals(0, overview.realizedPnl().compareTo(new BigDecimal("30.00")));
         assertEquals(0, overview.unrealizedPnl().compareTo(new BigDecimal("20.00")));
@@ -132,7 +132,7 @@ class PortfolioOverviewServiceTest {
         PortfolioOverview overview = service.getOverview(userId, "premium");
 
         assertEquals(userId, overview.userId());
-        assertEquals(BigDecimal.ZERO, overview.initialCapital());
+        assertEquals(BigDecimal.ZERO, overview.totalCapital());
         assertEquals(BigDecimal.ZERO, overview.cash());
         assertEquals(BigDecimal.ZERO, overview.realizedPnl());
         assertEquals(BigDecimal.ZERO, overview.equity());
@@ -151,14 +151,14 @@ class PortfolioOverviewServiceTest {
         PortfolioOverview overview = service.getOverview(userId, "premium");
 
         assertEquals(userId, overview.userId());
-        assertEquals(BigDecimal.ZERO, overview.initialCapital());
+        assertEquals(BigDecimal.ZERO, overview.totalCapital());
         assertEquals(BigDecimal.ZERO, overview.cash());
         assertEquals(BigDecimal.ZERO, overview.realizedPnl());
         assertEquals(BigDecimal.ZERO, overview.equity());
         assertTrue(overview.holdings().isEmpty());
     }
 
-    private static PortfolioJpaEntity portfolio(UUID userId, BigDecimal initialCapital) {
+    private static PortfolioJpaEntity portfolio(UUID userId, BigDecimal totalCapital) {
         UserJpaEntity user = new UserJpaEntity(
                 userId,
                 "user@example.com",
@@ -172,7 +172,7 @@ class PortfolioOverviewServiceTest {
         return new PortfolioJpaEntity(
                 UUID.fromString("33333333-3333-3333-3333-333333333333"),
                 user,
-                initialCapital,
+                totalCapital,
                 Instant.parse("2026-04-01T00:00:00Z"),
                 Instant.parse("2026-04-01T00:00:00Z"));
     }

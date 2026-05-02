@@ -105,13 +105,13 @@ class AddPortfolioPositionUseCaseImplTest {
         verify(portfolioRepository).save(portfolioCaptor.capture());
         verify(positionRepository).save(positionCaptor.capture());
 
-        assertEquals(0, portfolioCaptor.getValue().getInitialCapital().compareTo(new BigDecimal("25000")));
+        assertEquals(0, portfolioCaptor.getValue().getTotalCapital().compareTo(new BigDecimal("25000")));
         assertEquals(user, portfolioCaptor.getValue().getUser());
         assertEquals("MSFT", positionCaptor.getValue().getSymbolTicker());
         assertEquals(savedPortfolio, positionCaptor.getValue().getPortfolio());
     }
 
-    private static PortfolioJpaEntity portfolio(UUID userId, BigDecimal initialCapital) {
+    private static PortfolioJpaEntity portfolio(UUID userId, BigDecimal totalCapital) {
         UserJpaEntity user = new UserJpaEntity(
                 userId,
                 "user@example.com",
@@ -125,7 +125,7 @@ class AddPortfolioPositionUseCaseImplTest {
         return new PortfolioJpaEntity(
                 UUID.fromString("33333333-3333-3333-3333-333333333333"),
                 user,
-                initialCapital,
+                totalCapital,
                 Instant.parse("2026-04-01T00:00:00Z"),
                 Instant.parse("2026-04-01T00:00:00Z"));
     }
