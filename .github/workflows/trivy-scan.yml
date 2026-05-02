@@ -50,10 +50,16 @@ jobs:
           context: ${{ inputs.context }}
           file: ${{ inputs.dockerfile }}
           push: false
-          outputs: type=tar,dest=/tmp/scan-image.tar
+          load: true
           tags: ${{ steps.normalize.outputs.image-ref }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+
+      - name: Export image to tar
+        run: |
+          set -euo pipefail
+          docker create --name scan-helper "${{ steps.normalize.outputs.image-ref }}"
+          docker export scan-helper -o /tmp/scan-image.tar
+          docker rm -f scan-helper
+          echo "Exported $(du -h /tmp/scan-image.tar | cut -f1) image tar."
 
       - name: Verify image tar exists
         run: |
