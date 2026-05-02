@@ -29,7 +29,7 @@ public class PortfolioOverviewService {
     public PortfolioOverview getOverview(UUID userId, String plan) {
         return portfolioJpaRepository.findByUser_Id(userId)
                 .map(this::toOverview)
-                .orElseGet(() -> PortfolioOverview.empty(userId, defaultCapitalForPlan(plan)));
+                .orElseGet(() -> PortfolioOverview.empty(userId, BigDecimal.ZERO));
     }
 
     private PortfolioOverview toOverview(PortfolioJpaEntity portfolio) {

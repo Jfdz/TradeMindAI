@@ -12,10 +12,10 @@ import type {
 } from "@/lib/api-client";
 import type { DashboardCandle, DashboardPageData, EnrichedHolding, FilteredSignal } from "@/lib/dashboard/dashboard-api";
 import { buildHoldingTrend } from "@/lib/dashboard/dashboard-api";
+import { getSymbolColor } from "@/lib/dashboard/symbol-colors";
 import { buildSignalReasoning, signalTypeColor } from "@/lib/signal-utils";
 
 const API_BASE_URL = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
-const palette = ["#e8b84b", "#60a5fa", "#00d68f", "#ff4d6a", "#c084fc", "#f59e0b"];
 
 function formatAge(value: string) {
   const generatedAt = new Date(value).getTime();
@@ -218,7 +218,7 @@ export async function GET() {
       .sort((left, right) => new Date(right.generatedAt).getTime() - new Date(left.generatedAt).getTime());
 
     const holdings: EnrichedHolding[] = await Promise.all(
-      (portfolio.holdings ?? []).map(async (holding, index) => {
+      (portfolio.holdings ?? []).map(async (holding) => {
         const from = new Date();
         from.setUTCDate(from.getUTCDate() - 10);
         const history = await backendJson<PagedResponse<MarketPriceResponse>>(
@@ -231,7 +231,7 @@ export async function GET() {
           ...holding,
           name: symbolMap.get(holding.symbol)?.name ?? holding.symbol,
           sector: symbolMap.get(holding.symbol)?.sector ?? "Portfolio holding",
-          color: palette[index % palette.length],
+          color: getSymbolColor(holding.symbol),
           trend: buildHoldingTrend(history.content ?? [], holding.lastPrice),
         };
       })

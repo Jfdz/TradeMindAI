@@ -83,8 +83,8 @@ class PortfolioOverviewServiceTest {
         PortfolioOverview overview = service.getOverview(userId, "premium");
 
         assertEquals(userId, overview.userId());
-        assertEquals(0, overview.initialCapital().compareTo(new BigDecimal("100000")));
-        assertEquals(0, overview.cash().compareTo(new BigDecimal("100000")));
+        assertEquals(BigDecimal.ZERO, overview.initialCapital());
+        assertEquals(BigDecimal.ZERO, overview.cash());
         assertEquals(BigDecimal.ZERO, overview.realizedPnl());
         assertTrue(overview.holdings().isEmpty());
     }

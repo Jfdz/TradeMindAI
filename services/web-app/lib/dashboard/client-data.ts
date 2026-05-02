@@ -15,8 +15,7 @@ import {
   type FilteredSignal,
 } from "@/lib/dashboard/dashboard-api";
 import { buildSignalReasoning } from "@/lib/signal-utils";
-
-const palette = ["#e8b84b", "#60a5fa", "#00d68f", "#ff4d6a", "#c084fc", "#f59e0b"];
+import { getSymbolColor } from "@/lib/dashboard/symbol-colors";
 
 function formatAge(value: string) {
   const generatedAt = new Date(value).getTime();
@@ -176,7 +175,7 @@ export async function fetchPortfolioPageData(): Promise<PortfolioPageData> {
   const symbolMap = new Map<string, MarketSymbolResponse>(symbolResponse.content.map((symbol) => [symbol.ticker, symbol]));
 
   const holdings = await Promise.all(
-    portfolio.holdings.map(async (holding, index) => {
+    portfolio.holdings.map(async (holding) => {
       const symbol = symbolMap.get(holding.symbol);
       const from = new Date();
       from.setUTCDate(from.getUTCDate() - 10);
@@ -191,7 +190,7 @@ export async function fetchPortfolioPageData(): Promise<PortfolioPageData> {
         ...holding,
         name: symbol?.name ?? holding.symbol,
         sector: symbol?.sector ?? "Portfolio holding",
-        color: palette[index % palette.length],
+        color: getSymbolColor(holding.symbol),
         trend: buildHoldingTrend(history.content, holding.lastPrice),
       };
     })
