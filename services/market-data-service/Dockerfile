@@ -8,7 +8,7 @@ COPY src ./src
 RUN mvn package -DskipTests -q
 
 # Stage 2: Runtime
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21.0.5-jre-alpine
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
