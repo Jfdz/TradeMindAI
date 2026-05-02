@@ -78,18 +78,19 @@ export default function DashboardHomePage() {
     return `Good morning, ${name}`;
   }, [session?.user?.name]);
 
-  const summaryCards = useMemo(() => {
+const summaryCards = useMemo(() => {
     if (!portfolio) {
       return [];
     }
 
     const liveSignals = signals.filter((signal: FilteredSignal) => signal.live).length;
+    const totalCapital = portfolio.totalCapital ?? 0;
 
     return [
-      { label: "Portfolio Value", value: formatMoney(portfolio.totalCapital), detail: "Marked to market", tone: "text-green" },
+      { label: "Portfolio Value", value: formatMoney(totalCapital), detail: "Marked to market", tone: "text-green" },
       { label: "Open Positions", value: `${holdings.length}`, detail: "Backend portfolio book", tone: "text-white" },
       { label: "Live Signals", value: `${liveSignals}`, detail: `${signals.length} total signals`, tone: "text-cyan" },
-      { label: "Unrealized P&L", value: formatSignedMoney(portfolio.unrealizedPnl), detail: "Open position gains", tone: "text-green" },
+      { label: "Unrealized P&L", value: formatSignedMoney(portfolio.unrealizedPnl ?? 0), detail: "Open position gains", tone: "text-green" },
     ];
   }, [holdings.length, portfolio, signals]);
 
