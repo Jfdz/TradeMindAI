@@ -44,6 +44,7 @@ jobs:
       - name: Build image for scanning
         run: |
           set -euo pipefail
+          export DOCKER_BUILDKIT=0
           docker build -t "${{ steps.normalize.outputs.image-ref }}" -f "${{ inputs.dockerfile }}" "${{ inputs.context }}"
           docker save "${{ steps.normalize.outputs.image-ref }}" -o /tmp/scan-image.tar
           echo "Built and saved $(du -h /tmp/scan-image.tar | cut -f1) tar."
