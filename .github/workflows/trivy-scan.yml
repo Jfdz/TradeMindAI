@@ -46,23 +46,23 @@ jobs:
           set -euo pipefail
           export DOCKER_BUILDKIT=0
           docker build -t "${{ steps.normalize.outputs.image-ref }}" -f "${{ inputs.dockerfile }}" "${{ inputs.context }}"
-          echo "Built ${{ steps.normalize.outputs.image-ref }}"
+          docker save "${{ steps.normalize.outputs.image-ref }}" -o "$GITHUB_WORKSPACE/scan-image.tar"
+          ls -lh "$GITHUB_WORKSPACE/scan-image.tar"
+
+      - name: Debug: check image and tar
+        run: |
+          set -euo pipefail
+          docker images
+          du -h "$GITHUB_WORKSPACE/scan-image.tar"
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          image-ref: ${{ steps.normalize.outputs.image-ref }}
-          version: v0.69.3
-          format: sarif
-          output: trivy-results.sarif
-          exit-code: '0'
-          ignore-unfixed: true
-          vuln-type: os,library
-          limit-severities-for-sarif: true
-          # Fail on CRITICAL or HIGH — MEDIUM/LOW are reported but non-blocking
-          severity: CRITICAL,HIGH
-          trivyignores: .trivyignore
-          token-setup-trivy: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          trivy image --input "$GITHUB_WORKSPACE/scan-image.tar" \
+            --format sarif --output trivy-results.sarif \
+            --exit-code 0 --ignore-unfixed --vuln-type os,library \
+            --severity CRITICAL,HIGH --ignorefile .trivyignore \
+            --skip-version-check
 
       - name: Upload Trivy SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4
@@ -73,18 +73,16 @@ jobs:
           category: trivy-${{ steps.normalize.outputs.image-ref }}
 
       - name: Run Trivy for human-readable table output
-        uses: aquasecurity/trivy-action@0.35.0
         if: always()
-        with:
-          image-ref: ${{ steps.normalize.outputs.image-ref }}
-          version: v0.69.3
-          format: table
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: os,library
-          severity: CRITICAL,HIGH
-          trivyignores: .trivyignore
-          token-setup-trivy: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          trivy image --input "$GITHUB_WORKSPACE/scan-image.tar" \
+            --format table --exit-code 1 --ignore-unfixed --vuln-type os,library \
+            --severity CRITICAL,HIGH --ignorefile .trivyignore \
+            --skip-version-check
+
+      - name: Cleanup tar
+        run: rm -f "$GITHUB_WORKSPACE/scan-image.tar"
 
       - name: Set result output
         id: set-result
