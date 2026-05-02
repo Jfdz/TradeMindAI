@@ -27,7 +27,7 @@ public class PortfolioOverviewService {
         this.historicalMarketDataPort = historicalMarketDataPort;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public PortfolioOverview getOverview(UUID userId, String plan) {
         return portfolioJpaRepository.findByUser_Id(userId)
                 .map(this::toOverview)
@@ -126,9 +126,13 @@ public class PortfolioOverviewService {
 
         BigDecimal equity = (pricedPositionCount > 0) ? totalMarketValue : ZERO;
 
+        // Persist the recomputed totalCapital to the database
+        portfolio.setTotalCapital(totalMarketValue);
+        portfolioJpaRepository.save(portfolio);
+
         return new PortfolioOverview(
                 portfolio.getUser().getId(),
-                ZERO,
+                totalMarketValue,
                 ZERO,
                 realizedPnl,
                 unrealizedPnl,
