@@ -84,11 +84,12 @@ public class PortfolioOverviewService {
             ));
         }
 
+        final BigDecimal finalTotalMarketValue = totalMarketValue;
         List<PortfolioHoldingOverview> normalizedHoldings = holdings.stream()
                 .map(holding -> {
                     BigDecimal mv = holding.marketValue();
-                    Double pct = (totalMarketValue != null && totalMarketValue.signum() > 0 && mv != null)
-                            ? percentage(mv, totalMarketValue)
+                    Double pct = (finalTotalMarketValue != null && finalTotalMarketValue.signum() > 0 && mv != null)
+                            ? percentage(mv, finalTotalMarketValue)
                             : 0.0;
                     return new PortfolioHoldingOverview(
                             holding.symbol(),
