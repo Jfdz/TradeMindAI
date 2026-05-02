@@ -50,16 +50,16 @@ jobs:
           context: ${{ inputs.context }}
           file: ${{ inputs.dockerfile }}
           push: false
-          load: true
+          outputs: type=tar,dest=/tmp/scan-image.tar
           tags: ${{ steps.normalize.outputs.image-ref }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Export image to tar for scanning
+      - name: Verify image tar exists
         run: |
           set -euo pipefail
-          docker save "${{ steps.normalize.outputs.image-ref }}" -o /tmp/scan-image.tar
-          echo "Exported $(du -sh /tmp/scan-image.tar | cut -f1) image tar for Trivy."
+          ls -la /tmp/scan-image.tar
+          echo "Image tar ready for scanning."
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.35.0
