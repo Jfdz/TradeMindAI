@@ -86,7 +86,7 @@ export default function DashboardHomePage() {
     const liveSignals = signals.filter((signal: FilteredSignal) => signal.live).length;
 
     return [
-      { label: "Portfolio Value", value: formatMoney(portfolio.equity), detail: "Marked to market", tone: "text-green" },
+      { label: "Portfolio Value", value: formatMoney(portfolio.totalCapital), detail: "Marked to market", tone: "text-green" },
       { label: "Open Positions", value: `${holdings.length}`, detail: "Backend portfolio book", tone: "text-white" },
       { label: "Live Signals", value: `${liveSignals}`, detail: `${signals.length} total signals`, tone: "text-cyan" },
       { label: "Unrealized P&L", value: formatSignedMoney(portfolio.unrealizedPnl), detail: "Open position gains", tone: "text-green" },
