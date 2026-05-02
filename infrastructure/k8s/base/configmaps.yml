@@ -58,3 +58,4 @@ data:
   PORT: "3000"
   nextauth-url: https://trademind.es
   api-base-url: https://api.trademind.es
+  api-base-url-internal: http://trading-core-service.trading-saas.svc.cluster.local:8082
