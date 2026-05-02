@@ -25,6 +25,13 @@ function formatSignedMoney(value: number) {
   return value >= 0 ? `+${formatted}` : `-${formatted}`;
 }
 
+function getDonutTextClass(value: number) {
+  const length = formatMoney(value).length;
+  if (length <= 8) return "mt-3 font-display text-3xl font-bold tracking-[-0.05em] text-white";
+  if (length <= 11) return "mt-3 font-display text-2xl font-bold tracking-[-0.05em] text-white";
+  return "mt-3 font-display text-xl font-bold tracking-[-0.05em] text-white";
+}
+
 function Sparkline({ values, color }: { values: number[]; color: string }) {
   if (values.length === 0) {
     return null;
@@ -161,13 +168,13 @@ export default function PortfolioPage() {
   });
   const portfolio = data?.portfolio ?? null;
   const holdings = data?.holdings ?? EMPTY_HOLDINGS;
+  const totalValue = holdings.reduce((sum, h) => sum + (h.marketValue ?? 0), 0);
 
   const summary = useMemo(() => {
     if (!portfolio) {
       return null;
     }
 
-    const totalValue = holdings.reduce((sum, h) => sum + (h.marketValue ?? 0), 0);
     const totalCost = holdings.reduce((sum, h) => sum + (h.quantity * h.averageCost), 0);
     const unpricedCount = holdings.filter((h) => h.lastPrice == null).length;
 
@@ -198,7 +205,7 @@ export default function PortfolioPage() {
         detail: "Position-level",
       },
     ];
-  }, [portfolio]);
+  }, [portfolio, holdings, totalValue]);
 
   const allocationGradient = useMemo(() => {
     if (!holdings.length) {
@@ -274,15 +281,13 @@ export default function PortfolioPage() {
           <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">Allocation donut</h3>
 
           <div className="mt-8 flex items-center justify-center">
-            <div className="relative h-48 w-48 rounded-full" style={{ background: `conic-gradient(${allocationGradient})` }}>
-              <div className="absolute inset-5 rounded-full border border-border bg-bg-0/95 p-5 text-center">
+            <div className="relative h-56 w-56 rounded-full" style={{ background: `conic-gradient(${allocationGradient})` }}>
+              <div className="absolute inset-4 rounded-full border border-border bg-bg-0/95 p-3 text-center">
                 <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Portfolio</div>
-                <div className="mt-4 font-display text-3xl font-bold tracking-[-0.05em] text-white">
-                  {holdings.reduce((sum, h) => sum + (h.marketValue ?? 0), 0) > 0
-                    ? formatMoney(holdings.reduce((sum, h) => sum + (h.marketValue ?? 0), 0))
-                    : "—"}
+                <div className={getDonutTextClass(totalValue)}>
+                  {totalValue > 0 ? formatMoney(totalValue) : "—"}
                 </div>
-                <div className="mt-2 text-sm text-text-2">
+                <div className="mt-2 text-sm text-text-2 whitespace-nowrap">
                   Realized {formatSignedMoney(portfolio.realizedPnl)}
                 </div>
               </div>
