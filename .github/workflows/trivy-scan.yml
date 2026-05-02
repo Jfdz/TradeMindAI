@@ -43,8 +43,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          driver: docker
 
       - name: Build image for scanning
         uses: docker/build-push-action@v5
@@ -55,16 +53,16 @@ jobs:
           load: true
           tags: ${{ steps.normalize.outputs.image-ref }}
 
-      - name: Verify image loaded
+      - name: Save image to tar
         run: |
           set -euo pipefail
-          docker image inspect "${{ steps.normalize.outputs.image-ref }}"
-          echo "Image loaded in daemon."
+          docker save "${{ steps.normalize.outputs.image-ref }}" -o /tmp/scan-image.tar
+          echo "Saved $(du -h /tmp/scan-image.tar | cut -f1) tar."
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.35.0
         with:
-          image-ref: ${{ steps.normalize.outputs.image-ref }}
+          input: /tmp/scan-image.tar
           version: v0.69.3
           format: sarif
           output: trivy-results.sarif
@@ -89,7 +87,7 @@ jobs:
         uses: aquasecurity/trivy-action@0.35.0
         if: always()
         with:
-          image-ref: ${{ steps.normalize.outputs.image-ref }}
+          input: /tmp/scan-image.tar
           version: v0.69.3
           format: table
           exit-code: '1'
