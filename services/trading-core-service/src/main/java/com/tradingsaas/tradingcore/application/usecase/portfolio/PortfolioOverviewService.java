@@ -52,7 +52,7 @@ public class PortfolioOverviewService {
 
         List<PortfolioHoldingOverview> holdings = new ArrayList<>();
         BigDecimal costBasis = ZERO;
-        BigDecimal marketValue = ZERO;
+        BigDecimal totalMarketValue = ZERO;
         int pricedPositionCount = 0;
 
         for (PortfolioPositionJpaEntity position : openPositions) {
@@ -65,7 +65,7 @@ public class PortfolioOverviewService {
             BigDecimal pnl = (positionValue != null) ? positionValue.subtract(positionCost) : null;
 
             if (positionValue != null && currentPrice != null) {
-                marketValue = marketValue.add(positionValue);
+                totalMarketValue = totalMarketValue.add(positionValue);
                 pricedPositionCount++;
             }
             costBasis = costBasis.add(positionCost);
@@ -86,10 +86,9 @@ public class PortfolioOverviewService {
 
         List<PortfolioHoldingOverview> normalizedHoldings = holdings.stream()
                 .map(holding -> {
-                    BigDecimal totalValue = marketValue;
                     BigDecimal mv = holding.marketValue();
-                    Double pct = (totalValue != null && totalValue.signum() > 0 && mv != null)
-                            ? percentage(mv, totalValue)
+                    Double pct = (totalMarketValue != null && totalMarketValue.signum() > 0 && mv != null)
+                            ? percentage(mv, totalMarketValue)
                             : 0.0;
                     return new PortfolioHoldingOverview(
                             holding.symbol(),
@@ -107,7 +106,7 @@ public class PortfolioOverviewService {
                 .toList();
 
         BigDecimal unrealizedPnl = (pricedPositionCount > 0)
-                ? marketValue.subtract(costBasis)
+                ? totalMarketValue.subtract(costBasis)
                 : ZERO;
 
         double winRate = normalizedHoldings.isEmpty()
@@ -124,7 +123,7 @@ public class PortfolioOverviewService {
                         .subtract(p.getFees()))
                 .reduce(ZERO, BigDecimal::add);
 
-        BigDecimal equity = (pricedPositionCount > 0) ? marketValue : ZERO;
+        BigDecimal equity = (pricedPositionCount > 0) ? totalMarketValue : ZERO;
 
         return new PortfolioOverview(
                 portfolio.getUser().getId(),
