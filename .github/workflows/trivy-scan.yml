@@ -90,7 +90,7 @@ jobs:
           category: trivy-${{ steps.normalize.outputs.image-ref }}
 
       - name: Trivy scan (table, gating)
-        if: always()
+        if: success()
         run: |
           set -euxo pipefail
           trivy image --input "$SCAN_TAR" \

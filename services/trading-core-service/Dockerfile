@@ -10,7 +10,7 @@ COPY src ./src
 RUN mvn package -DskipTests -q
 
 # Stage 2: Runtime
-FROM eclipse-temurin:21.0.5-jre
+FROM eclipse-temurin:21.0.5_11-jre-noble
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser && \
     apt-get update && apt-get install -y curl --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
