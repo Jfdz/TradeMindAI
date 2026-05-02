@@ -46,13 +46,12 @@ jobs:
           set -euo pipefail
           export DOCKER_BUILDKIT=0
           docker build -t "${{ steps.normalize.outputs.image-ref }}" -f "${{ inputs.dockerfile }}" "${{ inputs.context }}"
-          docker save "${{ steps.normalize.outputs.image-ref }}" -o /tmp/scan-image.tar
-          echo "Built and saved $(du -h /tmp/scan-image.tar | cut -f1) tar."
+          echo "Built ${{ steps.normalize.outputs.image-ref }}"
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.35.0
         with:
-          input: /tmp/scan-image.tar
+          image-ref: ${{ steps.normalize.outputs.image-ref }}
           version: v0.69.3
           format: sarif
           output: trivy-results.sarif
@@ -77,7 +76,7 @@ jobs:
         uses: aquasecurity/trivy-action@0.35.0
         if: always()
         with:
-          input: /tmp/scan-image.tar
+          image-ref: ${{ steps.normalize.outputs.image-ref }}
           version: v0.69.3
           format: table
           exit-code: '1'
