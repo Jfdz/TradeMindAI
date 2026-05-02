@@ -12,7 +12,7 @@ import type {
 } from "@/lib/api-client";
 import type { DashboardCandle, DashboardPageData, EnrichedHolding, FilteredSignal } from "@/lib/dashboard/dashboard-api";
 import { buildHoldingTrend } from "@/lib/dashboard/dashboard-api";
-import { getSymbolColor } from "@/lib/dashboard/symbol-colors";
+import { assignSymbolColors } from "@/lib/dashboard/symbol-colors";
 import { buildSignalReasoning, signalTypeColor } from "@/lib/signal-utils";
 
 const API_BASE_URL = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
@@ -217,6 +217,8 @@ export async function GET() {
       .map((signal) => deriveSignal(signal, latestPriceBySymbol.get(signal.symbol) ?? null))
       .sort((left, right) => new Date(right.generatedAt).getTime() - new Date(left.generatedAt).getTime());
 
+    const colorMap = assignSymbolColors((portfolio.holdings ?? []).map((h) => h.symbol));
+
     const holdings: EnrichedHolding[] = await Promise.all(
       (portfolio.holdings ?? []).map(async (holding) => {
         const from = new Date();
@@ -231,7 +233,7 @@ export async function GET() {
           ...holding,
           name: symbolMap.get(holding.symbol)?.name ?? holding.symbol,
           sector: symbolMap.get(holding.symbol)?.sector ?? "Portfolio holding",
-          color: getSymbolColor(holding.symbol),
+          color: colorMap.get(holding.symbol)!,
           trend: buildHoldingTrend(history.content ?? [], holding.lastPrice),
         };
       })
