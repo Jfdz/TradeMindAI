@@ -1,9 +1,9 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
 import { ArrowRightIcon } from "@/components/site/icons";
@@ -95,6 +95,33 @@ export default function DashboardHomePage() {
 
   const topSignal = signals[0] ?? null;
 
+  const [generateResult, setGenerateResult] = useState<string | null>(null);
+  const generateSignals = useMutation({
+    mutationFn: async () => {
+      const tickers = Array.from(
+        new Set([
+          ...signals.map((s: FilteredSignal) => s.symbol),
+          ...holdings.map((h: EnrichedHolding) => h.symbol),
+        ])
+      );
+      const response = await fetch("/api/admin/generate-signals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tickers: tickers.length > 0 ? tickers : ["AAPL", "MSFT", "GOOGL"] }),
+      });
+      if (!response.ok) {
+        const err = (await response.json().catch(() => ({}))) as { message?: string };
+        throw new Error(err.message ?? `Error ${response.status}`);
+      }
+      return response.json() as Promise<{ predictions: { ticker: string; direction: string }[] }>;
+    },
+    onSuccess: (result) => {
+      const count = result.predictions?.length ?? 0;
+      setGenerateResult(`${count} signal${count !== 1 ? "s" : ""} generated`);
+      setTimeout(() => setGenerateResult(null), 5000);
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="space-y-8">
@@ -142,6 +169,25 @@ export default function DashboardHomePage() {
               You have {signals.length} signals in the backend feed, {holdings.length} open positions, and a live book
               that is now fully tied to the tradeMindAI data model.
             </p>
+            {session?.isAdmin && (
+              <div className="mt-4 flex items-center gap-3">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={generateSignals.isPending}
+                  onClick={() => generateSignals.mutate()}
+                  className="border-cyan/30 text-cyan hover:bg-cyan/10"
+                >
+                  {generateSignals.isPending ? "Generating…" : "Generate Signals"}
+                </Button>
+                {generateSignals.isError && (
+                  <span className="text-xs text-red">
+                    {generateSignals.error instanceof Error ? generateSignals.error.message : "Failed"}
+                  </span>
+                )}
+                {generateResult && <span className="text-xs text-green">{generateResult}</span>}
+              </div>
+            )}
           </div>
           <div className="rounded-3xl border border-border bg-bg-2 px-5 py-4">
             <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Market clock</div>

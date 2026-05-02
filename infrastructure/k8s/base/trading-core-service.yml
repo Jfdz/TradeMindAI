@@ -87,6 +87,11 @@ spec:
                 secretKeyRef:
                   name: jwt-secret
                   key: secret
+            - name: AI_ENGINE_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-core-service-config
+                  key: AI_ENGINE_SERVICE_URL
             - name: MARKET_DATA_INTERNAL_SECRET
               valueFrom:
                 secretKeyRef:

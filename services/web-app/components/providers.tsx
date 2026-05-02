@@ -1,11 +1,21 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { SessionProvider } from "next-auth/react";
+import { SessionProvider, signOut, useSession } from "next-auth/react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ThemeHydrator } from "@/components/theme/theme-hydrator";
+
+function SessionWatcher() {
+  const { data: session } = useSession();
+  useEffect(() => {
+    if (session?.error === "RefreshAccessTokenError") {
+      signOut({ callbackUrl: "/auth/login" });
+    }
+  }, [session?.error]);
+  return null;
+}
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -23,6 +33,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <SessionProvider>
+      <SessionWatcher />
       <QueryClientProvider client={queryClient}>
         <ThemeHydrator />
         {children}

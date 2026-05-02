@@ -34,13 +34,16 @@ describe("authOptions", () => {
         body: JSON.stringify({ email: "user@example.com", password: "secret" }),
       }),
     );
-    expect(user).toEqual({
-      id: "user@example.com",
-      email: "user@example.com",
-      name: "user@example.com",
-      accessToken: "access-123",
-      refreshToken: "refresh-123",
-    });
+    expect(user).toEqual(
+      expect.objectContaining({
+        id: "user@example.com",
+        email: "user@example.com",
+        name: "user@example.com",
+        accessToken: "access-123",
+        refreshToken: "refresh-123",
+      }),
+    );
+    expect((user as { accessTokenExpires?: number }).accessTokenExpires).toBeGreaterThan(Date.now());
   });
 
   it("returns null when backend login fails", async () => {
