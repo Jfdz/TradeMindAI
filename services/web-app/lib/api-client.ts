@@ -98,7 +98,7 @@ export type PortfolioHoldingResponse = {
   lastPrice: number | null;
   marketValue: number | null;
   unrealizedPnl: number | null;
-  allocationPct: number;
+  allocationPct: number | null;
   status: string;
   openedAt?: string;
   closedAt?: string | null;
@@ -121,15 +121,17 @@ export type ClosePositionPayload = {
 
 export type PortfolioOverviewResponse = {
   userId: string;
-  totalCapital: number;
+  totalCapital: number | null;
   cash: number;
   realizedPnl: number;
-  unrealizedPnl: number;
-  equity: number;
-  winRate: number;
-  dataSource: string;
+  unrealizedPnl: number | null;
+  equity: number | null;
+  winRate: number | null;
+  dataSource: DataSource;
   holdings: PortfolioHoldingResponse[];
 };
+
+export type DataSource = "market-data" | "partial-market-data" | "unavailable" | "none" | "missing-portfolio";
 
 export type MarketPriceResponse = {
   ticker: string;

@@ -125,14 +125,14 @@ class PortfolioController {
 
     // ── response DTOs ────────────────────────────────────────────────────────
 
-    record PortfolioOverviewResponse(
+record PortfolioOverviewResponse(
             UUID userId,
             BigDecimal totalCapital,
             BigDecimal cash,
             BigDecimal realizedPnl,
             BigDecimal unrealizedPnl,
             BigDecimal equity,
-            double winRate,
+            Double winRate,
             String dataSource,
             List<PortfolioHoldingResponse> holdings) {
 
@@ -158,7 +158,7 @@ class PortfolioController {
             BigDecimal lastPrice,
             BigDecimal marketValue,
             BigDecimal unrealizedPnl,
-            double allocationPct,
+            Double allocationPct,
             String status,
             Instant openedAt,
             Instant closedAt) {
