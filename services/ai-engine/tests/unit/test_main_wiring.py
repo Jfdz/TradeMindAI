@@ -27,8 +27,9 @@ class _FakePredictionService:
 
 
 class _FakeMarketDataClient:
-    def __init__(self, base_url):
+    def __init__(self, base_url, internal_secret="", timeout=10.0):
         self.base_url = base_url
+        self.internal_secret = internal_secret
 
     def fetch_ohlcv(self, ticker):
         return pd.DataFrame({"ticker": [ticker], "close": [123.45]})
@@ -91,6 +92,8 @@ async def test_make_market_data_trigger_fetches_predictions_and_publishes(monkey
     settings = SimpleNamespace(
         rabbitmq_url="amqp://guest:guest@localhost",
         market_data_service_url="http://market-data-service:8081",
+        market_data_internal_secret="market-secret",
+        internal_secret="internal-secret",
     )
     ai_main.app.state.prediction_service = service
     ai_main.app.state.model_loaded = True

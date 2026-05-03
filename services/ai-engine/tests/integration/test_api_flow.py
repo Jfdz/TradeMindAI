@@ -88,6 +88,57 @@ def test_predict_endpoint_returns_service_output(client, monkeypatch):
     assert ai_main.app.state.prediction_service.calls[0][0] == "AAPL"
 
 
+def test_predict_publish_endpoint_publishes_and_returns_predictions(client, monkeypatch):
+    published_payloads = []
+
+    async def fake_publish(rabbitmq_url, payload):
+        published_payloads.append((rabbitmq_url, payload))
+
+    ai_main.app.state.model_loaded = True
+    ai_main.app.state.prediction_service = _PredictionService()
+    ai_main.app.state.rabbitmq_url = "amqp://guest:guest@localhost"
+    ai_main.app.state.publish_predictions = fake_publish
+    monkeypatch.setattr(
+        prediction_router,
+        "_fetch_ohlcv",
+        lambda ticker: pd.DataFrame({"close": [101.0, 102.0, 103.0]}),
+    )
+
+    response = client.post(
+        "/api/v1/predict/publish",
+        json={"tickers": ["AAPL", "MSFT"]},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload["predictions"]) == 2
+    assert payload["predictions"][0]["ticker"] == "AAPL"
+    assert published_payloads == [
+        (
+            "amqp://guest:guest@localhost",
+            {
+                "tickers": ["AAPL", "MSFT"],
+                "predictions": [
+                    {
+                        "ticker": "AAPL",
+                        "direction": "UP",
+                        "confidence": 0.93,
+                        "predicted_change_pct": 1.5,
+                        "raw_logits": [0.05, 0.1, 0.85],
+                    },
+                    {
+                        "ticker": "MSFT",
+                        "direction": "UP",
+                        "confidence": 0.93,
+                        "predicted_change_pct": 1.5,
+                        "raw_logits": [0.05, 0.1, 0.85],
+                    },
+                ],
+            },
+        )
+    ]
+
+
 def test_training_flow_completes(client, monkeypatch):
     import numpy as np
     import pandas as pd

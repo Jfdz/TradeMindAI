@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     cors_allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     market_data_service_url: str = "http://market-data-service:8081"
     internal_secret: str = ""
+    market_data_internal_secret: str = ""
 
     def parsed_cors_allowed_origins(self) -> list[str]:
         return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]

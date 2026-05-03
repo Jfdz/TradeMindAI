@@ -139,7 +139,10 @@ def _make_sync_predict(app: FastAPI):
             return []
         try:
             settings = get_settings()
-            client = MarketDataClient(settings.market_data_service_url)
+            client = MarketDataClient(
+                settings.market_data_service_url,
+                internal_secret=settings.market_data_internal_secret or settings.internal_secret,
+            )
             pairs = []
             for ticker in tickers:
                 try:
@@ -191,7 +194,10 @@ def _make_market_data_trigger(app: FastAPI, settings):
             return
 
         svc = app.state.prediction_service
-        client = MarketDataClient(settings.market_data_service_url)
+        client = MarketDataClient(
+            settings.market_data_service_url,
+            internal_secret=settings.market_data_internal_secret or settings.internal_secret,
+        )
 
         pairs = []
         for ticker in symbols:

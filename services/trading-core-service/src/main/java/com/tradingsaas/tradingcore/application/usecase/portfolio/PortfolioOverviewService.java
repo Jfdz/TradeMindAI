@@ -8,8 +8,10 @@ import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort.Late
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +60,15 @@ public class PortfolioOverviewService {
                     portfolio.getUser().getId(), tickers, latestPricesResult.reason());
         }
         Map<String, BigDecimal> latestPrices = latestPricesResult.prices();
+        Set<String> returnedTickers = new LinkedHashSet<>(latestPrices.keySet());
+        Set<String> missingTickers = tickers.stream()
+                .filter(ticker -> !returnedTickers.contains(ticker))
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+
+        if (latestPricesResult.available()) {
+            log.info("Portfolio pricing lookup userId={} requestedTickers={} returnedTickers={} missingTickers={}",
+                    portfolio.getUser().getId(), tickers, returnedTickers, missingTickers);
+        }
 
         List<PortfolioHoldingOverview> holdings = new ArrayList<>();
         BigDecimal pricedCostBasis = ZERO;
@@ -137,9 +148,10 @@ public class PortfolioOverviewService {
                 .reduce(ZERO, BigDecimal::add);
 
         BigDecimal equity = (pricedPositionCount > 0) ? totalMarketValue : ZERO;
+        String dataSource = resolveDataSource(latestPricesResult, missingTickers);
 
-        // Only persist when the upstream call succeeded and at least one position was priced.
-        if (latestPricesResult.available() && pricedPositionCount > 0) {
+        // Only persist when all requested prices were available and at least one position was priced.
+        if ("market-data".equals(dataSource) && pricedPositionCount > 0) {
             portfolio.setTotalCapital(totalMarketValue);
             portfolioJpaRepository.save(portfolio);
         }
@@ -152,9 +164,19 @@ public class PortfolioOverviewService {
                 unrealizedPnl,
                 equity,
                 winRate,
-                latestPricesResult.available() ? "market-data" : "unavailable",
+                dataSource,
                 normalizedHoldings
         );
+    }
+
+    private static String resolveDataSource(LatestPricesResult latestPricesResult, Set<String> missingTickers) {
+        if (!latestPricesResult.available()) {
+            return "unavailable";
+        }
+        if (!missingTickers.isEmpty()) {
+            return "partial-market-data";
+        }
+        return "market-data";
     }
 
     private static double percentage(BigDecimal value, BigDecimal basis) {

@@ -142,7 +142,7 @@ export type MarketPriceResponse = {
     close: number;
     volume: number;
   };
-  adjustedClose: number;
+  adjustedClose: number | null;
 };
 
 export type MarketSymbolResponse = {
