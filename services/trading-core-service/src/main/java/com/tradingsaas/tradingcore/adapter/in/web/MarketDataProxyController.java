@@ -41,9 +41,13 @@ public class MarketDataProxyController {
 
     @GetMapping("/prices/latest")
     LatestPricesResponse latestPrices(
-            @RequestParam List<String> tickers,
+            @RequestParam(required = false) List<String> tickers,
+            @RequestParam(required = false) List<String> symbols,
             @RequestParam(defaultValue = "DAILY") String timeframe) {
-        return marketDataServiceAdapter.fetchLatestPrices(tickers, timeframe);
+        List<String> requestedTickers = symbols != null && !symbols.isEmpty() ? symbols : tickers;
+        return marketDataServiceAdapter.fetchLatestPrices(
+                requestedTickers == null ? List.of() : requestedTickers,
+                timeframe);
     }
 
     @GetMapping("/prices/{ticker}/history")

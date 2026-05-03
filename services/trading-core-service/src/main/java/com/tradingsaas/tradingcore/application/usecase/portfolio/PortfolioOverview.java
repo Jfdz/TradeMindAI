@@ -12,6 +12,7 @@ public record PortfolioOverview(
         BigDecimal unrealizedPnl,
         BigDecimal equity,
         double winRate,
+        String dataSource,
         List<PortfolioHoldingOverview> holdings
 ) {
 
@@ -24,6 +25,7 @@ public record PortfolioOverview(
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
                 0.0,
+                hasPortfolio ? "none" : "missing-portfolio",
                 List.of()
         );
     }

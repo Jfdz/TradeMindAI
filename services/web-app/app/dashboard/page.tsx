@@ -84,13 +84,25 @@ const summaryCards = useMemo(() => {
     }
 
     const liveSignals = signals.filter((signal: FilteredSignal) => signal.live).length;
-    const totalCapital = portfolio.totalCapital ?? 0;
+    const marketDataUnavailable = portfolio.dataSource === "unavailable";
+    const totalCapital = marketDataUnavailable ? null : (portfolio.totalCapital ?? 0);
+    const unrealizedPnl = marketDataUnavailable ? null : (portfolio.unrealizedPnl ?? 0);
 
     return [
-      { label: "Portfolio Value", value: formatMoney(totalCapital), detail: "Marked to market", tone: "text-green" },
+      {
+        label: "Portfolio Value",
+        value: totalCapital != null ? formatMoney(totalCapital) : "N/A",
+        detail: marketDataUnavailable ? "Market data unavailable" : "Marked to market",
+        tone: "text-green",
+      },
       { label: "Open Positions", value: `${holdings.length}`, detail: "Backend portfolio book", tone: "text-white" },
       { label: "Live Signals", value: `${liveSignals}`, detail: `${signals.length} total signals`, tone: "text-cyan" },
-      { label: "Unrealized P&L", value: formatSignedMoney(portfolio.unrealizedPnl ?? 0), detail: "Open position gains", tone: "text-green" },
+      {
+        label: "Unrealized P&L",
+        value: unrealizedPnl != null ? formatSignedMoney(unrealizedPnl) : "N/A",
+        detail: marketDataUnavailable ? "Market data unavailable" : "Open position gains",
+        tone: "text-green",
+      },
     ];
   }, [holdings.length, portfolio, signals]);
 
@@ -335,9 +347,15 @@ const summaryCards = useMemo(() => {
                     </td>
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">{position.quantity}</td>
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.averageCost)}</td>
-                    <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.lastPrice)}</td>
-                    <td className={`border-t border-border px-4 py-4 font-mono ${pnl >= 0 ? "text-green" : "text-red"}`}>
-                      {formatSignedMoney(pnl)}
+                    <td className="border-t border-border px-4 py-4 font-mono text-text-1">
+                      {position.lastPrice != null ? formatMoney(position.lastPrice) : "N/A"}
+                    </td>
+                    <td
+                      className={`border-t border-border px-4 py-4 font-mono ${
+                        pnl != null && pnl >= 0 ? "text-green" : pnl != null ? "text-red" : "text-text-3"
+                      }`}
+                    >
+                      {pnl != null ? formatSignedMoney(pnl) : "N/A"}
                     </td>
                     <td className="border-t border-border px-4 py-4 text-text-2">{position.sector}</td>
                     <td className="border-t border-border px-4 py-4">
