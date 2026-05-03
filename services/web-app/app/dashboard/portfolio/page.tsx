@@ -242,7 +242,6 @@ const portfolio = data?.portfolio ?? null;
       })
       .join(", ");
   }, [holdings]);
-  }, [holdings]);
 
   if (isLoading) {
     return (
