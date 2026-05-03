@@ -201,7 +201,7 @@ export async function GET() {
 
     const latestPriceParams = new URLSearchParams();
     for (const symbol of uniqueSymbols) {
-      latestPriceParams.append("tickers", symbol);
+      latestPriceParams.append("symbols", symbol);
     }
     latestPriceParams.set("timeframe", "DAILY");
 

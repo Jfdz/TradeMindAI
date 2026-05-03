@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter;
+import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter.LatestPricesResponse;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter.MarketDataPage;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter.MarketPricePageResponse;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter.MarketPriceResponse;
@@ -50,6 +51,17 @@ class MarketDataProxyControllerTest {
         ResponseEntity<MarketPriceResponse> response = controller.latestPrice("UNKNOWN", "DAILY");
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+
+    @Test
+    void acceptsSymbolsAliasForLatestPriceBatch() {
+        LatestPricesResponse prices = new LatestPricesResponse(List.of());
+        when(adapter.fetchLatestPrices(List.of("AAPL"), "DAILY")).thenReturn(prices);
+
+        LatestPricesResponse response = controller.latestPrices(null, List.of("AAPL"), "DAILY");
+
+        assertEquals(prices, response);
+        verify(adapter).fetchLatestPrices(List.of("AAPL"), "DAILY");
     }
 
     @Test

@@ -18,6 +18,7 @@ import com.tradingsaas.marketdata.domain.port.in.GetLatestPriceUseCase;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -74,12 +75,37 @@ class StockPricesControllerTest {
                 .thenReturn(List.of(price("AAPL", to), price("MSFT", to)));
 
         ResponseEntity<StockPricesController.LatestPricesResponse> response =
-                controller.getLatestBatch(List.of("AAPL", "MSFT"), TimeFrame.DAILY);
+                controller.getLatestBatch(List.of("AAPL", "MSFT"), null, TimeFrame.DAILY);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(2, response.getBody().prices().size());
         assertEquals("AAPL", response.getBody().prices().getFirst().ticker());
+    }
+
+    @Test
+    void returnsLatestPricesForSymbolsAlias() {
+        when(getLatestPriceUseCase.getLatestPrices(List.of("AAPL", "MSFT"), TimeFrame.DAILY))
+                .thenReturn(List.of(price("AAPL", to), price("MSFT", to)));
+
+        ResponseEntity<StockPricesController.LatestPricesResponse> response =
+                controller.getLatestBatch(null, List.of("aapl, msft"), TimeFrame.DAILY);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(2, response.getBody().prices().size());
+    }
+
+    @Test
+    void returns400ForOversizedLatestPriceBatch() {
+        List<String> tickers = IntStream.range(0, 101)
+                .mapToObj(index -> "T" + index)
+                .toList();
+
+        ResponseEntity<StockPricesController.LatestPricesResponse> response =
+                controller.getLatestBatch(tickers, null, TimeFrame.DAILY);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
     }
 
     private static StockPrice price(String ticker, LocalDate date) {

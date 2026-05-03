@@ -39,6 +39,7 @@ class PortfolioControllerTest {
                 new BigDecimal("20"),
                 new BigDecimal("10020"),
                 1.0,
+                "market-data",
                 List.of(new PortfolioHoldingOverview(
                         "AAPL",
                         new BigDecimal("2"),
@@ -54,6 +55,7 @@ class PortfolioControllerTest {
         PortfolioController.PortfolioOverviewResponse response = controller.getPortfolio(auth(userId, "PREMIUM"));
 
         assertEquals(userId, response.userId());
+        assertEquals("market-data", response.dataSource());
         assertEquals(1, response.holdings().size());
         assertEquals("AAPL", response.holdings().getFirst().symbol());
     }

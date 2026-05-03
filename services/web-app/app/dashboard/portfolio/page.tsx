@@ -177,6 +177,7 @@ export default function PortfolioPage() {
 
     const totalCost = holdings.reduce((sum, h) => sum + (h.quantity * h.averageCost), 0);
     const unpricedCount = holdings.filter((h) => h.lastPrice == null).length;
+    const marketDataUnavailable = portfolio.dataSource === "unavailable";
 
     const unrealizedPnl = holdings.reduce(
       (sum, h) => sum + (h.unrealizedPnl ?? 0),
@@ -187,7 +188,11 @@ export default function PortfolioPage() {
       {
         label: "Total Value",
         value: totalValue > 0 ? formatMoney(totalValue) : "—",
-        detail: unpricedCount > 0 ? `${unpricedCount} unpriced` : "Marked to market",
+        detail: marketDataUnavailable
+          ? "Market data unavailable"
+          : unpricedCount > 0
+            ? `${unpricedCount} unpriced`
+            : "Marked to market",
       },
       {
         label: "Total Cost Basis",
@@ -196,8 +201,8 @@ export default function PortfolioPage() {
       },
       {
         label: "Unrealized P&L",
-        value: formatSignedMoney(unrealizedPnl),
-        detail: "Open position gains",
+        value: marketDataUnavailable ? "N/A" : formatSignedMoney(unrealizedPnl),
+        detail: marketDataUnavailable ? "Market data unavailable" : "Open position gains",
       },
       {
         label: "Win Rate",
@@ -263,6 +268,12 @@ export default function PortfolioPage() {
           }}
           onClose={() => setShowAddForm(false)}
         />
+      ) : null}
+
+      {portfolio.dataSource === "unavailable" ? (
+        <section className="rounded-[20px] border border-gold/30 bg-[rgba(232,184,75,0.12)] px-5 py-4 text-sm text-gold">
+          Market data is unavailable. Open positions are shown without current prices until the pricing service recovers.
+        </section>
       ) : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -366,7 +377,7 @@ export default function PortfolioPage() {
                         {position.lastPrice != null ? formatMoney(position.lastPrice) : "—"}
                       </td>
                       <td className={`border-t border-border px-4 py-4 font-mono ${pnl != null && pnl >= 0 ? "text-green" : pnl != null && pnl < 0 ? "text-red" : "text-text-3"}`}>
-                        {position.lastPrice != null ? formatSignedMoney(pnl) : "—"}
+                        {pnl != null ? formatSignedMoney(pnl) : "—"}
                       </td>
                       <td className={`border-t border-border px-4 py-4 font-mono ${pnlPct != null && pnlPct >= 0 ? "text-green" : pnlPct != null && pnlPct < 0 ? "text-red" : "text-text-3"}`}>
                         {position.lastPrice != null ? (pnlPct != null && pnlPct >= 0 ? "+" : "") + (pnlPct?.toFixed(2) ?? "0.00") + "%" : "—"}
