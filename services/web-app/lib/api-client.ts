@@ -95,9 +95,9 @@ export type PortfolioHoldingResponse = {
   symbol: string;
   quantity: number;
   averageCost: number;
-  lastPrice: number;
-  marketValue: number;
-  unrealizedPnl: number;
+  lastPrice: number | null;
+  marketValue: number | null;
+  unrealizedPnl: number | null;
   allocationPct: number;
   status: string;
   openedAt?: string;
@@ -127,6 +127,7 @@ export type PortfolioOverviewResponse = {
   unrealizedPnl: number;
   equity: number;
   winRate: number;
+  dataSource: string;
   holdings: PortfolioHoldingResponse[];
 };
 
@@ -222,7 +223,7 @@ export const apiClient = {
 
     const params = new URLSearchParams();
     for (const ticker of tickers) {
-      params.append("tickers", ticker);
+      params.append("symbols", ticker);
     }
     params.set("timeframe", "DAILY");
 

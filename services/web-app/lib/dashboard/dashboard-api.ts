@@ -61,8 +61,11 @@ export type PortfolioPageData = {
   holdings: EnrichedHolding[];
 };
 
-export function buildHoldingTrend(prices: MarketPriceResponse[], lastPrice: number) {
+export function buildHoldingTrend(prices: MarketPriceResponse[], lastPrice: number | null) {
   if (prices.length === 0) {
+    if (lastPrice == null) {
+      return [];
+    }
     return Array.from({ length: 10 }, (_, index) => Number((lastPrice * (0.96 + index * 0.01)).toFixed(2)));
   }
 

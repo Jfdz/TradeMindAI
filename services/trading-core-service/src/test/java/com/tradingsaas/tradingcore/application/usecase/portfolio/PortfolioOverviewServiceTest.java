@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.tradingsaas.tradingcore.adapter.out.persistence.PortfolioJpaRepository;
@@ -53,11 +56,14 @@ class PortfolioOverviewServiceTest {
         portfolio.getPositions().add(closedPosition);
 
         when(portfolioRepository.findByUser_Id(userId)).thenReturn(Optional.of(portfolio));
-        when(marketDataPort.loadLatestPrices(List.of("AAPL"))).thenReturn(Map.of("AAPL", new BigDecimal("110.00")));
+        when(marketDataPort.loadLatestPricesResult(List.of("AAPL")))
+                .thenReturn(HistoricalMarketDataPort.LatestPricesResult.available(
+                        Map.of("AAPL", new BigDecimal("110.00"))));
 
         PortfolioOverview overview = service.getOverview(userId, "premium");
 
         assertEquals(userId, overview.userId());
+        assertEquals("market-data", overview.dataSource());
         assertEquals(new BigDecimal("220.00"), overview.totalCapital());
         assertEquals(BigDecimal.ZERO, overview.cash());
         assertEquals(0, overview.realizedPnl().compareTo(new BigDecimal("30.00")));
@@ -97,11 +103,13 @@ class PortfolioOverviewServiceTest {
         portfolio.getPositions().add(nvdaPosition);
 
         when(portfolioRepository.findByUser_Id(userId)).thenReturn(Optional.of(portfolio));
-        when(marketDataPort.loadLatestPrices(List.of("AAPL", "NVDA")))
-                .thenReturn(Map.of("AAPL", new BigDecimal("110.00")));
+        when(marketDataPort.loadLatestPricesResult(List.of("AAPL", "NVDA")))
+                .thenReturn(HistoricalMarketDataPort.LatestPricesResult.available(
+                        Map.of("AAPL", new BigDecimal("110.00"))));
 
         PortfolioOverview overview = service.getOverview(userId, "premium");
 
+        assertEquals("market-data", overview.dataSource());
         assertEquals(2, overview.holdings().size());
 
         var aapl = overview.holdings().get(0);
@@ -116,6 +124,41 @@ class PortfolioOverviewServiceTest {
         assertNull(nvda.marketValue());
 
         assertEquals(0, overview.equity().compareTo(new BigDecimal("220.00")));
+        assertEquals(0, overview.unrealizedPnl().compareTo(new BigDecimal("20.00")));
+    }
+
+    @Test
+    void marksOverviewUnavailableAndDoesNotPersistZeroWhenPricingFails() {
+        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
+        HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
+        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort);
+
+        PortfolioJpaEntity portfolio = portfolio(userId, BigDecimal.valueOf(10_000));
+        portfolio.getPositions().add(position(
+                portfolio,
+                "AAPL",
+                new BigDecimal("2"),
+                new BigDecimal("100.00"),
+                "OPEN",
+                null,
+                null,
+                Instant.parse("2026-04-16T10:00:00Z")));
+
+        when(portfolioRepository.findByUser_Id(userId)).thenReturn(Optional.of(portfolio));
+        when(marketDataPort.loadLatestPricesResult(List.of("AAPL")))
+                .thenReturn(HistoricalMarketDataPort.LatestPricesResult.unavailable("HTTP 401"));
+
+        PortfolioOverview overview = service.getOverview(userId, "premium");
+
+        assertEquals("unavailable", overview.dataSource());
+        assertEquals(BigDecimal.ZERO, overview.totalCapital());
+        assertEquals(BigDecimal.ZERO, overview.equity());
+        assertEquals(BigDecimal.ZERO, overview.unrealizedPnl());
+        assertEquals(1, overview.holdings().size());
+        assertNull(overview.holdings().getFirst().lastPrice());
+        assertNull(overview.holdings().getFirst().marketValue());
+        verify(portfolioRepository, never()).save(any(PortfolioJpaEntity.class));
     }
 
     @Test

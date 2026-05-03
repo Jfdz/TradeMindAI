@@ -4,18 +4,22 @@ import com.tradingsaas.tradingcore.adapter.out.persistence.PortfolioJpaRepositor
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.PortfolioJpaEntity;
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.PortfolioPositionJpaEntity;
 import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort;
+import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort.LatestPricesResult;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PortfolioOverviewService {
 
+    private static final Logger log = LoggerFactory.getLogger(PortfolioOverviewService.class);
     private static final BigDecimal ZERO = BigDecimal.ZERO;
 
     private final PortfolioJpaRepository portfolioJpaRepository;
@@ -48,10 +52,15 @@ public class PortfolioOverviewService {
                 .distinct()
                 .toList();
 
-        Map<String, BigDecimal> latestPrices = historicalMarketDataPort.loadLatestPrices(tickers);
+        LatestPricesResult latestPricesResult = historicalMarketDataPort.loadLatestPricesResult(tickers);
+        if (!latestPricesResult.available()) {
+            log.warn("Portfolio pricing unavailable for userId={} tickers={} reason={}",
+                    portfolio.getUser().getId(), tickers, latestPricesResult.reason());
+        }
+        Map<String, BigDecimal> latestPrices = latestPricesResult.prices();
 
         List<PortfolioHoldingOverview> holdings = new ArrayList<>();
-        BigDecimal costBasis = ZERO;
+        BigDecimal pricedCostBasis = ZERO;
         BigDecimal totalMarketValue = ZERO;
         int pricedPositionCount = 0;
 
@@ -66,10 +75,9 @@ public class PortfolioOverviewService {
 
             if (positionValue != null && currentPrice != null) {
                 totalMarketValue = totalMarketValue.add(positionValue);
+                pricedCostBasis = pricedCostBasis.add(positionCost);
                 pricedPositionCount++;
             }
-            costBasis = costBasis.add(positionCost);
-
             holdings.add(new PortfolioHoldingOverview(
                     position.getSymbolTicker(),
                     quantity,
@@ -107,14 +115,18 @@ public class PortfolioOverviewService {
                 .toList();
 
         BigDecimal unrealizedPnl = (pricedPositionCount > 0)
-                ? totalMarketValue.subtract(costBasis)
+                ? totalMarketValue.subtract(pricedCostBasis)
                 : ZERO;
 
-        double winRate = normalizedHoldings.isEmpty()
+        long pricedHoldingCount = normalizedHoldings.stream()
+                .filter(h -> h.unrealizedPnl() != null)
+                .count();
+
+        double winRate = pricedHoldingCount == 0
                 ? 0
                 : (double) normalizedHoldings.stream()
                         .filter(h -> h.unrealizedPnl() != null && h.unrealizedPnl().signum() > 0)
-                        .count() / normalizedHoldings.size();
+                        .count() / pricedHoldingCount;
 
         BigDecimal realizedPnl = portfolio.getPositions().stream()
                 .filter(p -> "CLOSED".equals(p.getStatus()) && p.getExitPrice() != null)
@@ -126,9 +138,8 @@ public class PortfolioOverviewService {
 
         BigDecimal equity = (pricedPositionCount > 0) ? totalMarketValue : ZERO;
 
-        // Only persist totalCapital when prices were actually fetched to avoid overwriting
-        // a previously correct value with 0 when market data is unavailable
-        if (pricedPositionCount > 0) {
+        // Only persist when the upstream call succeeded and at least one position was priced.
+        if (latestPricesResult.available() && pricedPositionCount > 0) {
             portfolio.setTotalCapital(totalMarketValue);
             portfolioJpaRepository.save(portfolio);
         }
@@ -141,6 +152,7 @@ public class PortfolioOverviewService {
                 unrealizedPnl,
                 equity,
                 winRate,
+                latestPricesResult.available() ? "market-data" : "unavailable",
                 normalizedHoldings
         );
     }

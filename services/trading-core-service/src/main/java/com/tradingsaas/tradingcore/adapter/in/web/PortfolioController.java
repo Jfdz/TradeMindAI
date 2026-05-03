@@ -133,6 +133,7 @@ class PortfolioController {
             BigDecimal unrealizedPnl,
             BigDecimal equity,
             double winRate,
+            String dataSource,
             List<PortfolioHoldingResponse> holdings) {
 
         static PortfolioOverviewResponse from(PortfolioOverview overview) {
@@ -144,6 +145,7 @@ class PortfolioController {
                     overview.unrealizedPnl(),
                     overview.equity(),
                     overview.winRate(),
+                    overview.dataSource(),
                     overview.holdings().stream().map(PortfolioHoldingResponse::from).toList()
             );
         }
