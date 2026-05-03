@@ -1,6 +1,7 @@
 """HTTP client for fetching OHLCV data from market-data-service."""
 
 import logging
+from datetime import UTC, date, timedelta
 
 import httpx
 import pandas as pd
@@ -11,8 +12,9 @@ logger = logging.getLogger(__name__)
 class MarketDataClient:
     """Fetches historical OHLCV bars from market-data-service REST API."""
 
-    def __init__(self, base_url: str, timeout: float = 10.0):
+    def __init__(self, base_url: str, internal_secret: str = "", timeout: float = 10.0):
         self._base_url = base_url.rstrip("/")
+        self._internal_secret = internal_secret
         self._timeout = timeout
 
     def fetch_ohlcv(self, ticker: str, size: int = 100) -> pd.DataFrame:
@@ -23,9 +25,18 @@ class MarketDataClient:
         response content is reversed before building the DataFrame.
         """
         url = f"{self._base_url}/api/v1/prices/{ticker}/history"
-        params = {"timeframe": "DAILY", "size": size}
+        today = date.today()
+        params = {
+            "timeframe": "DAILY",
+            "from": (today - timedelta(days=180)).isoformat(),
+            "to": today.isoformat(),
+            "size": size,
+        }
+        headers = {}
+        if self._internal_secret:
+            headers["X-Internal-Secret"] = self._internal_secret
 
-        response = httpx.get(url, params=params, timeout=self._timeout)
+        response = httpx.get(url, params=params, headers=headers, timeout=self._timeout)
         response.raise_for_status()
 
         bars = response.json().get("content", [])
@@ -47,4 +58,6 @@ class MarketDataClient:
         df = pd.DataFrame(records)
         df["date"] = pd.to_datetime(df["date"])
         df = df.set_index("date")
+        if df.index.tz is None:
+            df.index = df.index.tz_localize(UTC).tz_convert(None)
         return df
