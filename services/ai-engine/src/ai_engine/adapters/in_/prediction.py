@@ -130,4 +130,8 @@ def _fetch_ohlcv(ticker: str):
 
     settings = get_settings()
     internal_secret = settings.market_data_internal_secret or settings.internal_secret
-    return MarketDataClient(settings.market_data_service_url, internal_secret=internal_secret).fetch_ohlcv(ticker)
+    client = MarketDataClient(
+        settings.market_data_service_url,
+        internal_secret=internal_secret,
+    )
+    return client.fetch_ohlcv(ticker)
