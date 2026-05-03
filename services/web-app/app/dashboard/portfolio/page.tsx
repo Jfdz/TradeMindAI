@@ -174,9 +174,8 @@ export default function PortfolioPage() {
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
-  const portfolio = data?.portfolio ?? null;
+const portfolio = data?.portfolio ?? null;
   const holdings = data?.holdings ?? EMPTY_HOLDINGS;
-  const totalValue = holdings.reduce((sum, h) => sum + (h.marketValue ?? 0), 0);
 
   const summary = useMemo(() => {
     if (!portfolio) {
@@ -188,22 +187,17 @@ export default function PortfolioPage() {
     const marketDataUnavailable = isMarketDataUnavailable(portfolio.dataSource);
     const partialMarketData = isPartialMarketData(portfolio.dataSource);
 
-    const unrealizedPnl = holdings.reduce(
-      (sum, h) => sum + (h.unrealizedPnl ?? 0),
-      0
-    );
-
     return [
       {
         label: "Total Value",
-        value: totalValue > 0 ? formatMoney(totalValue) : "—",
+        value: portfolio.totalCapital != null ? formatMoney(portfolio.totalCapital) : "Unavailable",
         detail: marketDataUnavailable
           ? "Market data unavailable"
           : partialMarketData
             ? `${unpricedCount} still unpriced`
-          : unpricedCount > 0
-            ? `${unpricedCount} unpriced`
-            : "Marked to market",
+            : unpricedCount > 0
+              ? `${unpricedCount} unpriced`
+              : "Marked to market",
       },
       {
         label: "Total Cost Basis",
@@ -212,26 +206,36 @@ export default function PortfolioPage() {
       },
       {
         label: "Unrealized P&L",
-        value: marketDataUnavailable ? "N/A" : formatSignedMoney(unrealizedPnl),
+        value: marketDataUnavailable
+          ? "Unavailable"
+          : portfolio.unrealizedPnl != null
+            ? formatSignedMoney(portfolio.unrealizedPnl)
+            : "N/A",
         detail: marketDataUnavailable ? "Market data unavailable" : partialMarketData ? "Priced holdings only" : "Open position gains",
       },
       {
         label: "Win Rate",
-        value: `${Math.round(portfolio.winRate * 100)}%`,
+        value: portfolio.winRate != null ? `${Math.round(portfolio.winRate * 100)}%` : "N/A",
         detail: "Position-level",
       },
     ];
-  }, [portfolio, holdings, totalValue]);
+  }, [portfolio, holdings]);
 
   const allocationGradient = useMemo(() => {
     if (!holdings.length) {
       return "rgba(0,200,212,0.35) 0% 100%";
     }
 
+    const hasAllocation = holdings.some((h) => h.allocationPct != null);
+    if (!hasAllocation) {
+      return "rgba(100,100,100,0.3) 0% 100%";
+    }
+
     let start = 0;
     return holdings
       .map((holding) => {
-        const end = start + holding.allocationPct;
+        const pct = holding.allocationPct ?? 0;
+        const end = start + pct;
         const segment = `${holding.color} ${start}% ${end}%`;
         start = end;
         return segment;
@@ -310,8 +314,8 @@ export default function PortfolioPage() {
             <div className="relative h-56 w-56 rounded-full" style={{ background: `conic-gradient(${allocationGradient})` }}>
               <div className="absolute inset-4 rounded-full border border-border bg-bg-0/95 p-3 text-center">
                 <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Portfolio</div>
-                <div className={getDonutTextClass(totalValue)}>
-                  {totalValue > 0 ? formatMoney(totalValue) : "—"}
+                <div className={getDonutTextClass(portfolio.totalCapital ?? 0)}>
+                  {portfolio.totalCapital != null ? formatMoney(portfolio.totalCapital) : "Unavailable"}
                 </div>
                 <div className="mt-2 text-sm text-text-2 whitespace-nowrap">
                   Realized {formatSignedMoney(portfolio.realizedPnl)}
@@ -330,7 +334,7 @@ export default function PortfolioPage() {
                     <div className="text-xs text-text-3">{position.sector}</div>
                   </div>
                 </div>
-                <div className="font-mono text-sm text-text-1">{position.allocationPct.toFixed(1)}%</div>
+                <div className="font-mono text-sm text-text-1">{position.allocationPct != null ? `${position.allocationPct.toFixed(1)}%` : "—"}</div>
               </div>
             ))}
           </div>

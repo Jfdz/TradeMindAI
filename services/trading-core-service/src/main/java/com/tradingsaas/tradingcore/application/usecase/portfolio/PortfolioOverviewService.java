@@ -96,7 +96,7 @@ public class PortfolioOverviewService {
                     currentPrice,
                     positionValue,
                     pnl,
-                    0.0,
+                    null,
                     position.getStatus(),
                     position.getOpenedAt(),
                     position.getClosedAt()
@@ -104,12 +104,13 @@ public class PortfolioOverviewService {
         }
 
         final BigDecimal finalTotalMarketValue = totalMarketValue;
+        final boolean hasLivePrices = finalTotalMarketValue.signum() > 0;
         List<PortfolioHoldingOverview> normalizedHoldings = holdings.stream()
                 .map(holding -> {
                     BigDecimal mv = holding.marketValue();
-                    Double pct = (finalTotalMarketValue != null && finalTotalMarketValue.signum() > 0 && mv != null)
+                    Double pct = (hasLivePrices && mv != null)
                             ? percentage(mv, finalTotalMarketValue)
-                            : 0.0;
+                            : null;
                     return new PortfolioHoldingOverview(
                             holding.symbol(),
                             holding.quantity(),
@@ -125,19 +126,29 @@ public class PortfolioOverviewService {
                 })
                 .toList();
 
-        BigDecimal unrealizedPnl = (pricedPositionCount > 0)
-                ? totalMarketValue.subtract(pricedCostBasis)
-                : ZERO;
+        BigDecimal unrealizedPnl = null;
+        Double winRate = null;
+        BigDecimal equity = null;
+        BigDecimal capital = null;
 
-        long pricedHoldingCount = normalizedHoldings.stream()
-                .filter(h -> h.unrealizedPnl() != null)
-                .count();
+        if (latestPricesResult.available()) {
+            unrealizedPnl = pricedPositionCount > 0
+                    ? totalMarketValue.subtract(pricedCostBasis)
+                    : ZERO;
 
-        double winRate = pricedHoldingCount == 0
-                ? 0
-                : (double) normalizedHoldings.stream()
+            long pricedHoldingCount = normalizedHoldings.stream()
+                    .filter(h -> h.unrealizedPnl() != null)
+                    .count();
+
+            if (pricedHoldingCount > 0) {
+                winRate = (double) normalizedHoldings.stream()
                         .filter(h -> h.unrealizedPnl() != null && h.unrealizedPnl().signum() > 0)
                         .count() / pricedHoldingCount;
+            }
+
+            capital = pricedPositionCount > 0 ? totalMarketValue : ZERO;
+            equity = pricedPositionCount > 0 ? totalMarketValue : ZERO;
+        }
 
         BigDecimal realizedPnl = portfolio.getPositions().stream()
                 .filter(p -> "CLOSED".equals(p.getStatus()) && p.getExitPrice() != null)
@@ -147,7 +158,6 @@ public class PortfolioOverviewService {
                         .subtract(p.getFees()))
                 .reduce(ZERO, BigDecimal::add);
 
-        BigDecimal equity = (pricedPositionCount > 0) ? totalMarketValue : ZERO;
         String dataSource = resolveDataSource(latestPricesResult, missingTickers);
 
         // Only persist when all requested prices were available and at least one position was priced.
@@ -158,7 +168,7 @@ public class PortfolioOverviewService {
 
         return new PortfolioOverview(
                 portfolio.getUser().getId(),
-                totalMarketValue,
+                capital,
                 ZERO,
                 realizedPnl,
                 unrealizedPnl,
