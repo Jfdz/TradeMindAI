@@ -182,9 +182,9 @@ class PortfolioOverviewServiceTest {
         PortfolioOverview overview = service.getOverview(userId, "premium");
 
         assertEquals("unavailable", overview.dataSource());
-        assertEquals(BigDecimal.ZERO, overview.totalCapital());
-        assertEquals(BigDecimal.ZERO, overview.equity());
-        assertEquals(BigDecimal.ZERO, overview.unrealizedPnl());
+        assertNull(overview.totalCapital());
+        assertNull(overview.equity());
+        assertNull(overview.unrealizedPnl());
         assertEquals(1, overview.holdings().size());
         assertNull(overview.holdings().getFirst().lastPrice());
         assertNull(overview.holdings().getFirst().marketValue());
@@ -205,10 +205,10 @@ class PortfolioOverviewServiceTest {
         PortfolioOverview overview = service.getOverview(userId, "premium");
 
         assertEquals(userId, overview.userId());
-        assertEquals(BigDecimal.ZERO, overview.totalCapital());
+        assertNull(overview.totalCapital());
         assertEquals(BigDecimal.ZERO, overview.cash());
         assertEquals(BigDecimal.ZERO, overview.realizedPnl());
-        assertEquals(BigDecimal.ZERO, overview.equity());
+        assertNull(overview.equity());
         assertTrue(overview.holdings().isEmpty());
     }
 
@@ -224,10 +224,10 @@ class PortfolioOverviewServiceTest {
         PortfolioOverview overview = service.getOverview(userId, "premium");
 
         assertEquals(userId, overview.userId());
-        assertEquals(BigDecimal.ZERO, overview.totalCapital());
+        assertNull(overview.totalCapital());
         assertEquals(BigDecimal.ZERO, overview.cash());
         assertEquals(BigDecimal.ZERO, overview.realizedPnl());
-        assertEquals(BigDecimal.ZERO, overview.equity());
+        assertNull(overview.equity());
         assertTrue(overview.holdings().isEmpty());
     }
 

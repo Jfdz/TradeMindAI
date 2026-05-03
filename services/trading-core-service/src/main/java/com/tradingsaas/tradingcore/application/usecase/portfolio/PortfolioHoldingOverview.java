@@ -10,7 +10,7 @@ public record PortfolioHoldingOverview(
         BigDecimal lastPrice,
         BigDecimal marketValue,
         BigDecimal unrealizedPnl,
-        double allocationPct,
+        Double allocationPct,
         String status,
         Instant openedAt,
         Instant closedAt

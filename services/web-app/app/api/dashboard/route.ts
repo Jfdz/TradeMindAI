@@ -256,9 +256,9 @@ export async function GET() {
       );
 
       const latestPrice = latestPriceBySymbol.get(targetSymbol) ?? null;
-      chartCandles = (history.content ?? []).length
+      chartCandles = (history.content ?? []).length > 0
         ? convertPricesToCandles(history.content ?? [])
-        : synthesizeCandles(latestPrice ?? 100, targetSignal?.generatedAt ?? new Date().toISOString());
+        : [];
 
       const lastCandle = chartCandles[chartCandles.length - 1];
       if (lastCandle && targetSignal) {
