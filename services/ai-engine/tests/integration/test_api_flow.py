@@ -27,6 +27,18 @@ class _PredictionService:
             raw_logits=[0.05, 0.1, 0.85],
         )
 
+    def predict_batch(self, ticker_ohlcv_pairs):
+        return [
+            PredictionResult(
+                ticker=ticker,
+                direction="UP",
+                confidence=0.93,
+                predicted_change_pct=1.5,
+                raw_logits=[0.05, 0.1, 0.85],
+            )
+            for ticker, _ in ticker_ohlcv_pairs
+        ]
+
 
 @pytest.fixture(autouse=True)
 def reset_app_state(monkeypatch):
