@@ -13,6 +13,8 @@ import org.springframework.data.repository.query.Param;
 
 interface StockPriceJpaRepository extends JpaRepository<StockPriceEntity, Long> {
 
+    Optional<StockPriceEntity> findBySymbol_TickerAndDateAndTimeFrame(String ticker, LocalDate date, TimeFrame timeFrame);
+
     @Query("""
             SELECT s FROM StockPriceEntity s JOIN FETCH s.symbol
             WHERE s.symbol.ticker = :ticker

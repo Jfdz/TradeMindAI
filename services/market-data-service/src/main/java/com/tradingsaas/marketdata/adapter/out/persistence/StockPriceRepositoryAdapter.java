@@ -1,5 +1,6 @@
 package com.tradingsaas.marketdata.adapter.out.persistence;
 
+import com.tradingsaas.marketdata.adapter.out.persistence.entity.StockPriceEntity;
 import com.tradingsaas.marketdata.adapter.out.persistence.mapper.StockPriceEntityMapper;
 import com.tradingsaas.marketdata.domain.model.StockPrice;
 import com.tradingsaas.marketdata.domain.model.Symbol;
@@ -27,8 +28,27 @@ public class StockPriceRepositoryAdapter implements StockPriceRepository {
     @Override
     @Transactional
     public List<StockPrice> saveAll(List<StockPrice> prices) {
-        return jpaRepository.saveAll(prices.stream().map(mapper::toEntity).toList())
+        return jpaRepository.saveAll(prices.stream()
+                        .map(mapper::toEntity)
+                        .map(this::mergeWithExisting)
+                        .toList())
                 .stream().map(mapper::toDomain).toList();
+    }
+
+    private StockPriceEntity mergeWithExisting(StockPriceEntity candidate) {
+        String ticker = candidate.getSymbol().getTicker();
+        return jpaRepository.findBySymbol_TickerAndDateAndTimeFrame(ticker, candidate.getDate(), candidate.getTimeFrame())
+                .map(existing -> {
+                    existing.setSymbol(candidate.getSymbol());
+                    existing.setOpen(candidate.getOpen());
+                    existing.setHigh(candidate.getHigh());
+                    existing.setLow(candidate.getLow());
+                    existing.setClose(candidate.getClose());
+                    existing.setAdjustedClose(candidate.getAdjustedClose());
+                    existing.setVolume(candidate.getVolume());
+                    return existing;
+                })
+                .orElse(candidate);
     }
 
     @Override

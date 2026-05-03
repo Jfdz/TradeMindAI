@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -109,7 +110,7 @@ class PortfolioOverviewServiceTest {
 
         PortfolioOverview overview = service.getOverview(userId, "premium");
 
-        assertEquals("market-data", overview.dataSource());
+        assertEquals("partial-market-data", overview.dataSource());
         assertEquals(2, overview.holdings().size());
 
         var aapl = overview.holdings().get(0);
@@ -125,6 +126,35 @@ class PortfolioOverviewServiceTest {
 
         assertEquals(0, overview.equity().compareTo(new BigDecimal("220.00")));
         assertEquals(0, overview.unrealizedPnl().compareTo(new BigDecimal("20.00")));
+        verify(portfolioRepository, never()).save(any(PortfolioJpaEntity.class));
+    }
+
+    @Test
+    void persistsPortfolioWhenAllRequestedPricesAreReturned() {
+        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
+        HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
+        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort);
+
+        PortfolioJpaEntity portfolio = portfolio(userId, BigDecimal.valueOf(10_000));
+        portfolio.getPositions().add(position(
+                portfolio,
+                "AAPL",
+                new BigDecimal("2"),
+                new BigDecimal("100.00"),
+                "OPEN",
+                null,
+                null,
+                Instant.parse("2026-04-16T10:00:00Z")));
+
+        when(portfolioRepository.findByUser_Id(userId)).thenReturn(Optional.of(portfolio));
+        when(marketDataPort.loadLatestPricesResult(List.of("AAPL")))
+                .thenReturn(HistoricalMarketDataPort.LatestPricesResult.available(
+                        Map.of("AAPL", new BigDecimal("110.00"))));
+
+        service.getOverview(userId, "premium");
+
+        verify(portfolioRepository, times(1)).save(portfolio);
     }
 
     @Test

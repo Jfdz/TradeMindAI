@@ -171,6 +171,9 @@ services:
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/${RABBITMQ_VHOST:-/}
       MODEL_PATH: /app/models/
       ENABLE_GPU: ${ENABLE_GPU:-false}
+      INTERNAL_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
+      MARKET_DATA_INTERNAL_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
+      MARKET_DATA_SERVICE_URL: http://market-data-service:8081
     depends_on:
       postgres:
         condition: service_healthy
@@ -198,6 +201,9 @@ services:
       - "${WEB_APP_PORT:-3000}:3000"
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8082
+      API_BASE_URL: http://trading-core-service:8082
+      AI_ENGINE_SERVICE_URL: http://ai-engine:8000
+      INTERNAL_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
       NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-TradeMindAI}
       NEXTAUTH_SECRET: ${SESSION_SECRET:-dev-session-secret-change-in-production}
       NEXTAUTH_URL: http://localhost:3000

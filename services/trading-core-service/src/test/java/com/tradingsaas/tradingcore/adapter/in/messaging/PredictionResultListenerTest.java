@@ -2,6 +2,7 @@ package com.tradingsaas.tradingcore.adapter.in.messaging;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tradingsaas.tradingcore.domain.model.AiPrediction;
@@ -38,6 +39,53 @@ class PredictionResultListenerTest {
         assertEquals(expectedSymbolId, useCase.lastSignal.getSymbolId());
         assertEquals("AAPL", useCase.lastPrediction.getTicker());
         assertEquals(new BigDecimal("0.85"), useCase.lastPrediction.getConfidence().getValue());
+    }
+
+    @Test
+    void skipsInvalidPredictionRowsAndProcessesValidRows() throws Exception {
+        RecordingUseCase useCase = new RecordingUseCase();
+        PredictionResultListener listener = new PredictionResultListener(useCase, new ObjectMapper());
+
+        listener.onPredictionResult("""
+                {
+                  "tickers": ["", "msft"],
+                  "predictions": [
+                    {
+                      "ticker": "",
+                      "direction": "UP",
+                      "confidence": 0.75,
+                      "predicted_change_pct": 1.1,
+                      "raw_logits": [0.2, 0.7, 0.1]
+                    },
+                    {
+                      "ticker": "msft",
+                      "direction": "DOWN",
+                      "confidence": 0.65,
+                      "predicted_change_pct": -0.8,
+                      "raw_logits": [0.6, 0.2, 0.2]
+                    }
+                  ]
+                }
+                """);
+
+        assertNotNull(useCase.lastSignal);
+        assertEquals("MSFT", useCase.lastPrediction.getTicker());
+    }
+
+    @Test
+    void ignoresPredictionEventsWithoutPredictionRows() throws Exception {
+        RecordingUseCase useCase = new RecordingUseCase();
+        PredictionResultListener listener = new PredictionResultListener(useCase, new ObjectMapper());
+
+        listener.onPredictionResult("""
+                {
+                  "tickers": ["aapl"],
+                  "predictions": []
+                }
+                """);
+
+        assertNull(useCase.lastSignal);
+        assertNull(useCase.lastPrediction);
     }
 
     private static final class RecordingUseCase implements GenerateSignalUseCase {

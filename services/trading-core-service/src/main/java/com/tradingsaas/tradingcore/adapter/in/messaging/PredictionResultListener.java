@@ -13,12 +13,15 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
 @Component
 public class PredictionResultListener {
 
+    private static final Logger log = LoggerFactory.getLogger(PredictionResultListener.class);
     public static final String EXCHANGE_NAME = "prediction.result.completed";
     public static final String QUEUE_NAME = "trading-core.prediction.result.completed";
 
@@ -34,7 +37,17 @@ public class PredictionResultListener {
     public void onPredictionResult(String payload) {
         try {
             PredictionResultEvent event = objectMapper.readValue(payload, PredictionResultEvent.class);
+            if (event.predictions() == null || event.predictions().isEmpty()) {
+                log.warn("Prediction result event contained no predictions: tickers={}", event.tickers());
+                return;
+            }
             for (PredictionDto prediction : event.predictions()) {
+                if (!prediction.isValid()) {
+                    log.warn(
+                            "Skipping invalid prediction result: ticker={} direction={} confidence={} predictedChangePct={}",
+                            prediction.ticker(), prediction.direction(), prediction.confidence(), prediction.predictedChangePct());
+                    continue;
+                }
                 UUID symbolId = symbolIdForTicker(prediction.ticker());
                 generateSignalUseCase.generate(symbolId, prediction.toDomain());
             }
@@ -56,6 +69,16 @@ public class PredictionResultListener {
             double confidence,
             @JsonProperty("predicted_change_pct") double predictedChangePct,
             @JsonProperty("raw_logits") List<Double> rawLogits) {
+
+        boolean isValid() {
+            return ticker != null
+                    && !ticker.isBlank()
+                    && !Double.isNaN(confidence)
+                    && confidence >= 0.0
+                    && confidence <= 1.0
+                    && !Double.isNaN(predictedChangePct)
+                    && !Double.isInfinite(predictedChangePct);
+        }
 
         AiPrediction toDomain() {
             return new AiPrediction(

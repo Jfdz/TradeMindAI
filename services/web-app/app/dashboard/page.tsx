@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useMemo, useState } from "react";
@@ -15,6 +15,16 @@ import { cn } from "@/lib/utils";
 
 const EMPTY_SIGNALS: FilteredSignal[] = [];
 const EMPTY_HOLDINGS: EnrichedHolding[] = [];
+const DASHBOARD_QUERY_KEY = ["dashboard"] as const;
+const SIGNALS_QUERY_KEY = ["signals"] as const;
+
+function isMarketDataUnavailable(dataSource: string | null | undefined) {
+  return dataSource === "unavailable";
+}
+
+function isPartialMarketData(dataSource: string | null | undefined) {
+  return dataSource === "partial-market-data";
+}
 
 function formatMoney(value: number) {
   return value.toLocaleString("en-US", {
@@ -56,9 +66,10 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
 }
 
 export default function DashboardHomePage() {
+  const queryClient = useQueryClient();
   const { data: session } = useSession();
   const { data, isLoading, error } = useQuery({
-    queryKey: ["dashboard"],
+    queryKey: DASHBOARD_QUERY_KEY,
     queryFn: fetchDashboardPageData,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -78,13 +89,14 @@ export default function DashboardHomePage() {
     return `Good morning, ${name}`;
   }, [session?.user?.name]);
 
-const summaryCards = useMemo(() => {
+  const summaryCards = useMemo(() => {
     if (!portfolio) {
       return [];
     }
 
     const liveSignals = signals.filter((signal: FilteredSignal) => signal.live).length;
-    const marketDataUnavailable = portfolio.dataSource === "unavailable";
+    const marketDataUnavailable = isMarketDataUnavailable(portfolio.dataSource);
+    const partialMarketData = isPartialMarketData(portfolio.dataSource);
     const totalCapital = marketDataUnavailable ? null : (portfolio.totalCapital ?? 0);
     const unrealizedPnl = marketDataUnavailable ? null : (portfolio.unrealizedPnl ?? 0);
 
@@ -92,7 +104,7 @@ const summaryCards = useMemo(() => {
       {
         label: "Portfolio Value",
         value: totalCapital != null ? formatMoney(totalCapital) : "N/A",
-        detail: marketDataUnavailable ? "Market data unavailable" : "Marked to market",
+        detail: marketDataUnavailable ? "Market data unavailable" : partialMarketData ? "Partial live pricing" : "Marked to market",
         tone: "text-green",
       },
       { label: "Open Positions", value: `${holdings.length}`, detail: "Backend portfolio book", tone: "text-white" },
@@ -100,7 +112,7 @@ const summaryCards = useMemo(() => {
       {
         label: "Unrealized P&L",
         value: unrealizedPnl != null ? formatSignedMoney(unrealizedPnl) : "N/A",
-        detail: marketDataUnavailable ? "Market data unavailable" : "Open position gains",
+        detail: marketDataUnavailable ? "Market data unavailable" : partialMarketData ? "Priced holdings only" : "Open position gains",
         tone: "text-green",
       },
     ];
@@ -130,7 +142,13 @@ const summaryCards = useMemo(() => {
     },
     onSuccess: (result) => {
       const count = result.predictions?.length ?? 0;
-      setGenerateResult(`${count} signal${count !== 1 ? "s" : ""} generated`);
+      setGenerateResult(`${count} signal${count !== 1 ? "s" : ""} queued for persistence`);
+      void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: SIGNALS_QUERY_KEY });
+      setTimeout(() => {
+        void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
+        void queryClient.invalidateQueries({ queryKey: SIGNALS_QUERY_KEY });
+      }, 3000);
       setTimeout(() => setGenerateResult(null), 5000);
     },
   });
@@ -182,6 +200,15 @@ const summaryCards = useMemo(() => {
               You have {signals.length} signals in the backend feed, {holdings.length} open positions, and a live book
               that is now fully tied to the tradeMindAI data model.
             </p>
+            {isMarketDataUnavailable(portfolio.dataSource) ? (
+              <p className="mt-3 text-sm text-gold">
+                Market pricing is currently unavailable. Holdings remain visible, but current prices and P&amp;L are paused.
+              </p>
+            ) : isPartialMarketData(portfolio.dataSource) ? (
+              <p className="mt-3 text-sm text-gold">
+                Partial pricing returned from market data. Some holdings and signals are still waiting on fresh prices.
+              </p>
+            ) : null}
             {session?.isAdmin && (
               <div className="mt-4 flex items-center gap-3">
                 <Button
@@ -191,7 +218,7 @@ const summaryCards = useMemo(() => {
                   onClick={() => generateSignals.mutate()}
                   className="border-cyan/30 text-cyan hover:bg-cyan/10"
                 >
-                  {generateSignals.isPending ? "Generating…" : "Generate Signals"}
+                  {generateSignals.isPending ? "Generating..." : "Generate Signals"}
                 </Button>
                 {generateSignals.isError && (
                   <span className="text-xs text-red">

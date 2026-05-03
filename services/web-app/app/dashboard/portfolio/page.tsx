@@ -12,6 +12,14 @@ import { fetchPortfolioPageData } from "@/lib/dashboard/client-data";
 
 const EMPTY_HOLDINGS: EnrichedHolding[] = [];
 
+function isMarketDataUnavailable(dataSource: string | null | undefined) {
+  return dataSource === "unavailable";
+}
+
+function isPartialMarketData(dataSource: string | null | undefined) {
+  return dataSource === "partial-market-data";
+}
+
 function formatMoney(value: number) {
   return value.toLocaleString("en-US", {
     style: "currency",
@@ -177,7 +185,8 @@ export default function PortfolioPage() {
 
     const totalCost = holdings.reduce((sum, h) => sum + (h.quantity * h.averageCost), 0);
     const unpricedCount = holdings.filter((h) => h.lastPrice == null).length;
-    const marketDataUnavailable = portfolio.dataSource === "unavailable";
+    const marketDataUnavailable = isMarketDataUnavailable(portfolio.dataSource);
+    const partialMarketData = isPartialMarketData(portfolio.dataSource);
 
     const unrealizedPnl = holdings.reduce(
       (sum, h) => sum + (h.unrealizedPnl ?? 0),
@@ -190,6 +199,8 @@ export default function PortfolioPage() {
         value: totalValue > 0 ? formatMoney(totalValue) : "—",
         detail: marketDataUnavailable
           ? "Market data unavailable"
+          : partialMarketData
+            ? `${unpricedCount} still unpriced`
           : unpricedCount > 0
             ? `${unpricedCount} unpriced`
             : "Marked to market",
@@ -202,7 +213,7 @@ export default function PortfolioPage() {
       {
         label: "Unrealized P&L",
         value: marketDataUnavailable ? "N/A" : formatSignedMoney(unrealizedPnl),
-        detail: marketDataUnavailable ? "Market data unavailable" : "Open position gains",
+        detail: marketDataUnavailable ? "Market data unavailable" : partialMarketData ? "Priced holdings only" : "Open position gains",
       },
       {
         label: "Win Rate",
@@ -270,9 +281,13 @@ export default function PortfolioPage() {
         />
       ) : null}
 
-      {portfolio.dataSource === "unavailable" ? (
+      {isMarketDataUnavailable(portfolio.dataSource) ? (
         <section className="rounded-[20px] border border-gold/30 bg-[rgba(232,184,75,0.12)] px-5 py-4 text-sm text-gold">
           Market data is unavailable. Open positions are shown without current prices until the pricing service recovers.
+        </section>
+      ) : isPartialMarketData(portfolio.dataSource) ? (
+        <section className="rounded-[20px] border border-gold/30 bg-[rgba(232,184,75,0.12)] px-5 py-4 text-sm text-gold">
+          Market data returned only a partial price set. Holdings without a live quote remain visible as unpriced until the next refresh.
         </section>
       ) : null}
 
