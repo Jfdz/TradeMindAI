@@ -8,9 +8,12 @@ on:
   workflow_dispatch:
 
 permissions:
+  id-token: write
   contents: write
   pull-requests: write
   issues: write
+  actions: read
+  checks: read
 
 jobs:
   opencode:
@@ -27,33 +30,60 @@ jobs:
       - name: Decide model
         shell: bash
         run: |
-          COMMENT="${{ github.event.comment.body }}"
-          if [[ "$COMMENT" == *"/oc deep"* ]]; then
-            echo "MODEL=ollama/qwen2.5-coder:14b" >> $GITHUB_ENV
-          else
-            echo "MODEL=ollama/qwen2.5-coder:7b" >> $GITHUB_ENV
-          fi
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
+            if [[ "$COMMENT" == *"/oc deep"* ]]; then
+            echo "MODEL=ollama/qwen2.5-coder:3b" >> $GITHUB_ENV
+            else
+            echo "MODEL=ollama/qwen2.5-coder:1.5b" >> $GITHUB_ENV
+            fi
 
       - name: Install OpenCode
         shell: bash
         run: |
-          npm install -g opencode
-          opencode --version
+          curl -fsSL https://opencode.ai/install | bash
+          echo "$HOME/.opencode/bin" >> $GITHUB_PATH
 
-      - name: Run OpenCode
+      - name: Configure OpenCode Ollama provider
         shell: bash
         run: |
-          opencode github run \
-            --model "$MODEL" \
-            --prompt "You are a Senior Backend Java Engineer.
+          mkdir -p "$HOME/.config/opencode"
+
+          printf '%s\n' \
+            '{' \
+            '  "$schema": "https://opencode.ai/config.json",' \
+            '  "provider": {' \
+            '    "ollama": {' \
+            '      "npm": "@ai-sdk/openai-compatible",' \
+            '      "name": "Ollama",' \
+            '      "options": {' \
+            '        "baseURL": "http://127.0.0.1:11434/v1",' \
+            '        "apiKey": "ollama"' \
+            '      },' \
+            '      "models": {' \
+            '        "qwen2.5-coder:1.5b": {' \
+            '          "name": "qwen2.5-coder:1.5b"' \
+            '        },' \
+            '        "qwen2.5-coder:3b": {' \
+            '          "name": "qwen2.5-coder:3b"' \
+            '        }' \
+            '      }' \
+            '    }' \
+            '  }' \
+            '}' > "$HOME/.config/opencode/opencode.json"
+
+          cat "$HOME/.config/opencode/opencode.json"
+          
+      - name: Run OpenCode
+        uses: anomalyco/opencode/github@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          model: ${{ env.MODEL }}
+          use_github_token: true
+          prompt: |
+            You are a Senior Backend Java Engineer.
 
             Task:
-            ${{ github.event.comment.body || 'Review repository' }}
+            ${{ github.event.comment.body || github.event.inputs.task || 'Review repository' }}
 
             Rules:
             - Never merge automatically
