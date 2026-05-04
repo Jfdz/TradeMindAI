@@ -7,9 +7,6 @@ on:
   pull_request_review_comment:
     types: [created]
 
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-
   workflow_dispatch:
     inputs:
       task:
