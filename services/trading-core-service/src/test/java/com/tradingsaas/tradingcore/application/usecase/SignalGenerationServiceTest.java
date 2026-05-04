@@ -40,9 +40,11 @@ class SignalGenerationServiceTest {
         assertNotNull(repository.savedSignal);
         assertEquals(generated, repository.savedSignal);
         assertEquals(symbolId, generated.getSymbolId());
+        assertEquals("AAPL", generated.getTicker());
         assertEquals(SignalType.BUY, generated.getType());
         assertEquals(new BigDecimal("2.00"), generated.getStopLossPct());
         assertEquals(new BigDecimal("4.00"), generated.getTakeProfitPct());
+        assertEquals(new BigDecimal("1.50"), generated.getPredictedChangePct());
     }
 
     @Test
