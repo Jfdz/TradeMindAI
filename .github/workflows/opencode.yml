@@ -1,0 +1,17 @@
+name: opencode-test
+
+on:
+  workflow_dispatch:
+  issue_comment:
+    types: [created]
+
+jobs:
+  test:
+    if: contains(github.event.comment.body, '/oc')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Print comment
+        run: |
+          echo "Action triggered"
+          echo "${{ github.event.comment.body }}"
