@@ -190,3 +190,7 @@ out/
 # Claude Code & IDE
 # ============================================================================
 .claude/
+CLAUDE.md
+test_fix_plan copy.md
+test_fix_plan.md
+velvet-rolling-gosling.md
