@@ -36,7 +36,7 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
     public MarketDataServiceAdapter(
             @Value("${services.market-data.url:http://localhost:8081}") String baseUrl,
             @Value("${services.market-data.internal-secret:}") String internalSecret) {
-        this(baseUrl, internalSecret, Clock.systemUTC());
+        this(WebClient.builder().baseUrl(baseUrl).build(), internalSecret, Clock.systemUTC());
     }
 
     MarketDataServiceAdapter(WebClient webClient, String internalSecret, Clock clock) {
