@@ -44,9 +44,29 @@ public class PortfolioOverviewService {
         List<PortfolioPositionJpaEntity> openPositions = portfolio.getPositions().stream()
                 .filter(p -> !"CLOSED".equals(p.getStatus()))
                 .toList();
+        List<PortfolioClosedPositionOverview> closedPositions = portfolio.getPositions().stream()
+                .filter(p -> "CLOSED".equals(p.getStatus()) && p.getExitPrice() != null)
+                .map(this::toClosedOverview)
+                .sorted(java.util.Comparator.comparing(PortfolioClosedPositionOverview::closedAt,
+                        java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())))
+                .toList();
+        BigDecimal realizedPnl = closedPositions.stream()
+                .map(PortfolioClosedPositionOverview::realizedPnl)
+                .reduce(ZERO, BigDecimal::add);
 
         if (openPositions.isEmpty()) {
-            return PortfolioOverview.empty(portfolio.getUser().getId(), true);
+            return new PortfolioOverview(
+                    portfolio.getUser().getId(),
+                    null,
+                    ZERO,
+                    realizedPnl,
+                    null,
+                    null,
+                    null,
+                    "none",
+                    List.of(),
+                    closedPositions
+            );
         }
 
         List<String> tickers = openPositions.stream()
@@ -90,6 +110,7 @@ public class PortfolioOverviewService {
                 pricedPositionCount++;
             }
             holdings.add(new PortfolioHoldingOverview(
+                    position.getId(),
                     position.getSymbolTicker(),
                     quantity,
                     entryPrice,
@@ -112,6 +133,7 @@ public class PortfolioOverviewService {
                             ? percentage(mv, finalTotalMarketValue)
                             : null;
                     return new PortfolioHoldingOverview(
+                            holding.id(),
                             holding.symbol(),
                             holding.quantity(),
                             holding.averageCost(),
@@ -150,14 +172,6 @@ public class PortfolioOverviewService {
             equity = pricedPositionCount > 0 ? totalMarketValue : ZERO;
         }
 
-        BigDecimal realizedPnl = portfolio.getPositions().stream()
-                .filter(p -> "CLOSED".equals(p.getStatus()) && p.getExitPrice() != null)
-                .map(p -> p.getExitPrice()
-                        .subtract(p.getEntryPrice())
-                        .multiply(p.getQuantity())
-                        .subtract(p.getFees()))
-                .reduce(ZERO, BigDecimal::add);
-
         String dataSource = resolveDataSource(latestPricesResult, missingTickers);
 
         // Only persist when all requested prices were available and at least one position was priced.
@@ -175,7 +189,27 @@ public class PortfolioOverviewService {
                 equity,
                 winRate,
                 dataSource,
-                normalizedHoldings
+                normalizedHoldings,
+                closedPositions
+        );
+    }
+
+    private PortfolioClosedPositionOverview toClosedOverview(PortfolioPositionJpaEntity position) {
+        BigDecimal fees = position.getFees();
+        BigDecimal realizedPnl = position.getExitPrice()
+                .subtract(position.getEntryPrice())
+                .multiply(position.getQuantity())
+                .subtract(fees);
+        return new PortfolioClosedPositionOverview(
+                position.getId(),
+                position.getSymbolTicker(),
+                position.getQuantity(),
+                position.getEntryPrice(),
+                position.getExitPrice(),
+                fees,
+                realizedPnl,
+                position.getOpenedAt(),
+                position.getClosedAt()
         );
     }
 

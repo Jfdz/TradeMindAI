@@ -92,6 +92,7 @@ export type UpdateNotificationPreferencesPayload = {
 };
 
 export type PortfolioHoldingResponse = {
+  id: string;
   symbol: string;
   quantity: number;
   averageCost: number;
@@ -100,6 +101,18 @@ export type PortfolioHoldingResponse = {
   unrealizedPnl: number | null;
   allocationPct: number | null;
   status: string;
+  openedAt?: string;
+  closedAt?: string | null;
+};
+
+export type PortfolioClosedPositionResponse = {
+  id: string;
+  symbol: string;
+  quantity: number;
+  averageCost: number;
+  exitPrice: number;
+  fees: number;
+  realizedPnl: number;
   openedAt?: string;
   closedAt?: string | null;
 };
@@ -129,6 +142,7 @@ export type PortfolioOverviewResponse = {
   winRate: number | null;
   dataSource: DataSource;
   holdings: PortfolioHoldingResponse[];
+  closedPositions: PortfolioClosedPositionResponse[];
 };
 
 export type DataSource = "market-data" | "partial-market-data" | "unavailable" | "none" | "missing-portfolio";

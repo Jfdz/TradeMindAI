@@ -1,5 +1,6 @@
 package com.tradingsaas.tradingcore.adapter.in.messaging;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tradingsaas.tradingcore.domain.model.AiPrediction;
@@ -64,10 +65,12 @@ public class PredictionResultListener {
     private record PredictionResultEvent(List<String> tickers, List<PredictionDto> predictions) {}
 
     private record PredictionDto(
-            String ticker,
-            String direction,
+            @JsonAlias("symbol") String ticker,
+            @JsonAlias("type") String direction,
             double confidence,
+            @JsonAlias("predictedChangePct")
             @JsonProperty("predicted_change_pct") double predictedChangePct,
+            @JsonAlias("rawLogits")
             @JsonProperty("raw_logits") List<Double> rawLogits) {
 
         boolean isValid() {
