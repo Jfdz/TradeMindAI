@@ -30,12 +30,11 @@ jobs:
       - name: Decide model
         shell: bash
         run: |
-          COMMENT="${{ github.event.comment.body }}"
-          if [[ "$COMMENT" == *"/oc deep"* ]]; then
-            echo "MODEL=ollama/qwen2.5-coder:14b" >> $GITHUB_ENV
-          else
-            echo "MODEL=ollama/qwen2.5-coder:7b" >> $GITHUB_ENV
-          fi
+            if [[ "$COMMENT" == *"/oc deep"* ]]; then
+            echo "MODEL=ollama/qwen2.5-coder:3b" >> $GITHUB_ENV
+            else
+            echo "MODEL=ollama/qwen2.5-coder:1.5b" >> $GITHUB_ENV
+            fi
 
       - name: Install OpenCode
         shell: bash
@@ -60,11 +59,11 @@ jobs:
             '        "apiKey": "ollama"' \
             '      },' \
             '      "models": {' \
-            '        "qwen2.5-coder:7b": {' \
-            '          "name": "qwen2.5-coder:7b"' \
+            '        "qwen2.5-coder:1.5b": {' \
+            '          "name": "qwen2.5-coder:1.5b"' \
             '        },' \
-            '        "qwen2.5-coder:14b": {' \
-            '          "name": "qwen2.5-coder:14b"' \
+            '        "qwen2.5-coder:3b": {' \
+            '          "name": "qwen2.5-coder:3b"' \
             '        }' \
             '      }' \
             '    }' \
