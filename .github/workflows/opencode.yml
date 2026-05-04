@@ -34,23 +34,21 @@ jobs:
             echo "MODEL=ollama/qwen2.5-coder:7b" >> $GITHUB_ENV
           fi
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
       - name: Install OpenCode
         shell: bash
         run: |
-          npm install -g opencode
-          opencode --version
+          curl -fsSL https://opencode.ai/install | bash
+          echo "$HOME/.opencode/bin" >> $GITHUB_PATH
 
       - name: Run OpenCode
-        shell: bash
-        run: |
-          opencode github run \
-            --model "$MODEL" \
-            --prompt "You are a Senior Backend Java Engineer.
+        uses: anomalyco/opencode/github@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          model: ${{ env.MODEL }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            You are a Senior Backend Java Engineer.
 
             Task:
             ${{ github.event.comment.body || 'Review repository' }}
