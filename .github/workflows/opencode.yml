@@ -119,10 +119,10 @@ jobs:
       - name: Run OpenCode
         uses: anomalyco/opencode/github@latest
         env:
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          model: deepseek/deepseek-chat
+          model: huggingface/deepseek-ai/DeepSeek-V4-Pro
           use_github_token: true
           prompt: |
             Read .opencode/context/instructions.md first.
