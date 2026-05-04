@@ -1,4 +1,4 @@
-name: opencode-agent
+name: opencode-local-dual
 
 on:
   issue_comment:
@@ -8,44 +8,50 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: write
   pull-requests: write
   issues: write
-  actions: read
-  checks: read
 
 jobs:
   opencode:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      startsWith(github.event.comment.body, '/oc') ||
-      startsWith(github.event.comment.body, '/opencode') ||
-      contains(github.event.comment.body, ' /oc') ||
-      contains(github.event.comment.body, ' /opencode')
+      startsWith(github.event.comment.body, '/oc')
 
-    runs-on: ubuntu-24.04
+    runs-on: self-hosted
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run OpenCode
-        uses: anomalyco/opencode/github@latest
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          model: huggingface/zai-org/GLM-4.5-Air
-          use_github_token: true
-          prompt: |
-            You are a Senior Backend Java Engineer.
+      - name: Decide model
+        shell: bash
+        run: |
+          COMMENT="${{ github.event.comment.body }}"
+          if [[ "$COMMENT" == *"/oc deep"* ]]; then
+            echo "MODEL=ollama/qwen2.5-coder:14b" >> $GITHUB_ENV
+          else
+            echo "MODEL=ollama/qwen2.5-coder:7b" >> $GITHUB_ENV
+          fi
 
-            User request:
-            ${{ github.event.comment.body || github.event.inputs.task || 'Review the repository.' }}
+      - name: Run OpenCode
+        shell: bash
+        run: |
+          opencode github run \
+            --model "$MODEL" \
+            --prompt "You are a Senior Backend Java Engineer.
+
+            Task:
+            ${{ github.event.comment.body || 'Review repository' }}
 
             Rules:
-            - Never merge automatically.
-            - If fixing an issue, create a new branch from develop.
-            - Open a PR targeting develop.
-            - Let the user review.
+            - Never merge automatically
+            - If fixing issue:
+            - create branch from develop
+            - implement fix
+            - open PR to develop
+            - Focus on:
+            - Spring Boot
+            - Clean architecture
+            - Null safety
+            - Performance"
