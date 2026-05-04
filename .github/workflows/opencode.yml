@@ -1,3 +1,35 @@
+name: opencode-agent
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: read
+  checks: read
+
+jobs:
+  opencode:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.event.comment.body, '/oc') ||
+      startsWith(github.event.comment.body, '/opencode') ||
+      contains(github.event.comment.body, ' /oc') ||
+      contains(github.event.comment.body, ' /opencode')
+
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Run OpenCode
         uses: anomalyco/opencode/github@latest
         env:
@@ -7,11 +39,13 @@
           model: huggingface/zai-org/GLM-4.5-Air
           use_github_token: true
           prompt: |
-            Read .opencode/context/instructions.md first.
+            You are a Senior Backend Java Engineer.
 
-            User request / GitHub event context:
+            User request:
             ${{ github.event.comment.body || github.event.inputs.task || 'Review the repository.' }}
 
-            Execute the task safely.
-            Never merge automatically.
-            If fixing an issue, create a new branch from develop and open a PR targeting develop.
+            Rules:
+            - Never merge automatically.
+            - If fixing an issue, create a new branch from develop.
+            - Open a PR targeting develop.
+            - Let the user review.
