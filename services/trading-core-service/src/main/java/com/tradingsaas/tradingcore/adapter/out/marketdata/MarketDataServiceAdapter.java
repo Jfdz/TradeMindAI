@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
@@ -25,21 +26,27 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
 
     private static final Logger log = LoggerFactory.getLogger(MarketDataServiceAdapter.class);
     private static final String INTERNAL_SECRET_HEADER = "X-Internal-Secret";
+    private static final int FALLBACK_LOOKBACK_DAYS = 14;
 
     private final WebClient webClient;
     private final String internalSecret;
+    private final Clock clock;
 
     @Autowired
     public MarketDataServiceAdapter(
             @Value("${services.market-data.url:http://localhost:8081}") String baseUrl,
             @Value("${services.market-data.internal-secret:}") String internalSecret) {
-        this.webClient = WebClient.builder().baseUrl(baseUrl).build();
+        this(WebClient.builder().baseUrl(baseUrl).build(), internalSecret, Clock.systemUTC());
+    }
+
+    MarketDataServiceAdapter(WebClient webClient, String internalSecret, Clock clock) {
+        this.webClient = webClient;
         this.internalSecret = internalSecret;
+        this.clock = clock;
     }
 
     MarketDataServiceAdapter(WebClient webClient, String internalSecret) {
-        this.webClient = webClient;
-        this.internalSecret = internalSecret;
+        this(webClient, internalSecret, Clock.systemUTC());
     }
 
     @PostConstruct
@@ -93,6 +100,41 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
             return LatestPricesResult.available(Map.of());
         }
 
+        LatestPricesResult latestResult = fetchLatestPricesFromBatchEndpoint(symbols);
+        Map<String, BigDecimal> resolvedPrices = new LinkedHashMap<>(latestResult.prices());
+
+        List<String> missingSymbols = symbols.stream()
+                .filter(s -> !resolvedPrices.containsKey(s))
+                .toList();
+
+        if (!missingSymbols.isEmpty()) {
+            for (String symbol : missingSymbols) {
+                BigDecimal fallbackPrice = fetchLatestPriceFromHistory(symbol);
+                if (fallbackPrice != null) {
+                    resolvedPrices.put(symbol, fallbackPrice);
+                    log.debug("Recovered price for {} from history fallback", symbol);
+                }
+            }
+        }
+
+        List<String> stillMissing = symbols.stream()
+                .filter(s -> !resolvedPrices.containsKey(s))
+                .toList();
+
+        if (stillMissing.size() == symbols.size()) {
+            return LatestPricesResult.unavailable(latestResult.reason() != null
+                    ? latestResult.reason()
+                    : "no price data available");
+        }
+
+        if (!stillMissing.isEmpty()) {
+            return LatestPricesResult.partial(resolvedPrices, stillMissing);
+        }
+
+        return LatestPricesResult.available(resolvedPrices);
+    }
+
+    private LatestPricesResult fetchLatestPricesFromBatchEndpoint(List<String> symbols) {
         try {
             return webClient.get()
                     .uri(uri -> uri.path("/api/v1/prices/latest")
@@ -118,21 +160,28 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
         }
     }
 
-    private LatestPricesResult toLatestPricesResult(LatestPricesResponse response) {
-        if (response == null || response.prices() == null) {
-            return LatestPricesResult.unavailable("missing prices");
-        }
-        Map<String, BigDecimal> prices = new LinkedHashMap<>();
-        for (MarketPriceResponse entry : response.prices()) {
-            BigDecimal close = latestClose(entry);
-            if (entry.ticker() != null && close != null) {
-                prices.put(entry.ticker(), close);
+    private BigDecimal fetchLatestPriceFromHistory(String symbol) {
+        LocalDate toDate = LocalDate.now(clock);
+        LocalDate fromDate = toDate.minusDays(FALLBACK_LOOKBACK_DAYS);
+
+        try {
+            MarketDataPage<MarketPriceResponse> historyResponse = fetchHistoricalPrices(
+                    symbol, "DAILY", fromDate, toDate, 0, 1);
+
+            if (historyResponse == null || historyResponse.content() == null
+                    || historyResponse.content().isEmpty()) {
+                return null;
             }
+
+            MarketPriceResponse mostRecent = historyResponse.content().getFirst();
+            return extractPrice(mostRecent);
+        } catch (Exception e) {
+            log.debug("Failed to fetch history for {}: {}", symbol, e.getMessage());
+            return null;
         }
-        return LatestPricesResult.available(prices);
     }
 
-    private BigDecimal latestClose(MarketPriceResponse entry) {
+    private BigDecimal extractPrice(MarketPriceResponse entry) {
         if (entry == null) {
             return null;
         }
@@ -140,6 +189,20 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
             return entry.adjustedClose();
         }
         return entry.ohlcv() != null ? BigDecimal.valueOf(entry.ohlcv().close()) : null;
+    }
+
+    private LatestPricesResult toLatestPricesResult(LatestPricesResponse response) {
+        if (response == null || response.prices() == null) {
+            return LatestPricesResult.unavailable("missing prices");
+        }
+        Map<String, BigDecimal> prices = new LinkedHashMap<>();
+        for (MarketPriceResponse entry : response.prices()) {
+            BigDecimal price = extractPrice(entry);
+            if (entry.ticker() != null && price != null) {
+                prices.put(entry.ticker(), price);
+            }
+        }
+        return LatestPricesResult.available(prices);
     }
 
     @Override

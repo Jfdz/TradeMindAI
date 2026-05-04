@@ -231,6 +231,65 @@ class PortfolioOverviewServiceTest {
         assertTrue(overview.holdings().isEmpty());
     }
 
+    @Test
+    void returnsOverviewWithAllPositionsPricedForMultiHoldingPortfolio() {
+        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
+        HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
+        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort);
+
+        PortfolioJpaEntity portfolio = portfolio(userId, BigDecimal.valueOf(10_000));
+        PortfolioPositionJpaEntity aaplPosition = position(
+                portfolio,
+                "AAPL",
+                new BigDecimal("2"),
+                new BigDecimal("100.00"),
+                "OPEN",
+                null,
+                null,
+                Instant.parse("2026-04-16T10:00:00Z"));
+        PortfolioPositionJpaEntity msftPosition = position(
+                portfolio,
+                "MSFT",
+                new BigDecimal("3"),
+                new BigDecimal("150.00"),
+                "OPEN",
+                null,
+                null,
+                Instant.parse("2026-04-15T10:00:00Z"));
+        portfolio.getPositions().add(aaplPosition);
+        portfolio.getPositions().add(msftPosition);
+
+        when(portfolioRepository.findByUser_Id(userId)).thenReturn(Optional.of(portfolio));
+        when(marketDataPort.loadLatestPricesResult(List.of("AAPL", "MSFT")))
+                .thenReturn(HistoricalMarketDataPort.LatestPricesResult.available(
+                        Map.of(
+                                "AAPL", new BigDecimal("110.00"),
+                                "MSFT", new BigDecimal("160.00"))));
+
+        PortfolioOverview overview = service.getOverview(userId, "premium");
+
+        assertEquals("market-data", overview.dataSource());
+        assertEquals(2, overview.holdings().size());
+
+        var aapl = overview.holdings().get(0);
+        var msft = overview.holdings().get(1);
+
+        assertEquals("AAPL", aapl.symbol());
+        assertEquals(new BigDecimal("110.00"), aapl.lastPrice());
+        assertEquals(new BigDecimal("220.00"), aapl.marketValue());
+        assertEquals(new BigDecimal("20.00"), aapl.unrealizedPnl());
+
+        assertEquals("MSFT", msft.symbol());
+        assertEquals(new BigDecimal("160.00"), msft.lastPrice());
+        assertEquals(new BigDecimal("480.00"), msft.marketValue());
+        assertEquals(new BigDecimal("30.00"), msft.unrealizedPnl());
+
+        assertEquals(0, overview.totalCapital().compareTo(new BigDecimal("700.00")));
+        assertEquals(0, overview.unrealizedPnl().compareTo(new BigDecimal("50.00")));
+        assertEquals(0, overview.equity().compareTo(new BigDecimal("700.00")));
+    }
+
     private static PortfolioJpaEntity portfolio(UUID userId, BigDecimal totalCapital) {
         UserJpaEntity user = new UserJpaEntity(
                 userId,
