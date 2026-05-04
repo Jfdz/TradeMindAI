@@ -16,7 +16,7 @@ User wants to add three environment variables to the Kubernetes cluster:
 
 ## What Each Variable Means
 
-### INTERNAL_SECRET
+### INTERNAL_SEOk CRET
 **What it is:** A shared secret string used as the value of the `X-Internal-Secret` HTTP header. This header authenticates service-to-service calls so that internal endpoints (e.g. market-data `/api/v1/ingestion`) cannot be called from the public internet.
 
 **What value to use:** Generate a strong random string on your Ubuntu machine:

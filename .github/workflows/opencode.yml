@@ -41,11 +41,14 @@ jobs:
           echo "$HOME/.opencode/bin" >> $GITHUB_PATH
 
       - name: Run OpenCode
-        shell: bash
-        run: |
-          opencode github run \
-            --model "$MODEL" \
-            --prompt "You are a Senior Backend Java Engineer.
+        uses: anomalyco/opencode/github@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          model: ${{ env.MODEL }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            You are a Senior Backend Java Engineer.
 
             Task:
             ${{ github.event.comment.body || 'Review repository' }}
