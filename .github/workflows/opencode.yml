@@ -8,9 +8,12 @@ on:
   workflow_dispatch:
 
 permissions:
+  id-token: write
   contents: write
   pull-requests: write
   issues: write
+  actions: read
+  checks: read
 
 jobs:
   opencode:
@@ -46,12 +49,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           model: ${{ env.MODEL }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          use_github_token: true
           prompt: |
             You are a Senior Backend Java Engineer.
 
             Task:
-            ${{ github.event.comment.body || 'Review repository' }}
+            ${{ github.event.comment.body || github.event.inputs.task || 'Review repository' }}
 
             Rules:
             - Never merge automatically
