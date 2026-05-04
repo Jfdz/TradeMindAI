@@ -34,16 +34,11 @@ jobs:
             echo "MODEL=ollama/qwen2.5-coder:7b" >> $GITHUB_ENV
           fi
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
       - name: Install OpenCode
         shell: bash
         run: |
-          npm install -g opencode
-          opencode --version
+          curl -fsSL https://opencode.ai/install | bash
+          echo "$HOME/.opencode/bin" >> $GITHUB_PATH
 
       - name: Run OpenCode
         shell: bash
