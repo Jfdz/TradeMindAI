@@ -44,7 +44,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -58,6 +58,7 @@ jobs:
       - name: Create OpenCode context folder
         run: mkdir -p .opencode/context
       - name: Capture SonarQube issues
+        shell: bash
         if: env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' && env.SONAR_PROJECT_KEY != ''
         env:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
@@ -70,6 +71,7 @@ jobs:
 
           echo "SonarQube issues exported to .opencode/context/sonarqube-issues.json"
       - name: Build project context
+        shell: bash
         run: |
           cat > .opencode/context/instructions.md <<'EOF'
           You are acting as a Senior Backend Java Engineer.
@@ -99,11 +101,13 @@ jobs:
       - name: Decide model
         shell: bash
         run: |
-            if [[ "$COMMENT" == *"/oc deep"* ]]; then
-            echo "MODEL=ollama/qwen2.5-coder:3b" >> $GITHUB_ENV
-            else
-            echo "MODEL=ollama/qwen2.5-coder:1.5b" >> $GITHUB_ENV
-            fi
+          COMMENT="${{ github.event.comment.body || github.event.inputs.task || '' }}"
+
+          if [[ "$COMMENT" == *"/oc deep"* ]]; then
+            echo "MODEL=ollama/qwen2.5-coder:3b" >> "$GITHUB_ENV"
+          else
+            echo "MODEL=ollama/qwen2.5-coder:1.5b" >> "$GITHUB_ENV"
+          fi
 
       - name: Install OpenCode
         shell: bash
