@@ -71,7 +71,9 @@ class PortfolioOverviewServiceTest {
         assertEquals(0, overview.unrealizedPnl().compareTo(new BigDecimal("20.00")));
         assertEquals(0, overview.equity().compareTo(new BigDecimal("220.00")));
         assertEquals(1, overview.holdings().size());
+        assertEquals(1, overview.closedPositions().size());
         assertEquals("AAPL", overview.holdings().getFirst().symbol());
+        assertEquals("MSFT", overview.closedPositions().getFirst().symbol());
     }
 
     @Test
@@ -210,6 +212,7 @@ class PortfolioOverviewServiceTest {
         assertEquals(BigDecimal.ZERO, overview.realizedPnl());
         assertNull(overview.equity());
         assertTrue(overview.holdings().isEmpty());
+        assertTrue(overview.closedPositions().isEmpty());
     }
 
     @Test
@@ -229,6 +232,36 @@ class PortfolioOverviewServiceTest {
         assertEquals(BigDecimal.ZERO, overview.realizedPnl());
         assertNull(overview.equity());
         assertTrue(overview.holdings().isEmpty());
+        assertTrue(overview.closedPositions().isEmpty());
+    }
+
+    @Test
+    void returnsClosedHistoryWhenNoOpenPositionsRemain() {
+        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
+        HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
+        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort);
+
+        PortfolioJpaEntity portfolio = portfolio(userId, BigDecimal.valueOf(10_000));
+        portfolio.getPositions().add(position(
+                portfolio,
+                "NVDA",
+                new BigDecimal("4"),
+                new BigDecimal("90.00"),
+                "CLOSED",
+                new BigDecimal("100.00"),
+                new BigDecimal("3.00"),
+                Instant.parse("2026-04-12T10:00:00Z")));
+
+        when(portfolioRepository.findByUser_Id(userId)).thenReturn(Optional.of(portfolio));
+
+        PortfolioOverview overview = service.getOverview(userId, "premium");
+
+        assertEquals("none", overview.dataSource());
+        assertTrue(overview.holdings().isEmpty());
+        assertEquals(1, overview.closedPositions().size());
+        assertEquals("NVDA", overview.closedPositions().getFirst().symbol());
+        assertEquals(0, overview.realizedPnl().compareTo(new BigDecimal("37.00")));
     }
 
     @Test

@@ -24,19 +24,23 @@ class SignalControllerTest {
         TradingSignal signal = new TradingSignal(
                 UUID.fromString("11111111-1111-1111-1111-111111111111"),
                 UUID.fromString("22222222-2222-2222-2222-222222222222"),
+                "NVDA",
                 SignalType.SELL,
                 new Confidence(new BigDecimal("0.61")),
                 Timeframe.HOUR_1,
                 Instant.parse("2026-04-17T10:00:00Z"),
                 new BigDecimal("2.00"),
-                new BigDecimal("4.00"));
+                new BigDecimal("4.00"),
+                new BigDecimal("-1.50"));
 
         SignalController controller = new SignalController(new StubUseCase(signal));
 
         Page<SignalController.SignalResponse> page = controller.listSignals(PageRequest.of(0, 20));
 
         assertEquals(1, page.getTotalElements());
+        assertEquals("NVDA", page.getContent().get(0).symbol());
         assertEquals("SELL", page.getContent().get(0).type());
+        assertEquals(new BigDecimal("-1.50"), page.getContent().get(0).predictedChangePct());
     }
 
     @Test
