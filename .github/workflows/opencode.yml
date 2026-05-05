@@ -149,7 +149,7 @@ jobs:
         shell: bash
         run: |
           echo "Warming up model..."
-          ollama run qwen2.5-coder:3b "ping" || true
+          ollama run qwen2.5-coder:3b
       - name: Protect workflow and context files from OpenCode changes
         shell: bash
         run: |
