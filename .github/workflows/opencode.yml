@@ -43,12 +43,13 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout
+      - name: Checkout develop
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
-          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          ref: develop
+
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
@@ -149,6 +150,13 @@ jobs:
         run: |
           echo "Warming up model..."
           ollama run qwen2.5-coder:3b "ping" || true
+      - name: Protect workflow and context files from OpenCode changes
+        shell: bash
+        run: |
+          git update-index --skip-worktree .github/workflows/opencode.yml || true
+          git update-index --skip-worktree .github/workflows/trivy-scan.yml || true
+          git update-index --skip-worktree .opencode/context/instructions.md || true
+          git update-index --skip-worktree .opencode/context/sonarqube-issues.json || true
       - name: Run OpenCode
         uses: anomalyco/opencode/github@latest
         env:
@@ -157,28 +165,59 @@ jobs:
           model: ${{ env.MODEL }}
           use_github_token: true
           prompt: |
-
-            Keep answers short and focused.
-            Limit output to maximum 500 tokens.
             Read .opencode/context/instructions.md first.
 
             User request / GitHub event context:
             ${{ github.event.comment.body || github.event.inputs.task || 'Automatically review this pull request.' }}
 
-            Execute the task safely.
+            CRITICAL RULES:
+            - This is a FIX task, not a summary task, if the request contains "fix", "sonar", "sonarqube", "sonarcloud", "refactor" or a file path.
+            - Do NOT output internal tool calls, JSON tool messages, skill names, "caveman", "delivery-agent", or session metadata in the PR title, PR body, comments, or commits.
+            - Do NOT modify workflow files.
+            - Do NOT modify .opencode files.
+            - Do NOT commit .opencode/context/instructions.md.
+            - Do NOT commit .opencode/context/sonarqube-issues.json.
+            - Modify only the affected application file unless another file is strictly required.
 
-            If this is a PR review:
-            - Leave a structured review comment.
-            - Do not commit changes unless explicitly requested.
+            Target file:
+            All related files to the SonarCloud issues in .opencode/context/sonarqube-issues.json, if present.
 
-            If this is an issue fix:
-            - Create a new branch from develop.
-            - Implement the fix.
-            - Run relevant tests when possible.
-            - Open a PR targeting develop.
-            - Do not merge.
-
-            If this is a SonarQube request:
+            SonarQube task:
             - Read .opencode/context/sonarqube-issues.json.
-            - Create GitHub issues only for actionable findings.
-            - If asked to fix them, create a branch and PR to develop.
+            - Fix all the SonarCloud issues related.
+            - Keep behaviour unchanged.
+            - Do not perform broad formatting.
+            - Do not refactor unrelated code.
+            - Do not change CI/CD configuration.
+
+            Commit rules:
+            - Commit only relevant source-code changes.
+            - Commit message must be:
+              fix(portfolio): resolve SonarCloud issues in dashboard page
+
+            Target branch:
+            - All fix PRs MUST target develop.
+            - Never open fix PRs against main.
+            
+            Pull request rules:
+            - PR target branch must be develop.
+            - PR title must be:
+              fix(portfolio): resolve SonarCloud issues in dashboard page
+            - PR body must contain:
+              Summary:
+              - Fixed SonarCloud issues.
+              - Kept behaviour unchanged.
+              - No workflow or generated context files changed.
+
+              Validation:
+              - Mention which checks were run, or explain if checks were not available.
+
+              Closes #${{ github.event.issue.number || github.event.pull_request.number }}
+      - name: Revert forbidden generated files
+        if: always()
+        shell: bash
+        run: |
+          git checkout -- .github/workflows/opencode.yml || true
+          git checkout -- .github/workflows/trivy-scan.yml || true
+          git checkout -- .opencode/context/instructions.md || true
+          git checkout -- .opencode/context/sonarqube-issues.json || true
