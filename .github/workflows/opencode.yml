@@ -104,9 +104,9 @@ jobs:
           COMMENT="${{ github.event.comment.body || github.event.inputs.task || '' }}"
 
           if [[ "$COMMENT" == *"/oc deep"* ]]; then
-            echo "MODEL=ollama/qwen2.5-coder:3b" >> "$GITHUB_ENV"
+            echo "MODEL=ollama/qwen2.5-coder:7b" >> "$GITHUB_ENV"
           else
-            echo "MODEL=ollama/qwen2.5-coder:1.5b" >> "$GITHUB_ENV"
+            echo "MODEL=ollama/qwen2.5-coder:3b" >> "$GITHUB_ENV"
           fi
 
       - name: Install OpenCode
@@ -132,11 +132,11 @@ jobs:
             '        "apiKey": "ollama"' \
             '      },' \
             '      "models": {' \
-            '        "qwen2.5-coder:1.5b": {' \
-            '          "name": "qwen2.5-coder:1.5b"' \
-            '        },' \
             '        "qwen2.5-coder:3b": {' \
             '          "name": "qwen2.5-coder:3b"' \
+            '        },' \
+            '        "qwen2.5-coder:7b": {' \
+            '          "name": "qwen2.5-coder:7b"' \
             '        }' \
             '      }' \
             '    }' \
@@ -144,7 +144,11 @@ jobs:
             '}' > "$HOME/.config/opencode/opencode.json"
 
           cat "$HOME/.config/opencode/opencode.json"
-          
+      - name: Warm up Ollama model
+        shell: bash
+        run: |
+          echo "Warming up model..."
+          ollama run qwen2.5-coder:3b "ping" || true
       - name: Run OpenCode
         uses: anomalyco/opencode/github@latest
         env:
@@ -153,6 +157,9 @@ jobs:
           model: ${{ env.MODEL }}
           use_github_token: true
           prompt: |
+
+            Keep answers short and focused.
+            Limit output to maximum 500 tokens.
             Read .opencode/context/instructions.md first.
 
             User request / GitHub event context:

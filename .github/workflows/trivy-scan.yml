@@ -42,12 +42,10 @@ jobs:
         run: echo "image-ref=$(echo '${{ inputs.image-ref }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
       - name: Install Trivy
-        env:
-          TRIVY_VERSION: 0.69.3
         run: |
           set -euxo pipefail
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-            | sh -s -- -b /usr/local/bin "v${TRIVY_VERSION}"
+            | sh -s -- -b /usr/local/bin latest
           trivy --version
 
       - name: Build image and save to tar
