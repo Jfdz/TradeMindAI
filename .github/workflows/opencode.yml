@@ -17,24 +17,98 @@ permissions:
 
 jobs:
   opencode:
+    name: OpenCode Review / Fix / SonarQube Triage
+
     if: |
       github.event_name == 'workflow_dispatch' ||
-      startsWith(github.event.comment.body, '/oc')
-
+      (
+        github.event_name == 'issue_comment' &&
+        (
+          startsWith(github.event.comment.body, '/oc') ||
+          startsWith(github.event.comment.body, '/opencode') ||
+          contains(github.event.comment.body, ' /oc') ||
+          contains(github.event.comment.body, ' /opencode')
+        )
+      ) ||
+      (
+        github.event_name == 'pull_request_review_comment' &&
+        (
+          startsWith(github.event.comment.body, '/oc') ||
+          startsWith(github.event.comment.body, '/opencode') ||
+          contains(github.event.comment.body, ' /oc') ||
+          contains(github.event.comment.body, ' /opencode')
+        )
+      )
+        
     runs-on: self-hosted
 
     steps:
-      - name: Checkout
+      - name: Checkout develop
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: develop
 
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: Create OpenCode context folder
+        run: mkdir -p /tmp/opencode-context
+      - name: Capture SonarQube issues
+        shell: bash
+        if: env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' && env.SONAR_PROJECT_KEY != ''
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+        run: |
+          curl -sS -u "${SONAR_TOKEN}:" \
+            "${SONAR_HOST_URL}/api/issues/search?componentKeys=${SONAR_PROJECT_KEY}&resolved=false&ps=100" \
+            -o /tmp/opencode-context/sonarqube-issues.json || true
+
+          echo "SonarQube issues exported to /tmp/opencode-context/sonarqube-issues.json"
+      - name: Build project context
+        shell: bash
+        run: |
+          cat > /tmp/opencode-context/instructions.md <<'EOF'
+          You are acting as a Senior Backend Java Engineer.
+
+          Repository rules:
+          - Target branch for generated fixes: develop.
+          - Never merge automatically.
+          - Never approve your own PR.
+          - If fixing an issue, create a new branch from develop.
+          - Implement the smallest safe change.
+          - Add or update tests when possible.
+          - Open a pull request targeting develop.
+          - Explain clearly what was changed and why.
+
+          PR review rules:
+          - Review Java, Spring Boot, REST APIs, persistence, transactions, security, null safety, test coverage and clean architecture.
+          - Classify findings as HIGH, MEDIUM or LOW.
+          - Do not modify code during pure review unless explicitly requested.
+          - Suggest exact files/classes/methods when possible.
+
+          SonarQube rules:
+          - Read /tmp/opencode-context/sonarqube-issues.json if present.
+          - Group SonarQube issues by severity and component.
+          - If requested, create GitHub issues for relevant SonarQube findings.
+          - If requested to fix SonarQube issues, create a branch, fix them, add tests if needed, and open a PR to develop.
+          EOF
       - name: Decide model
         shell: bash
         run: |
-            if [[ "$COMMENT" == *"/oc deep"* ]]; then
-            echo "MODEL=ollama/qwen2.5-coder:3b" >> $GITHUB_ENV
-            else
-            echo "MODEL=ollama/qwen2.5-coder:1.5b" >> $GITHUB_ENV
-            fi
+          COMMENT="${{ github.event.comment.body || github.event.inputs.task || '' }}"
+
+          if [[ "$COMMENT" == *"/oc deep"* ]]; then
+            echo "MODEL=ollama/qwen2.5-coder:7b" >> "$GITHUB_ENV"
+          else
+            echo "MODEL=ollama/qwen2.5-coder:3b" >> "$GITHUB_ENV"
+          fi
 
       - name: Install OpenCode
         shell: bash
@@ -59,11 +133,11 @@ jobs:
             '        "apiKey": "ollama"' \
             '      },' \
             '      "models": {' \
-            '        "qwen2.5-coder:1.5b": {' \
-            '          "name": "qwen2.5-coder:1.5b"' \
-            '        },' \
             '        "qwen2.5-coder:3b": {' \
             '          "name": "qwen2.5-coder:3b"' \
+            '        },' \
+            '        "qwen2.5-coder:7b": {' \
+            '          "name": "qwen2.5-coder:7b"' \
             '        }' \
             '      }' \
             '    }' \
@@ -71,7 +145,11 @@ jobs:
             '}' > "$HOME/.config/opencode/opencode.json"
 
           cat "$HOME/.config/opencode/opencode.json"
-          
+      - name: Warm up Ollama model
+        shell: bash
+        run: |
+          echo "Warming up model..."
+          ollama run qwen2.5-coder:3b
       - name: Run OpenCode
         uses: anomalyco/opencode/github@latest
         env:
@@ -80,19 +158,53 @@ jobs:
           model: ${{ env.MODEL }}
           use_github_token: true
           prompt: |
-            You are a Senior Backend Java Engineer.
+            Read /tmp/opencode-context/instructions.md first.
 
-            Task:
-            ${{ github.event.comment.body || github.event.inputs.task || 'Review repository' }}
+            User request / GitHub event context:
+            ${{ github.event.comment.body || github.event.inputs.task || 'Automatically review this pull request.' }}
 
-            Rules:
-            - Never merge automatically
-            - If fixing issue:
-            - create branch from develop
-            - implement fix
-            - open PR to develop
-            - Focus on:
-            - Spring Boot
-            - Clean architecture
-            - Null safety
-            - Performance"
+            CRITICAL RULES:
+            - Do not create, modify, stage, or commit any file under .opencode or .github.
+            - Context files are read-only and located at /tmp/opencode-context.
+            - This is a FIX task, not a summary task, if the request contains "fix", "sonar", "sonarqube", "sonarcloud", "refactor" or a file path.
+            - Do NOT output internal tool calls, JSON tool messages, skill names, "caveman", "delivery-agent", or session metadata in the PR title, PR body, comments, or commits.
+            - Do NOT modify workflow files.
+            - Do NOT modify .opencode files.
+            - Do NOT commit .opencode/context/instructions.md.
+            - Do NOT commit .opencode/context/sonarqube-issues.json.
+            - Modify only the affected application file unless another file is strictly required.
+
+            Target file:
+            All related files to the SonarCloud issues in /tmp/opencode-context/sonarqube-issues.json, if present.
+
+            SonarQube task:
+            - Read /tmp/opencode-context/sonarqube-issues.json.
+            - Fix all the SonarCloud issues related.
+            - Keep behaviour unchanged.
+            - Do not perform broad formatting.
+            - Do not refactor unrelated code.
+            - Do not change CI/CD configuration.
+
+            Commit rules:
+            - Commit only relevant source-code changes.
+            - Commit message must be:
+              fix(portfolio): resolve SonarCloud issues in dashboard page
+
+            Target branch:
+            - All fix PRs MUST target develop.
+            - Never open fix PRs against main.
+            
+            Pull request rules:
+            - PR target branch must be develop.
+            - PR title must be:
+              fix(portfolio): resolve SonarCloud issues in dashboard page
+            - PR body must contain:
+              Summary:
+              - Fixed SonarCloud issues.
+              - Kept behaviour unchanged.
+              - No workflow or generated context files changed.
+
+              Validation:
+              - Mention which checks were run, or explain if checks were not available.
+
+              Closes #${{ github.event.issue.number || github.event.pull_request.number }}
