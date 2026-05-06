@@ -37,11 +37,15 @@ function calculateTakeProfit(
   entry: number | null
 ): number | null {
   if (entry === null || takeProfitPct == null) return null;
-  return signalType === "BUY"
-    ? entry * (1 + takeProfitPct / 100)
-    : signalType === "SELL"
-      ? entry * (1 - takeProfitPct / 100)
-      : null;
+
+  switch (signalType) {
+    case "BUY":
+      return entry * (1 + takeProfitPct / 100);
+    case "SELL":
+      return entry * (1 - takeProfitPct / 100);
+    default:
+      return null;
+  }
 }
 
 function calculateStopLoss(
@@ -50,11 +54,15 @@ function calculateStopLoss(
   entry: number | null
 ): number | null {
   if (entry === null || stopLossPct == null) return null;
-  return signalType === "BUY"
-    ? entry * (1 - stopLossPct / 100)
-    : signalType === "SELL"
-      ? entry * (1 + stopLossPct / 100)
-      : null;
+
+  switch (signalType) {
+    case "BUY":
+      return entry * (1 - stopLossPct / 100);
+    case "SELL":
+      return entry * (1 + stopLossPct / 100);
+    default:
+      return null;
+  }
 }
 
 function isLiveSignal(generatedAt: string): boolean {
