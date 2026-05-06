@@ -35,8 +35,7 @@ class PredictionResultListenerTest {
                 """);
 
         assertNotNull(useCase.lastSignal);
-        UUID expectedSymbolId = PredictionResultListener.symbolIdForTicker("aapl");
-        assertEquals(expectedSymbolId, useCase.lastSignal.getSymbolId());
+        assertNull(useCase.lastSignal.getSymbolId());
         assertEquals("AAPL", useCase.lastPrediction.getTicker());
         assertEquals(new BigDecimal("0.85"), useCase.lastPrediction.getConfidence().getValue());
     }
@@ -115,11 +114,6 @@ class PredictionResultListenerTest {
     private static final class RecordingUseCase implements GenerateSignalUseCase {
         private TradingSignal lastSignal;
         private AiPrediction lastPrediction;
-
-        @Override
-        public TradingSignal generate(UUID symbolId, String ticker) {
-            throw new UnsupportedOperationException();
-        }
 
         @Override
         public TradingSignal generate(UUID symbolId, AiPrediction prediction) {

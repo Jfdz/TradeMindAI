@@ -20,7 +20,7 @@ public class TradingSignalJpaEntity {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "symbol_id", nullable = false)
+    @Column(name = "symbol_id")
     private UUID symbolId;
 
     @Column(name = "ticker", length = 32)

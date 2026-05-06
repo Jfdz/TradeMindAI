@@ -24,10 +24,10 @@ except ImportError as e:
 
 DB_CONFIG = {
     "host": "localhost",
-    "port": 5433,
+    "port": 5432,
     "database": "trading_saas",
-    "user": "tradinguser",
-    "password": "",
+    "user": "trading_user",
+    "password": "dev_password_change_in_prod",
 }
 
 SYMBOLS = [

@@ -64,7 +64,6 @@ public class TradingSignal {
                          BigDecimal stopLossPct,
                          BigDecimal takeProfitPct,
                          BigDecimal predictedChangePct) {
-        Objects.requireNonNull(symbolId, "symbolId must not be null");
         Objects.requireNonNull(type, "type must not be null");
         Objects.requireNonNull(confidence, "confidence must not be null");
         Objects.requireNonNull(timeframe, "timeframe must not be null");

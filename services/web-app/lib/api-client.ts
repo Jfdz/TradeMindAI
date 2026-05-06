@@ -189,7 +189,8 @@ async function requestJson<T>(path: string, options: RequestInit = {}): Promise<
   });
 
   if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
+    const body = await response.text().catch(() => "");
+    throw new Error(`Request failed with status ${response.status}: ${body || response.statusText}`);
   }
 
   return (await response.json()) as T;
@@ -262,6 +263,32 @@ export const apiClient = {
       );
     } catch {
       return { content: [], page: 0, size, totalElements: 0, totalPages: 0 };
+    }
+  },
+
+  async getHistoricalPricesBatch(
+    symbols: string[],
+    from: string,
+    to: string,
+    size = 8
+  ): Promise<Record<string, MarketPriceResponse[]>> {
+    if (symbols.length === 0) {
+      return {};
+    }
+    const params = new URLSearchParams();
+    for (const s of symbols) {
+      params.append("symbols", s);
+    }
+    params.set("from", from);
+    params.set("to", to);
+    params.set("size", String(size));
+    params.set("timeframe", "DAILY");
+    try {
+      return await requestJson<Record<string, MarketPriceResponse[]>>(
+        `/api/v1/prices/history-batch?${params.toString()}`
+      );
+    } catch {
+      return {};
     }
   },
 

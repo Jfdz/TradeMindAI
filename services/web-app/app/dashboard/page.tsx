@@ -73,6 +73,7 @@ export default function DashboardHomePage() {
     queryFn: fetchDashboardPageData,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+    refetchInterval: 30_000,
   });
 
   const portfolio = data?.portfolio ?? null;

@@ -19,6 +19,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import reactor.core.publisher.Mono;
 
 @Component
@@ -269,6 +271,23 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
                 .bodyToMono(MarketPricePageResponse.class)
                 .defaultIfEmpty(new MarketPricePageResponse(List.of(), page, size, 0, 0))
                 .block();
+    }
+
+    public Map<String, List<MarketPriceResponse>> fetchHistoricalPricesBatch(
+            List<String> symbols, String timeframe, LocalDate from, LocalDate to, int size) {
+        if (symbols == null || symbols.isEmpty()) {
+            return Map.of();
+        }
+        List<CompletableFuture<Map.Entry<String, List<MarketPriceResponse>>>> futures = symbols.stream()
+                .map(symbol -> CompletableFuture.supplyAsync(() -> {
+                    MarketDataPage<MarketPriceResponse> page = fetchHistoricalPrices(symbol, timeframe, from, to, 0, size);
+                    List<MarketPriceResponse> content = page != null && page.content() != null ? page.content() : List.of();
+                    return Map.entry(symbol, content);
+                }))
+                .toList();
+        return futures.stream()
+                .map(CompletableFuture::join)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     public MarketDataPage<MarketSymbolResponse> fetchSymbols(int page, int size) {
