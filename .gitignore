@@ -1,7 +1,6 @@
 # ============================================================================
 # IDE & Editor
 # ============================================================================
-.vscode/
 .idea/
 *.swp
 *.swo
@@ -13,6 +12,13 @@
 .c9/
 *.sublime-project
 *.sublime-workspace
+# Allow tracked VS Code project configuration
+!.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
 
 # ============================================================================
 # Environment & Secrets (NEVER commit)
