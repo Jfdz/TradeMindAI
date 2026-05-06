@@ -25,7 +25,7 @@
         <resilience4j.version>2.2.0</resilience4j.version>
         <testcontainers.version>1.19.8</testcontainers.version>
         <wiremock.version>3.6.0</wiremock.version>
-        <postgresql.version>42.7.7</postgresql.version>
+        <postgresql.version>42.7.11</postgresql.version>
         <netty.version>4.1.132.Final</netty.version>
         <tomcat.version>10.1.54</tomcat.version>
         <spring.security.version>6.5.9</spring.security.version>
