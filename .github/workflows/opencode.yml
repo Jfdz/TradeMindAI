@@ -57,7 +57,7 @@ jobs:
           java-version: "17"
           cache: maven
       - name: Create OpenCode context folder
-        run: mkdir -p .opencode/context
+        run: mkdir -p /tmp/opencode-context
       - name: Capture SonarQube issues
         shell: bash
         if: env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' && env.SONAR_PROJECT_KEY != ''
@@ -68,13 +68,13 @@ jobs:
         run: |
           curl -sS -u "${SONAR_TOKEN}:" \
             "${SONAR_HOST_URL}/api/issues/search?componentKeys=${SONAR_PROJECT_KEY}&resolved=false&ps=100" \
-            -o .opencode/context/sonarqube-issues.json || true
+            -o /tmp/opencode-context/sonarqube-issues.json || true
 
-          echo "SonarQube issues exported to .opencode/context/sonarqube-issues.json"
+          echo "SonarQube issues exported to /tmp/opencode-context/sonarqube-issues.json"
       - name: Build project context
         shell: bash
         run: |
-          cat > .opencode/context/instructions.md <<'EOF'
+          cat > /tmp/opencode-context/instructions.md <<'EOF'
           You are acting as a Senior Backend Java Engineer.
 
           Repository rules:
@@ -94,7 +94,7 @@ jobs:
           - Suggest exact files/classes/methods when possible.
 
           SonarQube rules:
-          - Read .opencode/context/sonarqube-issues.json if present.
+          - Read /tmp/opencode-context/sonarqube-issues.json if present.
           - Group SonarQube issues by severity and component.
           - If requested, create GitHub issues for relevant SonarQube findings.
           - If requested to fix SonarQube issues, create a branch, fix them, add tests if needed, and open a PR to develop.
@@ -150,13 +150,6 @@ jobs:
         run: |
           echo "Warming up model..."
           ollama run qwen2.5-coder:3b
-      - name: Protect workflow and context files from OpenCode changes
-        shell: bash
-        run: |
-          git update-index --skip-worktree .github/workflows/opencode.yml || true
-          git update-index --skip-worktree .github/workflows/trivy-scan.yml || true
-          git update-index --skip-worktree .opencode/context/instructions.md || true
-          git update-index --skip-worktree .opencode/context/sonarqube-issues.json || true
       - name: Run OpenCode
         uses: anomalyco/opencode/github@latest
         env:
@@ -165,12 +158,14 @@ jobs:
           model: ${{ env.MODEL }}
           use_github_token: true
           prompt: |
-            Read .opencode/context/instructions.md first.
+            Read /tmp/opencode-context/instructions.md first.
 
             User request / GitHub event context:
             ${{ github.event.comment.body || github.event.inputs.task || 'Automatically review this pull request.' }}
 
             CRITICAL RULES:
+            - Do not create, modify, stage, or commit any file under .opencode or .github.
+            - Context files are read-only and located at /tmp/opencode-context.
             - This is a FIX task, not a summary task, if the request contains "fix", "sonar", "sonarqube", "sonarcloud", "refactor" or a file path.
             - Do NOT output internal tool calls, JSON tool messages, skill names, "caveman", "delivery-agent", or session metadata in the PR title, PR body, comments, or commits.
             - Do NOT modify workflow files.
@@ -180,10 +175,10 @@ jobs:
             - Modify only the affected application file unless another file is strictly required.
 
             Target file:
-            All related files to the SonarCloud issues in .opencode/context/sonarqube-issues.json, if present.
+            All related files to the SonarCloud issues in /tmp/opencode-context/sonarqube-issues.json, if present.
 
             SonarQube task:
-            - Read .opencode/context/sonarqube-issues.json.
+            - Read /tmp/opencode-context/sonarqube-issues.json.
             - Fix all the SonarCloud issues related.
             - Keep behaviour unchanged.
             - Do not perform broad formatting.
@@ -213,11 +208,3 @@ jobs:
               - Mention which checks were run, or explain if checks were not available.
 
               Closes #${{ github.event.issue.number || github.event.pull_request.number }}
-      - name: Revert forbidden generated files
-        if: always()
-        shell: bash
-        run: |
-          git checkout -- .github/workflows/opencode.yml || true
-          git checkout -- .github/workflows/trivy-scan.yml || true
-          git checkout -- .opencode/context/instructions.md || true
-          git checkout -- .opencode/context/sonarqube-issues.json || true
