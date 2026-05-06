@@ -31,29 +31,42 @@ export function toBusinessDay(value: string): DashboardCandle["time"] {
   };
 }
 
+function calculateTakeProfit(
+  signalType: string,
+  takeProfitPct: number | null | undefined,
+  entry: number | null
+): number | null {
+  if (entry === null || takeProfitPct == null) return null;
+  return signalType === "BUY"
+    ? entry * (1 + takeProfitPct / 100)
+    : signalType === "SELL"
+      ? entry * (1 - takeProfitPct / 100)
+      : null;
+}
+
+function calculateStopLoss(
+  signalType: string,
+  stopLossPct: number | null | undefined,
+  entry: number | null
+): number | null {
+  if (entry === null || stopLossPct == null) return null;
+  return signalType === "BUY"
+    ? entry * (1 - stopLossPct / 100)
+    : signalType === "SELL"
+      ? entry * (1 + stopLossPct / 100)
+      : null;
+}
+
+function isLiveSignal(generatedAt: string): boolean {
+  const ageMs = Date.now() - new Date(generatedAt).getTime();
+  return ageMs < 1000 * 60 * 60 * 24;
+}
+
 export function deriveSignal(signal: SignalResponse, latestPrice: number | null): FilteredSignal {
   const entry = latestPrice;
-  const takeProfit =
-    signal.type === "BUY"
-      ? signal.takeProfitPct != null && entry != null
-        ? entry * (1 + signal.takeProfitPct / 100)
-        : null
-      : signal.type === "SELL"
-        ? signal.takeProfitPct != null && entry != null
-          ? entry * (1 - signal.takeProfitPct / 100)
-          : null
-        : entry;
-  const stopLoss =
-    signal.type === "BUY"
-      ? signal.stopLossPct != null && entry != null
-        ? entry * (1 - signal.stopLossPct / 100)
-        : null
-      : signal.type === "SELL"
-        ? signal.stopLossPct != null && entry != null
-          ? entry * (1 + signal.stopLossPct / 100)
-          : null
-        : entry;
-  const live = Date.now() - new Date(signal.generatedAt).getTime() < 1000 * 60 * 60 * 24;
+  const takeProfit = calculateTakeProfit(signal.type, signal.takeProfitPct, entry);
+  const stopLoss = calculateStopLoss(signal.type, signal.stopLossPct, entry);
+  const live = isLiveSignal(signal.generatedAt);
 
   return {
     ...signal,
