@@ -75,14 +75,14 @@ class TradingSignalDomainModelTest {
     @Test
     void tradingSignalRejectsMissingRequiredFields() {
         UUID symbolId = UUID.randomUUID();
+        UUID id = UUID.randomUUID();
         Confidence confidence = new Confidence(new BigDecimal("0.50"));
         Instant generatedAt = Instant.now();
 
-        assertThrows(NullPointerException.class, () -> new TradingSignal(null, null, SignalType.BUY, confidence, Timeframe.DAILY, generatedAt));
-        assertThrows(NullPointerException.class, () -> new TradingSignal(null, symbolId, null, confidence, Timeframe.DAILY, generatedAt));
-        assertThrows(NullPointerException.class, () -> new TradingSignal(null, symbolId, SignalType.BUY, null, Timeframe.DAILY, generatedAt));
-        assertThrows(NullPointerException.class, () -> new TradingSignal(null, symbolId, SignalType.BUY, confidence, null, generatedAt));
-        assertThrows(NullPointerException.class, () -> new TradingSignal(null, symbolId, SignalType.BUY, confidence, Timeframe.DAILY, null));
+        assertThrows(NullPointerException.class, () -> new TradingSignal(id, symbolId, null, confidence, Timeframe.DAILY, generatedAt));
+        assertThrows(NullPointerException.class, () -> new TradingSignal(id, symbolId, SignalType.BUY, null, Timeframe.DAILY, generatedAt));
+        assertThrows(NullPointerException.class, () -> new TradingSignal(id, symbolId, SignalType.BUY, confidence, null, generatedAt));
+        assertThrows(NullPointerException.class, () -> new TradingSignal(id, symbolId, SignalType.BUY, confidence, Timeframe.DAILY, null));
     }
 
     @Test
