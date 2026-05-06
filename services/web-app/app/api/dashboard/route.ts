@@ -10,7 +10,7 @@ import type {
   PortfolioOverviewResponse,
   SignalResponse,
 } from "@/lib/api-client";
-import type { DashboardPageData, EnrichedHolding, FilteredSignal } from "@/lib/dashboard/dashboard-api";
+import type { DashboardCandle, DashboardPageData, EnrichedHolding } from "@/lib/dashboard/dashboard-api";
 import { buildHoldingTrend } from "@/lib/dashboard/dashboard-api";
 import { convertPricesToCandles, deriveSignal } from "@/lib/dashboard/signal-derivation";
 import { assignSymbolColors } from "@/lib/dashboard/symbol-colors";
@@ -113,7 +113,6 @@ export async function GET() {
 
     const colorMap = assignSymbolColors((portfolio.holdings ?? []).map((h) => h.symbol));
 
-    const holdingSymbols = (portfolio.holdings ?? []).map((h) => h.symbol);
     let holdingHistory: Record<string, MarketPriceResponse[]> = {};
     if (holdingSymbols.length > 0) {
       const holdingFrom = new Date();
@@ -155,7 +154,6 @@ export async function GET() {
         true
       );
 
-      const latestPrice = latestPriceBySymbol.get(targetSymbol) ?? null;
       chartCandles = (history.content ?? []).length > 0
         ? convertPricesToCandles(history.content ?? [])
         : [];

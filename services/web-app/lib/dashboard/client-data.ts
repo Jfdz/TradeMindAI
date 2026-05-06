@@ -1,9 +1,7 @@
 import {
   apiClient,
   type BacktestJobResponse,
-  type MarketPriceResponse,
   type MarketSymbolResponse,
-  type SignalResponse,
 } from "@/lib/api-client";
 import {
   buildHoldingTrend,
