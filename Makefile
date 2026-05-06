@@ -84,6 +84,17 @@ setup: ## First-time developer setup
 seed: ## Seed the database with sample data
 	@bash scripts/seed-data.sh
 
+bootstrap: ## Full local bootstrap: infra + migrations + seed data + AI model
+	@echo "=== Step 1: Start infrastructure ==="
+	$(MAKE) infra-up
+	@echo "=== Step 2: Seed symbols and demo user ==="
+	@bash scripts/seed-data.sh
+	@echo "=== Step 3: Seed market data (requires yfinance, psycopg2) ==="
+	python3 scripts/seed_market_data.py
+	@echo "=== Step 4: Seed AI model ==="
+	cd services/ai-engine && python scripts/seed_model.py --model-path ./models
+	@echo "=== Bootstrap complete. Run 'make up' to start all services. ==="
+
 # ── Clean ─────────────────────────────────────────────────────────────────────
 
 clean: ## Remove build artifacts and containers (keeps volumes)

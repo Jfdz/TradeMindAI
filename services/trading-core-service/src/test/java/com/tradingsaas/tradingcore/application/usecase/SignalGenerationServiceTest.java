@@ -7,16 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import com.tradingsaas.tradingcore.domain.model.AiPrediction;
 import com.tradingsaas.tradingcore.domain.model.Confidence;
 import com.tradingsaas.tradingcore.domain.model.SignalType;
-import com.tradingsaas.tradingcore.domain.model.Timeframe;
 import com.tradingsaas.tradingcore.domain.model.TradingSignal;
-import com.tradingsaas.tradingcore.domain.port.out.AiPredictionPort;
 import com.tradingsaas.tradingcore.domain.port.out.TradingSignalRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
 class SignalGenerationServiceTest {
@@ -24,8 +21,8 @@ class SignalGenerationServiceTest {
     @Test
     void generatesBuySignalWithDefaultRiskParameters() {
         UUID symbolId = UUID.fromString("22222222-2222-2222-2222-222222222222");
-        AiPredictionPort predictionPort = ticker -> new AiPrediction(
-                ticker,
+        AiPrediction prediction = new AiPrediction(
+                "AAPL",
                 SignalType.BUY,
                 new Confidence(new BigDecimal("0.85")),
                 new BigDecimal("1.50"),
@@ -33,9 +30,9 @@ class SignalGenerationServiceTest {
                 Instant.parse("2026-04-17T10:00:00Z"));
 
         RecordingRepository repository = new RecordingRepository();
-        SignalGenerationService service = new SignalGenerationService(predictionPort, repository);
+        SignalGenerationService service = new SignalGenerationService(repository);
 
-        TradingSignal generated = service.generate(symbolId, "aapl");
+        TradingSignal generated = service.generate(symbolId, prediction);
 
         assertNotNull(repository.savedSignal);
         assertEquals(generated, repository.savedSignal);
@@ -50,8 +47,8 @@ class SignalGenerationServiceTest {
     @Test
     void generatesHoldSignalWithoutRiskParameters() {
         UUID symbolId = UUID.fromString("33333333-3333-3333-3333-333333333333");
-        AiPredictionPort predictionPort = ticker -> new AiPrediction(
-                ticker,
+        AiPrediction prediction = new AiPrediction(
+                "MSFT",
                 SignalType.HOLD,
                 new Confidence(new BigDecimal("0.55")),
                 BigDecimal.ZERO,
@@ -59,9 +56,9 @@ class SignalGenerationServiceTest {
                 Instant.parse("2026-04-17T10:00:00Z"));
 
         RecordingRepository repository = new RecordingRepository();
-        SignalGenerationService service = new SignalGenerationService(predictionPort, repository);
+        SignalGenerationService service = new SignalGenerationService(repository);
 
-        TradingSignal generated = service.generate(symbolId, "msft");
+        TradingSignal generated = service.generate(symbolId, prediction);
 
         assertEquals(SignalType.HOLD, generated.getType());
         assertNull(generated.getStopLossPct());

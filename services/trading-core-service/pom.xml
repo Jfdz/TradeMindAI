@@ -134,13 +134,6 @@
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
 
-        <!-- ── Resilience ────────────────────────────────────────────────────── -->
-        <dependency>
-            <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-spring-boot3</artifactId>
-            <version>${resilience4j.version}</version>
-        </dependency>
-
         <!-- ── JWT ──────────────────────────────────────────────────────────── -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>

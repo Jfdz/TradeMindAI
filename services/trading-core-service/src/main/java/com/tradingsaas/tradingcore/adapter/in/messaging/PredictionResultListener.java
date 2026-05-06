@@ -9,11 +9,9 @@ import com.tradingsaas.tradingcore.domain.model.SignalType;
 import com.tradingsaas.tradingcore.domain.port.in.GenerateSignalUseCase;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -49,17 +47,11 @@ public class PredictionResultListener {
                             prediction.ticker(), prediction.direction(), prediction.confidence(), prediction.predictedChangePct());
                     continue;
                 }
-                UUID symbolId = symbolIdForTicker(prediction.ticker());
-                generateSignalUseCase.generate(symbolId, prediction.toDomain());
+                generateSignalUseCase.generate(null, prediction.toDomain());
             }
         } catch (IOException ex) {
             throw new IllegalStateException("Failed to parse prediction result event", ex);
         }
-    }
-
-    static UUID symbolIdForTicker(String ticker) {
-        String normalizedTicker = ticker.trim().toUpperCase(Locale.ROOT);
-        return UUID.nameUUIDFromBytes(normalizedTicker.getBytes(StandardCharsets.UTF_8));
     }
 
     private record PredictionResultEvent(List<String> tickers, List<PredictionDto> predictions) {}
