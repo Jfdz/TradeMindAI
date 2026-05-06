@@ -1,0 +1,65 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build trading-core-service",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "clean",
+        "compile",
+        "-f",
+        "services/trading-core-service/pom.xml"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$java"
+    },
+    {
+      "label": "Build market-data-service",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "clean",
+        "compile",
+        "-f",
+        "services/market-data-service/pom.xml"
+      ],
+      "group": "build",
+      "problemMatcher": "$java"
+    },
+    {
+      "label": "Test trading-core-service",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "test",
+        "-f",
+        "services/trading-core-service/pom.xml"
+      ],
+      "group": "test",
+      "problemMatcher": "$java"
+    },
+    {
+      "label": "Run trading-core-service",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "spring-boot:run",
+        "-f",
+        "services/trading-core-service/pom.xml"
+      ],
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": "$java",
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*Tomcat initialized.*",
+          "endsPattern": ".*Started.*in.*seconds.*"
+        }
+      }
+    }
+  ]
+}
