@@ -55,7 +55,8 @@ import org.springframework.test.web.servlet.MockMvc;
         "trading-core.cors.allowed-origins=https://trading-saas.example.com",
         "trading-core.rate-limit.free-per-minute=2",
         "trading-core.rate-limit.basic-per-minute=5",
-        "trading-core.rate-limit.premium-per-minute=10"
+        "trading-core.rate-limit.premium-per-minute=10",
+        "subscriptions.enforce=true"
 })
 class BacktestSubscriptionSecurityTest {
 

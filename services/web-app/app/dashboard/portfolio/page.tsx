@@ -67,7 +67,7 @@ function getDonutTextClass(value: number) {
 
 function Sparkline({ values, color }: { values: number[]; color: string }) {
   if (values.length === 0) {
-    return null;
+    return <span className="text-text-3 text-xs">—</span>;
   }
 
   const min = Math.min(...values);

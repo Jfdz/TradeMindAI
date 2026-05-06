@@ -5,7 +5,6 @@ import com.tradingsaas.tradingcore.domain.model.SignalType;
 import com.tradingsaas.tradingcore.domain.model.Timeframe;
 import com.tradingsaas.tradingcore.domain.model.TradingSignal;
 import com.tradingsaas.tradingcore.domain.port.in.GenerateSignalUseCase;
-import com.tradingsaas.tradingcore.domain.port.out.AiPredictionPort;
 import com.tradingsaas.tradingcore.domain.port.out.TradingSignalRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -18,18 +17,10 @@ class SignalGenerationService implements GenerateSignalUseCase {
     private static final BigDecimal DEFAULT_STOP_LOSS_PCT = new BigDecimal("2.00");
     private static final BigDecimal DEFAULT_TAKE_PROFIT_PCT = new BigDecimal("4.00");
 
-    private final AiPredictionPort aiPredictionPort;
     private final TradingSignalRepository tradingSignalRepository;
 
-    SignalGenerationService(AiPredictionPort aiPredictionPort, TradingSignalRepository tradingSignalRepository) {
-        this.aiPredictionPort = aiPredictionPort;
+    SignalGenerationService(TradingSignalRepository tradingSignalRepository) {
         this.tradingSignalRepository = tradingSignalRepository;
-    }
-
-    @Override
-    public TradingSignal generate(UUID symbolId, String ticker) {
-        AiPrediction prediction = aiPredictionPort.predict(ticker);
-        return generate(symbolId, prediction);
     }
 
     @Override
