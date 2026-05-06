@@ -114,7 +114,7 @@ export default function DashboardHomePage() {
         label: "Unrealized P&L",
         value: unrealizedPnl != null ? formatSignedMoney(unrealizedPnl) : "N/A",
         detail: marketDataUnavailable ? "Market data unavailable" : partialMarketData ? "Priced holdings only" : "Open position gains",
-        tone: "text-green",
+        tone: unrealizedPnl == null ? "text-text-3" : unrealizedPnl >= 0 ? "text-green" : "text-red",
       },
     ];
   }, [holdings.length, portfolio, signals]);

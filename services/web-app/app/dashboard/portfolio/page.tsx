@@ -116,6 +116,10 @@ function ClosePositionPanel({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
+      if (!position.id) {
+        toast.error("Cannot close position: missing position ID. Contact support.");
+        return;
+      }
       const payload = buildClosePositionPayload(draft);
       setSubmitting(true);
       setErr(null);
@@ -234,6 +238,11 @@ export default function PortfolioPage() {
             ? formatSignedMoney(portfolio.unrealizedPnl)
             : "N/A",
         detail: marketDataUnavailable ? "Market data unavailable" : partialMarketData ? "Priced holdings only" : "Open position gains",
+        tone: (marketDataUnavailable || portfolio.unrealizedPnl == null)
+          ? "text-text-3"
+          : portfolio.unrealizedPnl >= 0
+            ? "text-green"
+            : "text-red",
       },
       {
         label: "Win Rate",
@@ -324,7 +333,7 @@ export default function PortfolioPage() {
         {summary.map((card) => (
           <article key={card.label} className="rounded-[20px] border border-border bg-bg-1/80 p-5 shadow-glow">
             <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">{card.label}</div>
-            <div className="mt-3 font-display text-3xl font-bold tracking-[-0.05em] text-white">{card.value}</div>
+            <div className={`mt-3 font-display text-3xl font-bold tracking-[-0.05em] ${"tone" in card ? card.tone : "text-white"}`}>{card.value}</div>
             <div className="mt-2 text-sm text-text-2">{card.detail}</div>
           </article>
         ))}
