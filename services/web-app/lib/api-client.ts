@@ -287,7 +287,8 @@ export const apiClient = {
       return await requestJson<Record<string, MarketPriceResponse[]>>(
         `/api/v1/prices/history-batch?${params.toString()}`
       );
-    } catch {
+    } catch (err) {
+      console.warn("[api-client] getHistoricalPricesBatch failed:", err);
       return {};
     }
   },
