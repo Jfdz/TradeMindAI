@@ -1,13 +1,13 @@
 # Trading SaaS - Development Progress
 
-This file tracks Claude's progress through the PLAN_EXECUTION.md backlog.
-Update after every completed PBI: record the last done task and the next in development.
+File track Claude progress through PLAN_EXECUTION.md backlog.
+Update after every done PBI: record last done task and next in development.
 
 ---
 
 ## Environment Notes
 
-- Maven resolution rule: prefer repo-local Maven first if visible and runnable (`mvnw.cmd`, `mvnw`, or other repository-provided wrapper/script). Use the installed Maven path below only as fallback when the repository does not provide its own Maven entrypoint.
+- Maven resolution rule: prefer repo-local Maven first if visible and runnable (`mvnw.cmd`, `mvnw`, or other repo-provided wrapper/script). Use installed Maven path below only as fallback when repo no provide own Maven entrypoint.
 - Maven fallback launcher: `C:\Users\JFERNANDEZ\tools\apache-maven-3.9.10\bin\mvn.cmd`
 - JDK 21 home: `C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot`
 - Use `JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot` when running Maven in this shell.
@@ -20,8 +20,8 @@ Update after every completed PBI: record the last done task and the next in deve
 
 | Acceptance criterion | Status |
 |---|---|
-| Vitest is configured in `web-app` and wired to `npm test` | Closed |
-| Middleware, auth credential flow, and api-client fallback/header behavior are covered by unit tests | Closed |
+| Vitest configured in `web-app` and wired to `npm test` | Closed |
+| Middleware, auth credential flow, and api-client fallback/header behavior covered by unit tests | Closed |
 | Frontend unit test suite passes locally | Closed |
 
 ### Remaining Tasks
@@ -34,15 +34,15 @@ None.
 
 **Branch:** `fix/sprint11-architecture-remediation`
 **Started:** 2026-04-29
-**Coverage target for new code:** 85% minimum via focused unit tests for each implemented slice.
+**Coverage target for new code:** 85% min via focused unit tests per slice.
 
 ### Current Status
 
 | ID | Title | Status | Notes |
 |---|---|---|---|
-| S11-01 | Make market-data internal-only | Done | `market-data-service` now requires `X-Internal-Secret` for all `/api/v1/**`; health/actuator stays public. Docker Compose already had no host port. K8s service remains `ClusterIP`; ingress no longer routes prices/symbols to market-data. |
-| S11-02 | Move market-data calls into trading-core | Done | Added trading-core proxy endpoints for `/api/v1/prices/**` and `/api/v1/symbols`; trading-core adapter sends `X-Internal-Secret`; auth and rate-limit integration coverage now passes locally for proxy routes. |
-| S11-03 | Subscription tier enforcement at every paid endpoint | In Progress | Historical price windows, backtest submission, and active strategy quotas now enforce tier access in trading-core. A subscription usage ledger now records allowed/denied requests for the gated history, backtest, and strategy mutation flows. Next: finish the remaining S11-03 durability gap by reconciling Redis hot-path counters with the ledger and extend the same pattern to any newly introduced paid endpoints. |
+| S11-01 | Make market-data internal-only | Done | `market-data-service` now require `X-Internal-Secret` for all `/api/v1/**`; health/actuator stay public. Docker Compose already no host port. K8s service stay `ClusterIP`; ingress no longer route prices/symbols to market-data. |
+| S11-02 | Move market-data calls into trading-core | Done | Added trading-core proxy endpoints for `/api/v1/prices/**` and `/api/v1/symbols`; trading-core adapter send `X-Internal-Secret`; auth and rate-limit integration coverage now pass locally for proxy routes. |
+| S11-03 | Subscription tier enforcement at every paid endpoint | In Progress | Historical price windows, backtest submission, and active strategy quotas now enforce tier access in trading-core. Subscription usage ledger now record allowed/denied requests for gated history, backtest, and strategy mutation flows. Next: finish remaining S11-03 durability gap by reconciling Redis hot-path counters with ledger and extend same pattern to any new paid endpoints. |
 
 ### Completed This Session
 
@@ -56,7 +56,7 @@ None.
 | Added trading-core auth/rate-limit integration coverage for market-data proxy routes | `MarketDataProxySecurityTest.java` |
 | Added first subscription-tier enforcement slice for historical market-data access | `SubscriptionAccessGuard.java`, `GlobalExceptionHandler.java`, `MarketDataProxyController.java`, `SubscriptionAccessGuardTest.java`, updated `MarketDataProxyControllerTest.java`, updated `MarketDataProxySecurityTest.java` |
 | Enforced BASIC+ access for backtest submission with aspect-backed MVC coverage | `BacktestController.java`, `RequiresSubscriptionAspect.java`, `SecurityConfig.java`, `BacktestSubscriptionSecurityTest.java` |
-| Enforced active-strategy quotas by plan and covered the strategy create path in MVC/security tests | `StrategyManagementService.java`, `StrategyRepository.java`, `StrategyJpaRepository.java`, `StrategyRepositoryAdapter.java`, `ManageStrategiesUseCase.java`, `StrategyManagementServiceTest.java`, `StrategySubscriptionSecurityTest.java`, updated `StrategyControllerTest.java` |
+| Enforced active-strategy quotas by plan and covered strategy create path in MVC/security tests | `StrategyManagementService.java`, `StrategyRepository.java`, `StrategyJpaRepository.java`, `StrategyRepositoryAdapter.java`, `ManageStrategiesUseCase.java`, `StrategyManagementServiceTest.java`, `StrategySubscriptionSecurityTest.java`, updated `StrategyControllerTest.java` |
 | Added durable subscription usage ledger tracking for gated entitlement routes | `V11__create_subscription_usage_ledger_table.sql`, `SubscriptionUsageLedgerJpaEntity.java`, `SubscriptionUsageLedgerJpaRepository.java`, `SubscriptionUsageLedgerService.java`, `SubscriptionUsageLedgerInterceptor.java`, `SubscriptionUsageLedgerWebConfig.java`, `SubscriptionUsageLedgerServiceTest.java`, updated `MarketDataProxySecurityTest.java`, updated `BacktestSubscriptionSecurityTest.java`, updated `StrategySubscriptionSecurityTest.java` |
 
 ### Verification
@@ -73,27 +73,27 @@ None.
 | Trading-core backtest subscription tests | Passed - `BacktestSubscriptionSecurityTest`, `BacktestControllerTest` |
 | Trading-core strategy quota tests | Passed - `StrategyManagementServiceTest`, `StrategyControllerTest`, `StrategySubscriptionSecurityTest` |
 | Trading-core subscription usage ledger tests | Passed - `SubscriptionUsageLedgerServiceTest`, updated `MarketDataProxySecurityTest`, updated `BacktestSubscriptionSecurityTest`, updated `StrategySubscriptionSecurityTest` |
-| Trading-core Flyway migration validation for usage ledger | Added - `FlywayMigrationTest` is assumption-guarded and skipped locally when Docker is unavailable |
-| Maven local cache recovery | Passed - removed two corrupted `.m2` POM directories and re-ran successfully |
+| Trading-core Flyway migration validation for usage ledger | Added - `FlywayMigrationTest` is assumption-guarded and skipped locally when Docker unavailable |
+| Maven local cache recovery | Passed - removed two corrupted `.m2` POM dirs and re-ran successfully |
 
 ### Next In Development
 
 **PBI:** `S11-03` - subscription tier enforcement at every paid endpoint
-**Immediate next task:** Finish the remaining `S11-03` durability work by reconciling Redis hot-path counters with `subscription_usage_ledger`, and keep applying the same entitlement + ledger pattern to any newly added paid endpoints before moving to `S11-04`.
+**Immediate next task:** Finish remaining `S11-03` durability work by reconciling Redis hot-path counters with `subscription_usage_ledger`, and keep applying same entitlement + ledger pattern to any new paid endpoints before moving to `S11-04`.
 
 ---
 
 ## Next In Development
-Tracker note (2026-04-28): `S10-14`, `S10-17`, `S10-18`, `S10-19`, and `S10-24` are completed in the working tree below. The remaining active sprint item is `S10-10`, followed by `S10-11`.
+Tracker note (2026-04-28): `S10-14`, `S10-17`, `S10-18`, `S10-19`, and `S10-24` done in working tree below. Remaining active sprint item: `S10-10`, then `S10-11`.
 
 **PBI:** `S10-01` — AI engine: add auth middleware on training/model routes
 **Branch:** `fix/sprint10-flaw-remediation`
 **Severity:** Critical
 
 ### Acceptance Criteria
-- Given an unauthenticated request to `/api/v1/models/**` or `/api/v1/training/**`, When it arrives, Then the service returns 401.
-- Given a request with a valid admin token, When it arrives, Then the route is executed normally.
-- Unit tests cover the auth dependency.
+- Given unauth request to `/api/v1/models/**` or `/api/v1/training/**`, When arrives, Then service returns 401.
+- Given request with valid admin token, When arrives, Then route executes normally.
+- Unit tests cover auth dependency.
 
 
 ---
@@ -134,10 +134,3 @@ Second Codex audit found 26 flaws. Branch: `fix/sprint10-flaw-remediation`
 | S10-26 | Low | Extract shared signal-formatting utilities | `dashboard/page.tsx:89-147`, `signals/page.tsx:60-118`, `signal-detail-client.tsx:47-63` | Done |
 
 ---
-
-
-
-
-
-
-
