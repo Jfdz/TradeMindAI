@@ -105,6 +105,38 @@ function pickDonutCenterValue(state: DataSourceState, totalCapital: number | nul
   return "Unavailable";
 }
 
+function formatMoneyOrDash(value: number | null | undefined) {
+  if (value == null) return "—";
+  return formatMoney(value);
+}
+
+function formatSignedMoneyOrDash(value: number | null | undefined) {
+  if (value == null) return "—";
+  return formatSignedMoney(value);
+}
+
+function formatPercentOrDash(value: number | null | undefined, digits = 1) {
+  if (value == null) return "—";
+  return `${value.toFixed(digits)}%`;
+}
+
+function formatWinRate(winRate: number | null | undefined) {
+  if (winRate == null) return "N/A";
+  return `${Math.round(winRate * 100)}%`;
+}
+
+function calculatePnlPct(pnl: number | null, costBasis: number) {
+  if (pnl == null || costBasis <= 0) return null;
+  return (pnl / costBasis) * 100;
+}
+
+function formatPnlPctCell(lastPrice: number | null | undefined, pnlPct: number | null) {
+  if (lastPrice == null) return "—";
+  const value = pnlPct ?? 0;
+  const sign = value >= 0 ? "+" : "";
+  return `${sign}${value.toFixed(2)}%`;
+}
+
 function formatMoney(value: number) {
   return value.toLocaleString("en-US", {
     style: "currency",
@@ -116,6 +148,17 @@ function formatMoney(value: number) {
 function formatSignedMoney(value: number) {
   const formatted = formatMoney(Math.abs(value));
   return value >= 0 ? `+${formatted}` : `-${formatted}`;
+}
+
+function formatRealized(value: number) {
+  if (value === 0) return formatMoney(0);
+  return formatSignedMoney(value);
+}
+
+function pickRealizedTone(value: number) {
+  if (value > 0) return "text-green";
+  if (value < 0) return "text-red";
+  return "text-white";
 }
 
 function formatDateTime(value: string | null | undefined) {
@@ -295,9 +338,7 @@ export default function PortfolioPage() {
 
     const showCostZero = state === "empty" || totalCost > 0;
     const costBasisValue = showCostZero ? formatMoney(totalCost) : "—";
-    const winRateValue = portfolio.winRate != null
-      ? `${Math.round(portfolio.winRate * 100)}%`
-      : "N/A";
+    const winRateValue = formatWinRate(portfolio.winRate);
 
     return [
       {
@@ -429,7 +470,9 @@ export default function PortfolioPage() {
                 <div className={getDonutTextClass(portfolio.totalCapital ?? 0)}>
                   {pickDonutCenterValue(getDataSourceState(portfolio.dataSource), portfolio.totalCapital)}
                 </div>
-                <div className="mt-2 whitespace-nowrap text-sm text-text-2">Realized {formatSignedMoney(portfolio.realizedPnl)}</div>
+                <div className={`mt-2 whitespace-nowrap text-sm ${pickRealizedTone(portfolio.realizedPnl)}`}>
+                  Realized {formatRealized(portfolio.realizedPnl)}
+                </div>
               </div>
             </div>
           </div>
@@ -445,7 +488,7 @@ export default function PortfolioPage() {
                   </div>
                 </div>
                 <div className="font-mono text-sm text-text-1">
-                  {position.allocationPct != null ? `${position.allocationPct.toFixed(1)}%` : "—"}
+                  {formatPercentOrDash(position.allocationPct)}
                 </div>
               </div>
             ))}
@@ -489,14 +532,11 @@ export default function PortfolioPage() {
                   {holdings.map((position, index) => {
                     const pnl = position.unrealizedPnl ?? null;
                     const costBasis = position.quantity * position.averageCost;
-                    const pnlPct = costBasis > 0 && pnl != null ? (pnl / costBasis) * 100 : null;
+                    const pnlPct = calculatePnlPct(pnl, costBasis);
                     const rowClass = index % 2 === 0 ? "bg-white/[0.015]" : "";
-                    const lastPriceCell = position.lastPrice != null ? formatMoney(position.lastPrice) : "—";
-                    const pnlCell = pnl != null ? formatSignedMoney(pnl) : "—";
-                    const pnlPctSign = pnlPct != null && pnlPct >= 0 ? "+" : "";
-                    const pnlPctCell = position.lastPrice != null
-                      ? `${pnlPctSign}${(pnlPct ?? 0).toFixed(2)}%`
-                      : "—";
+                    const lastPriceCell = formatMoneyOrDash(position.lastPrice);
+                    const pnlCell = formatSignedMoneyOrDash(pnl);
+                    const pnlPctCell = formatPnlPctCell(position.lastPrice, pnlPct);
 
                     return (
                       <tr key={position.id} className={rowClass}>
