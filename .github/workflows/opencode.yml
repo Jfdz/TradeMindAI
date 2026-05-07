@@ -48,20 +48,25 @@ jobs:
     steps:
       - name: Resolve checkout ref
         id: ref
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "ref=develop" >> "$GITHUB_OUTPUT"
-          elif [[ "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
-            echo "ref=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
-          elif [[ -n "${{ github.event.issue.pull_request.url }}" ]]; then
-            SHA=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}" --jq '.head.sha')
-            echo "ref=$SHA" >> "$GITHUB_OUTPUT"
-          else
-            echo "ref=develop" >> "$GITHUB_OUTPUT"
-          fi
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const ev = context.eventName;
+            let ref = 'develop';
+            if (ev === 'workflow_dispatch') {
+              ref = 'develop';
+            } else if (ev === 'pull_request_review_comment') {
+              ref = context.payload.pull_request.head.sha;
+            } else if (context.payload.issue && context.payload.issue.pull_request) {
+              const pr = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.issue.number,
+              });
+              ref = pr.data.head.sha;
+            }
+            core.setOutput('ref', ref);
 
       - name: Checkout
         uses: actions/checkout@v4
