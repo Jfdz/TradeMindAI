@@ -1,0 +1,37 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: market-data-ingestion
+  namespace: trading-saas
+  labels:
+    app: market-data-service
+    role: alert-rules
+spec:
+  groups:
+    - name: market-data-ingestion
+      rules:
+        - alert: MarketDataIngestionStale
+          expr: time() - marketdata_ingestion_last_success_timestamp_seconds > 36 * 3600
+          for: 30m
+          labels:
+            severity: warning
+            service: market-data-service
+          annotations:
+            summary: "Market data ingestion has not succeeded in 36h+"
+            description: |
+              The scheduled OHLCV ingestion job has not produced a successful run in over 36 hours.
+              Check market-data-service pod logs for `event=marketdata_ingestion_completed` entries
+              and verify yfinance is reachable, the cron is firing, and DB writes are succeeding.
+
+        - alert: MarketDataIngestionPartialFailure
+          expr: marketdata_ingestion_last_failed_count > 0
+          for: 1h
+          labels:
+            severity: warning
+            service: market-data-service
+          annotations:
+            summary: "Market data ingestion run had {{ $value }} failed symbols"
+            description: |
+              The most recent ingestion run failed for one or more tracked symbols.
+              Inspect logs for `event=marketdata_ingestion_symbol_failed` entries to see which
+              tickers failed and why (yfinance throttling, circuit-breaker open, schema mismatch, etc.).
