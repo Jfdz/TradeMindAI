@@ -36,6 +36,75 @@ function isEmptyPortfolio(dataSource: string | null | undefined) {
   return dataSource === "none" || dataSource === "missing-portfolio";
 }
 
+type DataSourceState = "empty" | "unavailable" | "partial" | "ok";
+
+function getDataSourceState(dataSource: string | null | undefined): DataSourceState {
+  if (isEmptyPortfolio(dataSource)) return "empty";
+  if (isMarketDataUnavailable(dataSource)) return "unavailable";
+  if (isPartialMarketData(dataSource)) return "partial";
+  return "ok";
+}
+
+function pickTotalValueDisplay(state: DataSourceState, totalCapital: number | null) {
+  if (state === "empty") return formatMoney(0);
+  if (totalCapital != null) return formatMoney(totalCapital);
+  return "Unavailable";
+}
+
+function pickTotalValueDetail(state: DataSourceState, unpricedCount: number) {
+  switch (state) {
+    case "empty":
+      return "No open positions";
+    case "unavailable":
+      return "Market data unavailable";
+    case "partial":
+      return `${unpricedCount} still unpriced`;
+    default:
+      return unpricedCount > 0 ? `${unpricedCount} unpriced` : "Marked to market";
+  }
+}
+
+function pickUnrealizedValue(state: DataSourceState, unrealizedPnl: number | null) {
+  if (state === "empty") return formatMoney(0);
+  if (state === "unavailable") return "Unavailable";
+  if (unrealizedPnl != null) return formatSignedMoney(unrealizedPnl);
+  return "N/A";
+}
+
+function pickUnrealizedDetail(state: DataSourceState) {
+  switch (state) {
+    case "unavailable":
+      return "Market data unavailable";
+    case "partial":
+      return "Priced holdings only";
+    default:
+      return "Open position gains";
+  }
+}
+
+function pickUnrealizedTone(state: DataSourceState, unrealizedPnl: number | null) {
+  if (state === "empty" || state === "unavailable" || unrealizedPnl == null) {
+    return "text-text-3";
+  }
+  return unrealizedPnl >= 0 ? "text-green" : "text-red";
+}
+
+function pickPnlTone(pnl: number | null) {
+  if (pnl == null) return "text-text-3";
+  return pnl >= 0 ? "text-green" : "text-red";
+}
+
+function pickPnlPctTone(pnlPct: number | null) {
+  if (pnlPct == null) return "text-text-3";
+  return pnlPct >= 0 ? "text-green" : "text-red";
+}
+
+function pickDonutCenterValue(state: DataSourceState, totalCapital: number | null) {
+  if (totalCapital != null) return formatMoney(totalCapital);
+  if (state === "empty") return formatMoney(0);
+  return "Unavailable";
+}
+
 function formatMoney(value: number) {
   return value.toLocaleString("en-US", {
     style: "currency",
@@ -222,66 +291,34 @@ export default function PortfolioPage() {
 
     const totalCost = holdings.reduce((sum, h) => sum + h.quantity * h.averageCost, 0);
     const unpricedCount = holdings.filter((h) => h.lastPrice == null).length;
-    const marketDataUnavailable = isMarketDataUnavailable(portfolio.dataSource);
-    const partialMarketData = isPartialMarketData(portfolio.dataSource);
-    const emptyPortfolio = isEmptyPortfolio(portfolio.dataSource);
+    const state = getDataSourceState(portfolio.dataSource);
 
-    const totalValueDisplay = emptyPortfolio
-      ? formatMoney(0)
-      : portfolio.totalCapital != null
-        ? formatMoney(portfolio.totalCapital)
-        : "Unavailable";
-
-    const unrealizedPnlValue = emptyPortfolio
-      ? formatMoney(0)
-      : marketDataUnavailable
-        ? "Unavailable"
-        : portfolio.unrealizedPnl != null
-          ? formatSignedMoney(portfolio.unrealizedPnl)
-          : "N/A";
-
-    const unrealizedTone = emptyPortfolio
-      ? "text-text-3"
-      : marketDataUnavailable || portfolio.unrealizedPnl == null
-        ? "text-text-3"
-        : portfolio.unrealizedPnl >= 0
-          ? "text-green"
-          : "text-red";
+    const showCostZero = state === "empty" || totalCost > 0;
+    const costBasisValue = showCostZero ? formatMoney(totalCost) : "—";
+    const winRateValue = portfolio.winRate != null
+      ? `${Math.round(portfolio.winRate * 100)}%`
+      : "N/A";
 
     return [
       {
         label: "Total Value",
-        value: totalValueDisplay,
-        detail: emptyPortfolio
-          ? "No open positions"
-          : marketDataUnavailable
-            ? "Market data unavailable"
-            : partialMarketData
-              ? `${unpricedCount} still unpriced`
-              : unpricedCount > 0
-                ? `${unpricedCount} unpriced`
-                : "Marked to market",
+        value: pickTotalValueDisplay(state, portfolio.totalCapital),
+        detail: pickTotalValueDetail(state, unpricedCount),
       },
       {
         label: "Total Cost Basis",
-        value: emptyPortfolio || totalCost > 0 ? formatMoney(totalCost) : "—",
+        value: costBasisValue,
         detail: "Weighted entry cost",
       },
       {
         label: "Unrealized P&L",
-        value: unrealizedPnlValue,
-        detail: emptyPortfolio
-          ? "Open position gains"
-          : marketDataUnavailable
-            ? "Market data unavailable"
-            : partialMarketData
-              ? "Priced holdings only"
-              : "Open position gains",
-        tone: unrealizedTone,
+        value: pickUnrealizedValue(state, portfolio.unrealizedPnl),
+        detail: pickUnrealizedDetail(state),
+        tone: pickUnrealizedTone(state, portfolio.unrealizedPnl),
       },
       {
         label: "Win Rate",
-        value: portfolio.winRate != null ? `${Math.round(portfolio.winRate * 100)}%` : "N/A",
+        value: winRateValue,
         detail: "Position-level",
       },
     ];
@@ -390,11 +427,7 @@ export default function PortfolioPage() {
               <div className="absolute inset-4 rounded-full border border-border bg-bg-0/95 p-3 text-center">
                 <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Portfolio</div>
                 <div className={getDonutTextClass(portfolio.totalCapital ?? 0)}>
-                  {portfolio.totalCapital != null
-                    ? formatMoney(portfolio.totalCapital)
-                    : isEmptyPortfolio(portfolio.dataSource)
-                      ? formatMoney(0)
-                      : "Unavailable"}
+                  {pickDonutCenterValue(getDataSourceState(portfolio.dataSource), portfolio.totalCapital)}
                 </div>
                 <div className="mt-2 whitespace-nowrap text-sm text-text-2">Realized {formatSignedMoney(portfolio.realizedPnl)}</div>
               </div>
@@ -457,9 +490,16 @@ export default function PortfolioPage() {
                     const pnl = position.unrealizedPnl ?? null;
                     const costBasis = position.quantity * position.averageCost;
                     const pnlPct = costBasis > 0 && pnl != null ? (pnl / costBasis) * 100 : null;
+                    const rowClass = index % 2 === 0 ? "bg-white/[0.015]" : "";
+                    const lastPriceCell = position.lastPrice != null ? formatMoney(position.lastPrice) : "—";
+                    const pnlCell = pnl != null ? formatSignedMoney(pnl) : "—";
+                    const pnlPctSign = pnlPct != null && pnlPct >= 0 ? "+" : "";
+                    const pnlPctCell = position.lastPrice != null
+                      ? `${pnlPctSign}${(pnlPct ?? 0).toFixed(2)}%`
+                      : "—";
 
                     return (
-                      <tr key={position.id} className={index % 2 === 0 ? "bg-white/[0.015]" : ""}>
+                      <tr key={position.id} className={rowClass}>
                         <td className="border-t border-border px-4 py-4">
                           <div className="flex items-center gap-3">
                             <span className="h-3 w-3 rounded-full" style={{ backgroundColor: position.color }} />
@@ -471,24 +511,12 @@ export default function PortfolioPage() {
                         </td>
                         <td className="border-t border-border px-4 py-4 font-mono text-text-1">{position.quantity}</td>
                         <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.averageCost)}</td>
-                        <td className="border-t border-border px-4 py-4 font-mono text-text-1">
-                          {position.lastPrice != null ? formatMoney(position.lastPrice) : "—"}
+                        <td className="border-t border-border px-4 py-4 font-mono text-text-1">{lastPriceCell}</td>
+                        <td className={`border-t border-border px-4 py-4 font-mono ${pickPnlTone(pnl)}`}>
+                          {pnlCell}
                         </td>
-                        <td
-                          className={`border-t border-border px-4 py-4 font-mono ${
-                            pnl != null && pnl >= 0 ? "text-green" : pnl != null && pnl < 0 ? "text-red" : "text-text-3"
-                          }`}
-                        >
-                          {pnl != null ? formatSignedMoney(pnl) : "—"}
-                        </td>
-                        <td
-                          className={`border-t border-border px-4 py-4 font-mono ${
-                            pnlPct != null && pnlPct >= 0 ? "text-green" : pnlPct != null && pnlPct < 0 ? "text-red" : "text-text-3"
-                          }`}
-                        >
-                          {position.lastPrice != null
-                            ? `${pnlPct != null && pnlPct >= 0 ? "+" : ""}${(pnlPct ?? 0).toFixed(2)}%`
-                            : "—"}
+                        <td className={`border-t border-border px-4 py-4 font-mono ${pickPnlPctTone(pnlPct)}`}>
+                          {pnlPctCell}
                         </td>
                         <td className="border-t border-border px-4 py-4">
                           <Sparkline values={position.trend} color={position.color} />
