@@ -2,35 +2,44 @@
 """
 Seed script: fetches real market data from Yahoo Finance and populates TradeMindAI DB.
 
-Usage (from Ubuntu server):
-  # Start port-forward in another terminal first:
-  #   kubectl port-forward svc/postgres --address 0.0.0.0 5433:5432 -n trading-saas
+Usage:
+  # Local dev (port-forward to in-cluster postgres):
+  kubectl port-forward svc/postgres --address 0.0.0.0 5433:5432 -n trading-saas
   pip3 install yfinance psycopg2-binary pandas numpy
-  python3 seed_market_data.py
+  python3 scripts/seed_market_data.py
+
+  # Connect via DATABASE_URL (preferred for prod / CI):
+  export DATABASE_URL='postgresql://user:pass@host:5432/db'
+  python3 scripts/seed_market_data.py --user-id 95ffd32c-7e64-43a5-9ae1-e0800aeabffd
+
+  # Override symbols / window:
+  python3 scripts/seed_market_data.py --symbols AAPL,MSFT --years 1
+
+  # Bootstrap an existing user, skipping the demo user creation:
+  python3 scripts/seed_market_data.py --user-id <uuid>
+
+  # Market-data only (no trading_core writes):
+  python3 scripts/seed_market_data.py --skip-user
+
+  # Dry-run (open transaction, do everything, then ROLLBACK):
+  python3 scripts/seed_market_data.py --dry-run
 """
 
+import argparse
 import json
+import os
 import sys
 
 try:
     import psycopg2
     import yfinance as yf
     import pandas as pd
-    import numpy as np
 except ImportError as e:
     print(f"Missing dependency: {e}")
     print("Run: pip3 install yfinance psycopg2-binary pandas numpy")
     sys.exit(1)
 
-DB_CONFIG = {
-    "host": "localhost",
-    "port": 5432,
-    "database": "trading_saas",
-    "user": "trading_user",
-    "password": "dev_password_change_in_prod",
-}
-
-SYMBOLS = [
+DEFAULT_SYMBOLS = [
     ("AAPL",  "Apple Inc.",                  "NASDAQ", "Technology"),
     ("MSFT",  "Microsoft Corporation",       "NASDAQ", "Technology"),
     ("GOOGL", "Alphabet Inc.",               "NASDAQ", "Technology"),
@@ -40,18 +49,70 @@ SYMBOLS = [
     ("META",  "Meta Platforms Inc.",         "NASDAQ", "Technology"),
     ("JPM",   "JPMorgan Chase & Co.",        "NYSE",   "Financial Services"),
     ("V",     "Visa Inc.",                   "NYSE",   "Financial Services"),
-    ("NFLX",  "Netflix Inc.",               "NASDAQ", "Communication Services"),
+    ("NFLX",  "Netflix Inc.",                "NASDAQ", "Communication Services"),
     ("AMD",   "Advanced Micro Devices",      "NASDAQ", "Technology"),
     ("INTC",  "Intel Corporation",           "NASDAQ", "Technology"),
     ("BA",    "Boeing Company",              "NYSE",   "Industrials"),
     ("DIS",   "Walt Disney Company",         "NYSE",   "Communication Services"),
-    ("WMT",   "Walmart Inc.",               "NYSE",   "Consumer Defensive"),
+    ("WMT",   "Walmart Inc.",                "NYSE",   "Consumer Defensive"),
     ("PYPL",  "PayPal Holdings Inc.",        "NASDAQ", "Financial Services"),
     ("COIN",  "Coinbase Global Inc.",        "NASDAQ", "Financial Services"),
     ("UBER",  "Uber Technologies Inc.",      "NYSE",   "Technology"),
     ("SPOT",  "Spotify Technology",          "NYSE",   "Communication Services"),
     ("PLTR",  "Palantir Technologies Inc.",  "NYSE",   "Technology"),
 ]
+
+DEFAULT_METADATA_BY_TICKER = {t[0]: t for t in DEFAULT_SYMBOLS}
+
+SAMPLE_POSITIONS = [
+    ("AAPL", 10, 175.50),
+    ("NVDA",  5, 620.00),
+    ("MSFT",  8, 380.25),
+    ("TSLA",  3, 245.00),
+]
+
+
+def parse_args():
+    p = argparse.ArgumentParser(description="Seed market data + optional user-scoped trading_core data.")
+    p.add_argument("--user-id",
+                   help="Existing user UUID to attach portfolio/positions/strategy/preferences to. "
+                        "When omitted, falls back to creating demo@trademind.ai.")
+    p.add_argument("--symbols",
+                   help="Comma-separated tickers to seed. Defaults to the built-in 20-ticker list.")
+    p.add_argument("--years", type=int, default=2,
+                   help="Historical window in years (default: 2).")
+    p.add_argument("--skip-user", action="store_true",
+                   help="Skip all trading_core writes; only seed market_data.* tables.")
+    p.add_argument("--dry-run", action="store_true",
+                   help="Run all inserts inside a transaction, then ROLLBACK. Nothing persisted.")
+    return p.parse_args()
+
+
+def db_connect():
+    """Connect via DATABASE_URL if set, else fall back to discrete env vars / localhost defaults."""
+    url = os.environ.get("DATABASE_URL")
+    if url:
+        return psycopg2.connect(url)
+    return psycopg2.connect(
+        host=os.environ.get("DB_HOST", "localhost"),
+        port=int(os.environ.get("DB_PORT", "5432")),
+        dbname=os.environ.get("DB_NAME", "trading_saas"),
+        user=os.environ.get("DB_USER", "trading_user"),
+        password=os.environ.get("DB_PASSWORD", "dev_password_change_in_prod"),
+    )
+
+
+def resolve_symbols(symbols_csv):
+    if not symbols_csv:
+        return DEFAULT_SYMBOLS
+    requested = [t.strip().upper() for t in symbols_csv.split(",") if t.strip()]
+    out = []
+    for ticker in requested:
+        if ticker in DEFAULT_METADATA_BY_TICKER:
+            out.append(DEFAULT_METADATA_BY_TICKER[ticker])
+        else:
+            out.append((ticker, ticker, "UNKNOWN", ""))
+    return out
 
 
 def calculate_rsi(close, period=14):
@@ -65,40 +126,34 @@ def calculate_rsi(close, period=14):
 
 
 def calculate_indicators(df):
-    """Returns list of (date, indicator_type, value, metadata_dict) tuples."""
     rows = []
     close = df["Close"].squeeze()
 
-    # SMA 20 / 50 / 200
     for period in [20, 50, 200]:
         sma = close.rolling(window=period).mean()
         for dt, val in sma.dropna().items():
             rows.append((dt.date(), f"SMA_{period}", float(val), {}))
 
-    # EMA 12 / 26
     for period in [12, 26]:
         ema = close.ewm(span=period, adjust=False).mean()
         for dt, val in ema.dropna().items():
             rows.append((dt.date(), f"EMA_{period}", float(val), {}))
 
-    # RSI 14
     rsi = calculate_rsi(close, 14)
     for dt, val in rsi.dropna().items():
         rows.append((dt.date(), "RSI_14", float(val), {}))
 
-    # MACD (12, 26, 9)
     ema12 = close.ewm(span=12, adjust=False).mean()
     ema26 = close.ewm(span=26, adjust=False).mean()
-    macd   = ema12 - ema26
+    macd = ema12 - ema26
     signal = macd.ewm(span=9, adjust=False).mean()
-    hist   = macd - signal
+    hist = macd - signal
     for dt, val in macd.dropna().items():
         rows.append((dt.date(), "MACD", float(val), {
-            "signal":    float(signal[dt]),
+            "signal": float(signal[dt]),
             "histogram": float(hist[dt]),
         }))
 
-    # Bollinger Bands (20, 2)
     sma20 = close.rolling(window=20).mean()
     std20 = close.rolling(window=20).std()
     upper = sma20 + std20 * 2
@@ -106,31 +161,30 @@ def calculate_indicators(df):
     for dt, val in sma20.dropna().items():
         rows.append((dt.date(), "BOLLINGER_UPPER", float(upper[dt]), {
             "middle": float(val),
-            "lower":  float(lower[dt]),
+            "lower": float(lower[dt]),
         }))
 
     return rows
 
 
-def seed_symbols(cur):
-    print(f"\n[1/3] Inserting {len(SYMBOLS)} symbols...")
-    for ticker, name, exchange, sector in SYMBOLS:
+def seed_symbols(cur, symbols):
+    print(f"\n[1/3] Inserting {len(symbols)} symbols...")
+    for ticker, name, exchange, sector in symbols:
         cur.execute("""
             INSERT INTO market_data.symbols (ticker, name, exchange, sector, active)
             VALUES (%s, %s, %s, %s, TRUE)
             ON CONFLICT (ticker) DO UPDATE
                 SET name = EXCLUDED.name, updated_at = NOW()
         """, (ticker, name, exchange, sector))
-    print(f"      Done.")
+    print("      Done.")
 
 
-def seed_prices_and_indicators(cur, ticker):
-    df = yf.download(ticker, period="2y", interval="1d", progress=False, auto_adjust=False)
+def seed_prices_and_indicators(cur, ticker, period_str):
+    df = yf.download(ticker, period=period_str, interval="1d", progress=False, auto_adjust=False)
     if df.empty:
-        print(f"      No data returned, skipping.")
-        return
+        print("      No data returned, skipping.")
+        return 0, 0
 
-    # Flatten MultiIndex columns (yfinance >= 0.2.x)
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
 
@@ -146,14 +200,9 @@ def seed_prices_and_indicators(cur, ticker):
                 VALUES (%s, %s, 'DAILY', %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (symbol_ticker, trade_date, time_frame) DO NOTHING
             """, (
-                ticker,
-                dt.date(),
-                float(row["Open"]),
-                float(row["High"]),
-                float(row["Low"]),
-                float(row["Close"]),
-                float(row[adj_col]),
-                int(row["Volume"]),
+                ticker, dt.date(),
+                float(row["Open"]), float(row["High"]), float(row["Low"]),
+                float(row["Close"]), float(row[adj_col]), int(row["Volume"]),
             ))
             price_count += 1
         except Exception as e:
@@ -174,12 +223,22 @@ def seed_prices_and_indicators(cur, ticker):
             print(f"      Indicator row error ({ind_date}, {ind_type}): {e}")
 
     print(f"      {price_count} prices  |  {ind_count} indicators")
+    return price_count, ind_count
 
 
-def seed_trading_core(cur):
-    print("\n[3/3] Seeding trading_core sample data...")
+def resolve_user_id(cur, supplied_user_id):
+    """Either return the supplied UUID (verifying it exists) or create demo@trademind.ai and return its id."""
+    if supplied_user_id:
+        cur.execute("SELECT id FROM trading_core.users WHERE id = %s", (supplied_user_id,))
+        row = cur.fetchone()
+        if not row:
+            raise RuntimeError(
+                f"--user-id {supplied_user_id} not found in trading_core.users. "
+                "Provide an existing user UUID or omit --user-id to create the demo user."
+            )
+        print(f"      Using existing user_id={supplied_user_id}")
+        return supplied_user_id
 
-    # Demo user
     cur.execute("""
         INSERT INTO trading_core.users
             (email, password_hash, first_name, last_name, active, timezone)
@@ -189,22 +248,24 @@ def seed_trading_core(cur):
              'Demo', 'User', TRUE, 'America/New_York')
         ON CONFLICT (email) DO NOTHING
     """)
-
     cur.execute("SELECT id FROM trading_core.users WHERE email = 'demo@trademind.ai'")
     row = cur.fetchone()
     if not row:
-        print("      Could not retrieve demo user id.")
-        return
+        raise RuntimeError("Could not retrieve demo user id after insert.")
     user_id = row[0]
+    print(f"      Created/located demo user_id={user_id}")
+    return user_id
 
-    # PREMIUM subscription
+
+def seed_trading_core(cur, user_id):
+    print("\n[3/3] Seeding trading_core sample data...")
+
     cur.execute("""
         INSERT INTO trading_core.subscriptions (user_id, plan, expires_at)
         VALUES (%s, 'PREMIUM', NULL)
         ON CONFLICT DO NOTHING
     """, (user_id,))
 
-    # Default strategy
     cur.execute("""
         INSERT INTO trading_core.strategies
             (id, user_id, name, description, active,
@@ -217,7 +278,6 @@ def seed_trading_core(cur):
         ON CONFLICT DO NOTHING
     """, (user_id,))
 
-    # Portfolio
     cur.execute("""
         INSERT INTO trading_core.portfolios
             (id, user_id, initial_capital, created_at, updated_at)
@@ -229,13 +289,7 @@ def seed_trading_core(cur):
     port_row = cur.fetchone()
     if port_row:
         portfolio_id = port_row[0]
-        sample_positions = [
-            ("AAPL",  10,  175.50),
-            ("NVDA",   5, 620.00),
-            ("MSFT",   8, 380.25),
-            ("TSLA",   3, 245.00),
-        ]
-        for sym, qty, price in sample_positions:
+        for sym, qty, price in SAMPLE_POSITIONS:
             cur.execute("""
                 INSERT INTO trading_core.positions
                     (id, portfolio_id, symbol_ticker, quantity, entry_price,
@@ -244,7 +298,6 @@ def seed_trading_core(cur):
                 ON CONFLICT DO NOTHING
             """, (portfolio_id, sym, qty, price))
 
-    # Notification preferences
     cur.execute("""
         INSERT INTO trading_core.user_notification_preferences
             (user_id, signal_digest, live_alerts, risk_warnings,
@@ -253,34 +306,56 @@ def seed_trading_core(cur):
         ON CONFLICT (user_id) DO NOTHING
     """, (user_id,))
 
-    print("      Demo user, subscription, strategy, portfolio and positions inserted.")
+    print("      Subscription, strategy, portfolio and positions inserted.")
 
 
 def main():
-    print("Connecting to PostgreSQL via port-forward localhost:5433 ...")
+    args = parse_args()
+    symbols = resolve_symbols(args.symbols)
+    period_str = f"{args.years}y"
+
+    print("Connecting to PostgreSQL...")
+    if os.environ.get("DATABASE_URL"):
+        print("      Using DATABASE_URL")
+    else:
+        print(f"      Using DB_HOST={os.environ.get('DB_HOST', 'localhost')} "
+              f"DB_PORT={os.environ.get('DB_PORT', '5432')}")
+
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = db_connect()
     except Exception as e:
         print(f"Connection failed: {e}")
-        print("Make sure port-forward is running:")
-        print("  kubectl port-forward svc/postgres --address 0.0.0.0 5433:5432 -n trading-saas")
+        print("Set DATABASE_URL or DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME.")
         sys.exit(1)
 
     conn.autocommit = False
     cur = conn.cursor()
 
+    total_prices = 0
+    total_indicators = 0
+    user_id = None
+
     try:
-        seed_symbols(cur)
-        conn.commit()
+        seed_symbols(cur, symbols)
 
-        print(f"\n[2/3] Fetching 2 years of daily OHLCV + indicators for {len(SYMBOLS)} symbols...")
-        for i, (ticker, name, *_) in enumerate(SYMBOLS, 1):
-            print(f"  [{i:02d}/{len(SYMBOLS)}] {ticker:5s}  {name}")
-            seed_prices_and_indicators(cur, ticker)
+        print(f"\n[2/3] Fetching {args.years}y daily OHLCV + indicators for {len(symbols)} symbols...")
+        for i, (ticker, name, *_) in enumerate(symbols, 1):
+            print(f"  [{i:02d}/{len(symbols)}] {ticker:5s}  {name}")
+            p, ind = seed_prices_and_indicators(cur, ticker, period_str)
+            total_prices += p
+            total_indicators += ind
+
+        if args.skip_user:
+            print("\n[3/3] --skip-user set, skipping trading_core writes.")
+        else:
+            user_id = resolve_user_id(cur, args.user_id)
+            seed_trading_core(cur, user_id)
+
+        if args.dry_run:
+            conn.rollback()
+            print("\n--dry-run set, ROLLBACK issued. Nothing persisted.")
+        else:
             conn.commit()
-
-        seed_trading_core(cur)
-        conn.commit()
 
     except Exception as e:
         conn.rollback()
@@ -290,7 +365,14 @@ def main():
         cur.close()
         conn.close()
 
-    print("\nAll done. Database seeded with real market data.")
+    print(
+        f"\nseeded_symbols={len(symbols)} "
+        f"seeded_bars={total_prices} "
+        f"seeded_indicators={total_indicators} "
+        f"user_id={user_id or 'none'} "
+        f"dry_run={args.dry_run}"
+    )
+    print("Done.")
 
 
 if __name__ == "__main__":
