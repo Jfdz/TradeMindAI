@@ -2,6 +2,32 @@ name: Seed Market Data
 
 on:
   workflow_dispatch:
+    inputs:
+      user_id:
+        description: User UUID to attach portfolio/positions/strategy to (existing trading_core.users.id)
+        required: false
+        default: 95ffd32c-7e64-43a5-9ae1-e0800aeabffd
+        type: string
+      symbols_csv:
+        description: Comma-separated tickers (leave empty to use the built-in 20-ticker list)
+        required: false
+        default: ''
+        type: string
+      years:
+        description: Historical window in years
+        required: false
+        default: '2'
+        type: string
+      skip_user:
+        description: Seed market_data only, skip trading_core writes
+        required: false
+        default: false
+        type: boolean
+      dry_run:
+        description: Run inside a transaction and ROLLBACK at the end (no persistence)
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   seed:
@@ -14,6 +40,12 @@ jobs:
 
       - name: Port-forward, wait, seed, cleanup
         shell: bash
+        env:
+          INPUT_USER_ID: ${{ inputs.user_id }}
+          INPUT_SYMBOLS_CSV: ${{ inputs.symbols_csv }}
+          INPUT_YEARS: ${{ inputs.years }}
+          INPUT_SKIP_USER: ${{ inputs.skip_user }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -euo pipefail
 
@@ -41,9 +73,24 @@ jobs:
           DB_NAME=$(kubectl get secret postgres-credentials -n trading-saas \
             -o jsonpath='{.data.market-data-db}' | base64 -d)
 
+          ARGS=()
+          if [ -n "$INPUT_USER_ID" ]; then
+            ARGS+=(--user-id "$INPUT_USER_ID")
+          fi
+          if [ -n "$INPUT_SYMBOLS_CSV" ]; then
+            ARGS+=(--symbols "$INPUT_SYMBOLS_CSV")
+          fi
+          ARGS+=(--years "$INPUT_YEARS")
+          if [ "$INPUT_SKIP_USER" = "true" ]; then
+            ARGS+=(--skip-user)
+          fi
+          if [ "$INPUT_DRY_RUN" = "true" ]; then
+            ARGS+=(--dry-run)
+          fi
+
           DB_HOST=127.0.0.1 \
           DB_PORT=5433 \
           DB_USER="$DB_USER" \
           DB_PASSWORD="$DB_PASSWORD" \
           DB_NAME="$DB_NAME" \
-          python3 scripts/seed_market_data.py
+          python3 scripts/seed_market_data.py "${ARGS[@]}"
