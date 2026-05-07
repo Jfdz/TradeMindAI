@@ -173,6 +173,18 @@ export type LatestPricesResponse = {
   prices: MarketPriceResponse[];
 };
 
+export class ApiError extends Error {
+  readonly status: number;
+  readonly body: string;
+
+  constructor(status: number, body: string, statusText: string) {
+    super(`Request failed with status ${status}: ${body || statusText}`);
+    this.name = "ApiError";
+    this.status = status;
+    this.body = body;
+  }
+}
+
 async function requestJson<T>(path: string, options: RequestInit = {}): Promise<T> {
   const session = await getSession();
   const token = (session as { accessToken?: string } | null)?.accessToken;
@@ -190,10 +202,18 @@ async function requestJson<T>(path: string, options: RequestInit = {}): Promise<
 
   if (!response.ok) {
     const body = await response.text().catch(() => "");
-    throw new Error(`Request failed with status ${response.status}: ${body || response.statusText}`);
+    throw new ApiError(response.status, body, response.statusText);
   }
 
-  return (await response.json()) as T;
+  // 204 No Content / empty body endpoints (e.g., POST /positions/{id}/close)
+  if (response.status === 204 || response.headers.get("content-length") === "0") {
+    return undefined as T;
+  }
+  const text = await response.text();
+  if (!text) {
+    return undefined as T;
+  }
+  return JSON.parse(text) as T;
 }
 
 export const apiClient = {

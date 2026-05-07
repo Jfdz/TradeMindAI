@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
+  ApiError,
   apiClient,
   type PortfolioClosedPositionResponse,
   type PortfolioHoldingResponse,
@@ -94,10 +95,12 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
 function ClosePositionPanel({
   position,
   onClosed,
+  onAlreadyClosed,
   onClose,
 }: {
   position: PortfolioHoldingResponse;
   onClosed: (payload: { realizedPnl: number }) => void;
+  onAlreadyClosed: () => void;
   onClose: () => void;
 }) {
   const [draft, setDraft] = useState<ClosePositionDraft>({
@@ -126,6 +129,10 @@ function ClosePositionPanel({
       await apiClient.closePosition(position.id, payload);
       onClosed({ realizedPnl: calculateClosePositionPnl(position, payload) });
     } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        onAlreadyClosed();
+        return;
+      }
       setErr(error instanceof Error ? error.message : "Failed to close position");
     } finally {
       setSubmitting(false);
@@ -314,6 +321,12 @@ export default function PortfolioPage() {
             setPositionToClose(null);
             void queryClient.invalidateQueries({ queryKey: ["portfolio"] });
             toast.success(`${symbol} closed with ${formatSignedMoney(realizedPnl)} realized`);
+          }}
+          onAlreadyClosed={() => {
+            const symbol = positionToClose.symbol;
+            setPositionToClose(null);
+            void queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+            toast.message(`${symbol} was already closed — refreshed your portfolio`);
           }}
           onClose={() => setPositionToClose(null)}
         />
