@@ -32,6 +32,10 @@ function isPartialMarketData(dataSource: string | null | undefined) {
   return dataSource === "partial-market-data";
 }
 
+function isEmptyPortfolio(dataSource: string | null | undefined) {
+  return dataSource === "none" || dataSource === "missing-portfolio";
+}
+
 function formatMoney(value: number) {
   return value.toLocaleString("en-US", {
     style: "currency",
@@ -204,6 +208,7 @@ export default function PortfolioPage() {
     queryFn: fetchPortfolioPageData,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+    refetchOnMount: "always",
   });
 
   const portfolio = data?.portfolio ?? null;
@@ -219,37 +224,60 @@ export default function PortfolioPage() {
     const unpricedCount = holdings.filter((h) => h.lastPrice == null).length;
     const marketDataUnavailable = isMarketDataUnavailable(portfolio.dataSource);
     const partialMarketData = isPartialMarketData(portfolio.dataSource);
+    const emptyPortfolio = isEmptyPortfolio(portfolio.dataSource);
+
+    const totalValueDisplay = emptyPortfolio
+      ? formatMoney(0)
+      : portfolio.totalCapital != null
+        ? formatMoney(portfolio.totalCapital)
+        : "Unavailable";
+
+    const unrealizedPnlValue = emptyPortfolio
+      ? formatMoney(0)
+      : marketDataUnavailable
+        ? "Unavailable"
+        : portfolio.unrealizedPnl != null
+          ? formatSignedMoney(portfolio.unrealizedPnl)
+          : "N/A";
+
+    const unrealizedTone = emptyPortfolio
+      ? "text-text-3"
+      : marketDataUnavailable || portfolio.unrealizedPnl == null
+        ? "text-text-3"
+        : portfolio.unrealizedPnl >= 0
+          ? "text-green"
+          : "text-red";
 
     return [
       {
         label: "Total Value",
-        value: portfolio.totalCapital != null ? formatMoney(portfolio.totalCapital) : "Unavailable",
-        detail: marketDataUnavailable
-          ? "Market data unavailable"
-          : partialMarketData
-            ? `${unpricedCount} still unpriced`
-            : unpricedCount > 0
-              ? `${unpricedCount} unpriced`
-              : "Marked to market",
+        value: totalValueDisplay,
+        detail: emptyPortfolio
+          ? "No open positions"
+          : marketDataUnavailable
+            ? "Market data unavailable"
+            : partialMarketData
+              ? `${unpricedCount} still unpriced`
+              : unpricedCount > 0
+                ? `${unpricedCount} unpriced`
+                : "Marked to market",
       },
       {
         label: "Total Cost Basis",
-        value: totalCost > 0 ? formatMoney(totalCost) : "—",
+        value: emptyPortfolio || totalCost > 0 ? formatMoney(totalCost) : "—",
         detail: "Weighted entry cost",
       },
       {
         label: "Unrealized P&L",
-        value: marketDataUnavailable
-          ? "Unavailable"
-          : portfolio.unrealizedPnl != null
-            ? formatSignedMoney(portfolio.unrealizedPnl)
-            : "N/A",
-        detail: marketDataUnavailable ? "Market data unavailable" : partialMarketData ? "Priced holdings only" : "Open position gains",
-        tone: (marketDataUnavailable || portfolio.unrealizedPnl == null)
-          ? "text-text-3"
-          : portfolio.unrealizedPnl >= 0
-            ? "text-green"
-            : "text-red",
+        value: unrealizedPnlValue,
+        detail: emptyPortfolio
+          ? "Open position gains"
+          : marketDataUnavailable
+            ? "Market data unavailable"
+            : partialMarketData
+              ? "Priced holdings only"
+              : "Open position gains",
+        tone: unrealizedTone,
       },
       {
         label: "Win Rate",
@@ -362,7 +390,11 @@ export default function PortfolioPage() {
               <div className="absolute inset-4 rounded-full border border-border bg-bg-0/95 p-3 text-center">
                 <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Portfolio</div>
                 <div className={getDonutTextClass(portfolio.totalCapital ?? 0)}>
-                  {portfolio.totalCapital != null ? formatMoney(portfolio.totalCapital) : "Unavailable"}
+                  {portfolio.totalCapital != null
+                    ? formatMoney(portfolio.totalCapital)
+                    : isEmptyPortfolio(portfolio.dataSource)
+                      ? formatMoney(0)
+                      : "Unavailable"}
                 </div>
                 <div className="mt-2 whitespace-nowrap text-sm text-text-2">Realized {formatSignedMoney(portfolio.realizedPnl)}</div>
               </div>

@@ -74,6 +74,7 @@ export default function DashboardHomePage() {
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchInterval: 30_000,
+    refetchOnMount: "always",
   });
 
   const portfolio = data?.portfolio ?? null;
