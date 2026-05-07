@@ -82,21 +82,24 @@ function pickUnrealizedDetail(state: DataSourceState) {
   }
 }
 
+// ── presentation primitives ──────────────────────────────────────────────────
+// Single source of truth for "given a numeric value, return a tone class".
+// Zero is neutral: positive PnL is green, negative is red, otherwise white.
+const TONE_NEUTRAL = "text-text-3";
+const TONE_DEFAULT = "text-white";
+const TONE_POSITIVE = "text-green";
+const TONE_NEGATIVE = "text-red";
+
+function signedTone(value: number | null | undefined, neutral = TONE_DEFAULT) {
+  if (value == null) return TONE_NEUTRAL;
+  if (value > 0) return TONE_POSITIVE;
+  if (value < 0) return TONE_NEGATIVE;
+  return neutral;
+}
+
 function pickUnrealizedTone(state: DataSourceState, unrealizedPnl: number | null) {
-  if (state === "empty" || state === "unavailable" || unrealizedPnl == null) {
-    return "text-text-3";
-  }
-  return unrealizedPnl >= 0 ? "text-green" : "text-red";
-}
-
-function pickPnlTone(pnl: number | null) {
-  if (pnl == null) return "text-text-3";
-  return pnl >= 0 ? "text-green" : "text-red";
-}
-
-function pickPnlPctTone(pnlPct: number | null) {
-  if (pnlPct == null) return "text-text-3";
-  return pnlPct >= 0 ? "text-green" : "text-red";
+  if (state === "empty" || state === "unavailable") return TONE_NEUTRAL;
+  return signedTone(unrealizedPnl, TONE_NEUTRAL);
 }
 
 function pickDonutCenterValue(state: DataSourceState, totalCapital: number | null) {
@@ -105,19 +108,22 @@ function pickDonutCenterValue(state: DataSourceState, totalCapital: number | nul
   return "Unavailable";
 }
 
+// `null/undefined → "—"` formatter wrapper. Lets callers compose any base
+// formatter without re-implementing the null guard.
+function orDash<T extends number>(value: T | null | undefined, fmt: (v: T) => string) {
+  return value == null ? "—" : fmt(value);
+}
+
 function formatMoneyOrDash(value: number | null | undefined) {
-  if (value == null) return "—";
-  return formatMoney(value);
+  return orDash(value, formatMoney);
 }
 
 function formatSignedMoneyOrDash(value: number | null | undefined) {
-  if (value == null) return "—";
-  return formatSignedMoney(value);
+  return orDash(value, formatSignedMoney);
 }
 
 function formatPercentOrDash(value: number | null | undefined, digits = 1) {
-  if (value == null) return "—";
-  return `${value.toFixed(digits)}%`;
+  return orDash(value, (v) => `${v.toFixed(digits)}%`);
 }
 
 function formatWinRate(winRate: number | null | undefined) {
@@ -130,11 +136,14 @@ function calculatePnlPct(pnl: number | null, costBasis: number) {
   return (pnl / costBasis) * 100;
 }
 
+function formatSignedPercent(value: number, digits = 2) {
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(digits)}%`;
+}
+
 function formatPnlPctCell(lastPrice: number | null | undefined, pnlPct: number | null) {
   if (lastPrice == null) return "—";
-  const value = pnlPct ?? 0;
-  const sign = value >= 0 ? "+" : "";
-  return `${sign}${value.toFixed(2)}%`;
+  return formatSignedPercent(pnlPct ?? 0);
 }
 
 function formatMoney(value: number) {
@@ -145,20 +154,13 @@ function formatMoney(value: number) {
   });
 }
 
+// Zero renders as plain `$0.00` (no sign). Positive gets `+`, negative gets `-`.
+// Callers that want a forced sign on zero must format manually.
 function formatSignedMoney(value: number) {
   const formatted = formatMoney(Math.abs(value));
-  return value >= 0 ? `+${formatted}` : `-${formatted}`;
-}
-
-function formatRealized(value: number) {
-  if (value === 0) return formatMoney(0);
-  return formatSignedMoney(value);
-}
-
-function pickRealizedTone(value: number) {
-  if (value > 0) return "text-green";
-  if (value < 0) return "text-red";
-  return "text-white";
+  if (value > 0) return `+${formatted}`;
+  if (value < 0) return `-${formatted}`;
+  return formatted;
 }
 
 function formatDateTime(value: string | null | undefined) {
@@ -470,8 +472,8 @@ export default function PortfolioPage() {
                 <div className={getDonutTextClass(portfolio.totalCapital ?? 0)}>
                   {pickDonutCenterValue(getDataSourceState(portfolio.dataSource), portfolio.totalCapital)}
                 </div>
-                <div className={`mt-2 whitespace-nowrap text-sm ${pickRealizedTone(portfolio.realizedPnl)}`}>
-                  Realized {formatRealized(portfolio.realizedPnl)}
+                <div className={`mt-2 whitespace-nowrap text-sm ${signedTone(portfolio.realizedPnl)}`}>
+                  Realized {formatSignedMoney(portfolio.realizedPnl)}
                 </div>
               </div>
             </div>
@@ -552,10 +554,10 @@ export default function PortfolioPage() {
                         <td className="border-t border-border px-4 py-4 font-mono text-text-1">{position.quantity}</td>
                         <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.averageCost)}</td>
                         <td className="border-t border-border px-4 py-4 font-mono text-text-1">{lastPriceCell}</td>
-                        <td className={`border-t border-border px-4 py-4 font-mono ${pickPnlTone(pnl)}`}>
+                        <td className={`border-t border-border px-4 py-4 font-mono ${signedTone(pnl, TONE_NEUTRAL)}`}>
                           {pnlCell}
                         </td>
-                        <td className={`border-t border-border px-4 py-4 font-mono ${pickPnlPctTone(pnlPct)}`}>
+                        <td className={`border-t border-border px-4 py-4 font-mono ${signedTone(pnlPct, TONE_NEUTRAL)}`}>
                           {pnlPctCell}
                         </td>
                         <td className="border-t border-border px-4 py-4">
@@ -610,7 +612,7 @@ export default function PortfolioPage() {
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.averageCost)}</td>
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.exitPrice)}</td>
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.fees)}</td>
-                    <td className={`border-t border-border px-4 py-4 font-mono ${position.realizedPnl >= 0 ? "text-green" : "text-red"}`}>
+                    <td className={`border-t border-border px-4 py-4 font-mono ${signedTone(position.realizedPnl)}`}>
                       {formatSignedMoney(position.realizedPnl)}
                     </td>
                     <td className="border-t border-border px-4 py-4 text-sm text-text-2">{formatDateTime(position.openedAt)}</td>
