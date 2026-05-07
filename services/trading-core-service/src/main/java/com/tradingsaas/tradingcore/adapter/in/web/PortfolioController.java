@@ -10,6 +10,7 @@ import com.tradingsaas.tradingcore.application.usecase.portfolio.PortfolioHoldin
 import com.tradingsaas.tradingcore.application.usecase.portfolio.PortfolioOverview;
 import com.tradingsaas.tradingcore.application.usecase.portfolio.PortfolioOverviewService;
 import com.tradingsaas.tradingcore.domain.model.TokenClaims;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -155,7 +156,7 @@ record PortfolioOverviewResponse(
     }
 
     record PortfolioHoldingResponse(
-            UUID id,
+            @JsonProperty("id") UUID id,
             String symbol,
             BigDecimal quantity,
             BigDecimal averageCost,
