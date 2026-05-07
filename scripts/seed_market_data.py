@@ -10,6 +10,7 @@ Usage (from Ubuntu server):
 """
 
 import json
+import os
 import sys
 
 try:
@@ -23,11 +24,11 @@ except ImportError as e:
     sys.exit(1)
 
 DB_CONFIG = {
-    "host": "localhost",
-    "port": 5432,
-    "database": "trading_saas",
-    "user": "trading_user",
-    "password": "dev_password_change_in_prod",
+    "host":     os.environ.get("DB_HOST", "localhost"),
+    "port":     int(os.environ.get("DB_PORT", "5432")),
+    "database": os.environ.get("DB_NAME", "trading_saas"),
+    "user":     os.environ.get("DB_USER", "trading_user"),
+    "password": os.environ.get("DB_PASSWORD", "dev_password_change_in_prod"),
 }
 
 SYMBOLS = [
@@ -257,7 +258,7 @@ def seed_trading_core(cur):
 
 
 def main():
-    print("Connecting to PostgreSQL via port-forward localhost:5433 ...")
+    print(f"Connecting to PostgreSQL at {DB_CONFIG['host']}:{DB_CONFIG['port']} ...")
     try:
         conn = psycopg2.connect(**DB_CONFIG)
     except Exception as e:

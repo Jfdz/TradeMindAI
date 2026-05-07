@@ -12,15 +12,38 @@ jobs:
       - name: Install Python dependencies
         run: pip3 install --quiet yfinance psycopg2-binary pandas numpy
 
-      - name: Start port-forward
+      - name: Port-forward, wait, seed, cleanup
+        shell: bash
         run: |
-          kubectl port-forward svc/postgres 5433:5432 -n trading-saas &
-          echo $! > /tmp/pf.pid
-          sleep 3
+          set -euo pipefail
 
-      - name: Run seed script
-        run: python3 scripts/seed_market_data.py
+          kubectl port-forward svc/postgres 5433:5432 -n trading-saas \
+            >/tmp/pf.log 2>&1 &
+          PF_PID=$!
+          trap 'kill "$PF_PID" 2>/dev/null || true; wait "$PF_PID" 2>/dev/null || true' EXIT
 
-      - name: Stop port-forward
-        if: always()
-        run: kill $(cat /tmp/pf.pid) 2>/dev/null || true
+          for i in $(seq 1 30); do
+            if (echo > /dev/tcp/127.0.0.1/5433) >/dev/null 2>&1; then
+              break
+            fi
+            if ! kill -0 "$PF_PID" 2>/dev/null; then
+              echo "port-forward died early; see log:" >&2
+              cat /tmp/pf.log >&2
+              exit 1
+            fi
+            sleep 1
+          done
+
+          DB_USER=$(kubectl get secret postgres-credentials -n trading-saas \
+            -o jsonpath='{.data.username}' | base64 -d)
+          DB_PASSWORD=$(kubectl get secret postgres-credentials -n trading-saas \
+            -o jsonpath='{.data.password}' | base64 -d)
+          DB_NAME=$(kubectl get secret postgres-credentials -n trading-saas \
+            -o jsonpath='{.data.market-data-db}' | base64 -d)
+
+          DB_HOST=127.0.0.1 \
+          DB_PORT=5433 \
+          DB_USER="$DB_USER" \
+          DB_PASSWORD="$DB_PASSWORD" \
+          DB_NAME="$DB_NAME" \
+          python3 scripts/seed_market_data.py
