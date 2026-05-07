@@ -58,6 +58,14 @@ function formatDateTime(value: string | null | undefined) {
   });
 }
 
+function synthTrend(position: EnrichedHolding): number[] {
+  if (position.trend.length > 0) return position.trend;
+  const start = position.averageCost;
+  const end = position.lastPrice ?? null;
+  if (end == null || start <= 0) return [];
+  return [start, end];
+}
+
 function getDonutTextClass(value: number) {
   const length = formatMoney(value).length;
   if (length <= 8) return "mt-3 font-display text-3xl font-bold tracking-[-0.05em] text-white";
@@ -212,11 +220,18 @@ export default function PortfolioPage() {
     const unpricedCount = holdings.filter((h) => h.lastPrice == null).length;
     const marketDataUnavailable = isMarketDataUnavailable(portfolio.dataSource);
     const partialMarketData = isPartialMarketData(portfolio.dataSource);
+    const totalValue = portfolio.totalCapital ?? null;
+    const totalValueTone =
+      totalValue == null || totalCost <= 0 || totalValue === totalCost
+        ? "text-white"
+        : totalValue > totalCost
+          ? "text-green"
+          : "text-red";
 
     return [
       {
         label: "Total Value",
-        value: portfolio.totalCapital != null ? formatMoney(portfolio.totalCapital) : "Unavailable",
+        value: totalValue != null ? formatMoney(totalValue) : "Unavailable",
         detail: marketDataUnavailable
           ? "Market data unavailable"
           : partialMarketData
@@ -224,6 +239,7 @@ export default function PortfolioPage() {
             : unpricedCount > 0
               ? `${unpricedCount} unpriced`
               : "Marked to market",
+        tone: totalValueTone,
       },
       {
         label: "Total Cost Basis",
@@ -446,7 +462,7 @@ export default function PortfolioPage() {
                             : "—"}
                         </td>
                         <td className="border-t border-border px-4 py-4">
-                          <Sparkline values={position.trend} color={position.color} />
+                          <Sparkline values={synthTrend(position)} color={position.color} />
                         </td>
                         <td className="border-t border-border px-4 py-4">
                           <button
