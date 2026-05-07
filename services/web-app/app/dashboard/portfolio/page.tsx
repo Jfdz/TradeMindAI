@@ -15,6 +15,16 @@ import {
 import type { EnrichedHolding } from "@/lib/dashboard/dashboard-api";
 import { fetchPortfolioPageData } from "@/lib/dashboard/client-data";
 import {
+  TONE_NEUTRAL,
+  formatMoney,
+  formatMoneyOrDash,
+  formatPercentOrDash,
+  formatSignedMoney,
+  formatSignedMoneyOrDash,
+  formatSignedPercent,
+  signedTone,
+} from "@/lib/dashboard/format";
+import {
   buildClosePositionPayload,
   calculateClosePositionPnl,
   type ClosePositionDraft,
@@ -82,21 +92,6 @@ function pickUnrealizedDetail(state: DataSourceState) {
   }
 }
 
-// ── presentation primitives ──────────────────────────────────────────────────
-// Single source of truth for "given a numeric value, return a tone class".
-// Zero is neutral: positive PnL is green, negative is red, otherwise white.
-const TONE_NEUTRAL = "text-text-3";
-const TONE_DEFAULT = "text-white";
-const TONE_POSITIVE = "text-green";
-const TONE_NEGATIVE = "text-red";
-
-function signedTone(value: number | null | undefined, neutral = TONE_DEFAULT) {
-  if (value == null) return TONE_NEUTRAL;
-  if (value > 0) return TONE_POSITIVE;
-  if (value < 0) return TONE_NEGATIVE;
-  return neutral;
-}
-
 function pickUnrealizedTone(state: DataSourceState, unrealizedPnl: number | null) {
   if (state === "empty" || state === "unavailable") return TONE_NEUTRAL;
   return signedTone(unrealizedPnl, TONE_NEUTRAL);
@@ -106,24 +101,6 @@ function pickDonutCenterValue(state: DataSourceState, totalCapital: number | nul
   if (totalCapital != null) return formatMoney(totalCapital);
   if (state === "empty") return formatMoney(0);
   return "Unavailable";
-}
-
-// `null/undefined → "—"` formatter wrapper. Lets callers compose any base
-// formatter without re-implementing the null guard.
-function orDash<T extends number>(value: T | null | undefined, fmt: (v: T) => string) {
-  return value == null ? "—" : fmt(value);
-}
-
-function formatMoneyOrDash(value: number | null | undefined) {
-  return orDash(value, formatMoney);
-}
-
-function formatSignedMoneyOrDash(value: number | null | undefined) {
-  return orDash(value, formatSignedMoney);
-}
-
-function formatPercentOrDash(value: number | null | undefined, digits = 1) {
-  return orDash(value, (v) => `${v.toFixed(digits)}%`);
 }
 
 function formatWinRate(winRate: number | null | undefined) {
@@ -136,31 +113,9 @@ function calculatePnlPct(pnl: number | null, costBasis: number) {
   return (pnl / costBasis) * 100;
 }
 
-function formatSignedPercent(value: number, digits = 2) {
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(digits)}%`;
-}
-
 function formatPnlPctCell(lastPrice: number | null | undefined, pnlPct: number | null) {
   if (lastPrice == null) return "—";
   return formatSignedPercent(pnlPct ?? 0);
-}
-
-function formatMoney(value: number) {
-  return value.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  });
-}
-
-// Zero renders as plain `$0.00` (no sign). Positive gets `+`, negative gets `-`.
-// Callers that want a forced sign on zero must format manually.
-function formatSignedMoney(value: number) {
-  const formatted = formatMoney(Math.abs(value));
-  if (value > 0) return `+${formatted}`;
-  if (value < 0) return `-${formatted}`;
-  return formatted;
 }
 
 function formatDateTime(value: string | null | undefined) {
