@@ -23,8 +23,10 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (
         (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') &&
+        github.event.comment.user.login != 'vercel[bot]' &&
         (
           github.event.comment.user.login == 'sonarcloud[bot]' ||
+          github.event.comment.user.login == 'sonarqubecloud[bot]' ||
           (
             github.event.comment.user.type != 'Bot' &&
             (
@@ -39,13 +41,34 @@ jobs:
         
     runs-on: self-hosted
 
+    concurrency:
+      group: opencode-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+      cancel-in-progress: false
+
     steps:
-      - name: Checkout develop
+      - name: Resolve checkout ref
+        id: ref
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "ref=develop" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
+            echo "ref=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif [[ -n "${{ github.event.issue.pull_request.url }}" ]]; then
+            SHA=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}" --jq '.head.sha')
+            echo "ref=$SHA" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=develop" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
-          ref: develop
+          ref: ${{ steps.ref.outputs.ref }}
 
       - name: Setup Java
         uses: actions/setup-java@v5
