@@ -117,12 +117,14 @@ jobs:
           - If requested, create GitHub issues for relevant SonarQube findings.
           - If requested to fix SonarQube issues, create a branch, fix them, add tests if needed, and open a PR to develop.
           EOF
-      - name: Install unzip
-        shell: bash
-        run: command -v unzip &>/dev/null || (sudo apt-get update -q && sudo apt-get install -y unzip)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Install Bun
+        shell: bash
+        run: npm install -g bun
 
       - name: Run OpenCode
         uses: anthropics/claude-code-action@v1
