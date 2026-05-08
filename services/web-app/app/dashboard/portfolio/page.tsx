@@ -162,7 +162,7 @@ function getDonutTextClass(value: number) {
   return "mt-3 font-display text-xl font-bold tracking-[-0.05em] text-white";
 }
 
-function Sparkline({ values, color }: { values: number[]; color: string }) {
+function Sparkline({ values, color }: { readonly values: number[]; readonly color: string }) {
   if (values.length === 0) {
     return <span className="text-text-3 text-xs">—</span>;
   }
@@ -324,8 +324,6 @@ export default function PortfolioPage() {
     const showCostZero = state === "empty" || totalCost > 0;
     const costBasisValue = showCostZero ? formatMoney(totalCost) : "—";
     const winRateValue = formatWinRate(portfolio.winRate);
-    const totalValue = portfolio.totalCapital ?? null;
-    const totalValueTone = pickTotalValueTone(totalValue, totalCost);
 
     return [
       {
@@ -426,15 +424,25 @@ export default function PortfolioPage() {
         />
       ) : null}
 
-      {isMarketDataUnavailable(portfolio.dataSource) ? (
-        <section className="rounded-[20px] border border-gold/30 bg-[rgba(232,184,75,0.12)] px-5 py-4 text-sm text-gold">
-          Market data is unavailable. Open positions are shown without current prices until the pricing service recovers.
-        </section>
-      ) : isPartialMarketData(portfolio.dataSource) ? (
-        <section className="rounded-[20px] border border-gold/30 bg-[rgba(232,184,75,0.12)] px-5 py-4 text-sm text-gold">
-          Market data returned only a partial price set. Holdings without a live quote remain visible as unpriced until the next refresh.
-        </section>
-      ) : null}
+      {(() => {
+        const marketDataUnavailable = isMarketDataUnavailable(portfolio.dataSource);
+        const partialMarketData = isPartialMarketData(portfolio.dataSource);
+        if (marketDataUnavailable) {
+          return (
+            <section className="rounded-[20px] border border-gold/30 bg-[rgba(232,184,75,0.12)] px-5 py-4 text-sm text-gold">
+              Market data is unavailable. Open positions are shown without current prices until the pricing service recovers.
+            </section>
+          );
+        }
+        if (partialMarketData) {
+          return (
+            <section className="rounded-[20px] border border-gold/30 bg-[rgba(232,184,75,0.12)] px-5 py-4 text-sm text-gold">
+              Market data returned only a partial price set. Holdings without a live quote remain visible as unpriced until the next refresh.
+            </section>
+          );
+        }
+        return null;
+      })()}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {summary.map((card) => (

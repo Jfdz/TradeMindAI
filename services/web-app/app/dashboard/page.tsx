@@ -58,7 +58,7 @@ function getSignalTypeStyle(type: string): string {
   return "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold";
 }
 
-function Sparkline({ values, color }: { values: number[]; color: string }) {
+function Sparkline({ values, color }: { readonly values: number[]; readonly color: string }) {
   if (values.length === 0) {
     return null;
   }
@@ -124,7 +124,7 @@ export default function DashboardHomePage() {
     return [
       {
         label: "Portfolio Value",
-        value: totalCapital != null ? formatMoney(totalCapital) : "N/A",
+        value: totalCapital === null ? "N/A" : formatMoney(totalCapital),
         detail: getPortfolioValueDetail(marketDataUnavailable, partialMarketData),
         tone: "text-green",
       },
@@ -132,7 +132,7 @@ export default function DashboardHomePage() {
       { label: "Live Signals", value: `${liveSignals}`, detail: `${signals.length} total signals`, tone: "text-cyan" },
       {
         label: "Unrealized P&L",
-        value: unrealizedPnl != null ? formatSignedMoney(unrealizedPnl) : "N/A",
+        value: unrealizedPnl === null ? "N/A" : formatSignedMoney(unrealizedPnl),
         detail: getUnrealizedPnlDetail(marketDataUnavailable, partialMarketData),
         tone: signedTone(unrealizedPnl, TONE_NEUTRAL),
       },
@@ -163,7 +163,7 @@ export default function DashboardHomePage() {
     },
     onSuccess: (result) => {
       const count = result.predictions?.length ?? 0;
-      setGenerateResult(`${count} signal${count !== 1 ? "s" : ""} queued for persistence`);
+      setGenerateResult(`${count} signal${count > 1 ? "s" : ""} queued for persistence`);
       queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: SIGNALS_QUERY_KEY });
       setTimeout(() => {
@@ -396,7 +396,7 @@ export default function DashboardHomePage() {
                       {position.lastPrice ? formatMoney(position.lastPrice) : "N/A"}
                     </td>
                     <td className={`border-t border-border px-4 py-4 font-mono ${signedTone(pnl, TONE_NEUTRAL)}`}>
-                      {pnl != null ? formatSignedMoney(pnl) : "N/A"}
+                      {pnl === null ? "N/A" : formatSignedMoney(pnl)}
                     </td>
                     <td className="border-t border-border px-4 py-4 text-text-2">{position.sector}</td>
                     <td className="border-t border-border px-4 py-4">
