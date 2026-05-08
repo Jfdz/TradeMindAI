@@ -18,7 +18,7 @@ function synthesizeColor(index: number): string {
 
 export function assignSymbolColors(symbols: string[]): Map<string, string> {
   const colorMap = new Map<string, string>();
-  const uniqueSymbols = [...new Set(symbols)].sort();
+  const uniqueSymbols = [...new Set(symbols)].sort((a, b) => a.localeCompare(b));
 
   for (let i = 0; i < uniqueSymbols.length; i++) {
     if (i < SYMBOL_PALETTE.length) {
@@ -34,7 +34,8 @@ export function assignSymbolColors(symbols: string[]): Map<string, string> {
 export function getSymbolColor(symbol: string): string {
   let hash = 0;
   for (let i = 0; i < symbol.length; i++) {
-    hash = (hash * 31 + symbol.charCodeAt(i)) | 0;
+    const code = symbol.codePointAt(i) ?? 0;
+    hash = Math.trunc(hash * 31 + code);
   }
   const index = Math.abs(hash) % SYMBOL_PALETTE.length;
   return SYMBOL_PALETTE[index];

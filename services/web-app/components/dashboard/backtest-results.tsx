@@ -53,9 +53,9 @@ function MetricTile({
   value,
   tone = "text-white",
 }: {
-  label: string;
-  value: string;
-  tone?: string;
+  readonly label: string;
+  readonly value: string;
+  readonly tone?: string;
 }) {
   return (
     <article className="rounded-[18px] border border-border bg-bg-2 p-4">
