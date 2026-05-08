@@ -10,6 +10,7 @@ import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
 import { type EnrichedHolding, type FilteredSignal } from "@/lib/dashboard/dashboard-api";
 import { fetchDashboardPageData } from "@/lib/dashboard/client-data";
+import { signedTone, TONE_NEUTRAL } from "@/lib/dashboard/format";
 import { formatConfidence } from "@/lib/signal-utils";
 import { cn } from "@/lib/utils";
 
@@ -51,23 +52,9 @@ function getUnrealizedPnlDetail(marketDataUnavailable: boolean, partialMarketDat
   return "Open position gains";
 }
 
-function getUnrealizedPnlTone(unrealizedPnl: number | null): string {
-  if (unrealizedPnl == null) return "text-text-3";
-  return unrealizedPnl >= 0 ? "text-green" : "text-red";
-}
-
-function getPnlTone(pnl: number | null): string {
-  if (pnl == null) return "text-text-3";
-  return pnl >= 0 ? "text-green" : "text-red";
-}
-
 function getSignalTypeStyle(type: string): string {
-  if (type === "BUY") {
-    return "border-green/30 bg-[rgba(0,214,143,0.12)] text-green";
-  }
-  if (type === "SELL") {
-    return "border-red/30 bg-[rgba(255,77,106,0.12)] text-red";
-  }
+  if (type === "BUY") return "border-green/30 bg-[rgba(0,214,143,0.12)] text-green";
+  if (type === "SELL") return "border-red/30 bg-[rgba(255,77,106,0.12)] text-red";
   return "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold";
 }
 
@@ -147,7 +134,7 @@ export default function DashboardHomePage() {
         label: "Unrealized P&L",
         value: unrealizedPnl != null ? formatSignedMoney(unrealizedPnl) : "N/A",
         detail: getUnrealizedPnlDetail(marketDataUnavailable, partialMarketData),
-        tone: getUnrealizedPnlTone(unrealizedPnl),
+        tone: signedTone(unrealizedPnl, TONE_NEUTRAL),
       },
     ];
   }, [holdings.length, portfolio, signals]);
@@ -406,11 +393,9 @@ export default function DashboardHomePage() {
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">{position.quantity}</td>
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.averageCost)}</td>
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">
-                      {position.lastPrice != null ? formatMoney(position.lastPrice) : "N/A"}
+                      {position.lastPrice ? formatMoney(position.lastPrice) : "N/A"}
                     </td>
-                    <td
-                      className={`border-t border-border px-4 py-4 font-mono ${getPnlTone(pnl)}`}
-                    >
+                    <td className={`border-t border-border px-4 py-4 font-mono ${signedTone(pnl, TONE_NEUTRAL)}`}>
                       {pnl != null ? formatSignedMoney(pnl) : "N/A"}
                     </td>
                     <td className="border-t border-border px-4 py-4 text-text-2">{position.sector}</td>

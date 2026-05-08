@@ -24,29 +24,23 @@ function formatPrice(value: number | null) {
   });
 }
 
-function getSignalCountLabel(signalCount: number): string {
-  return `${signalCount} live signal${signalCount !== 1 ? "s" : ""}`;
-}
-
-function getSignalTitle(isLoading: boolean, signalCount: number): string {
-  if (isLoading) {
-    return "Loading signals…";
-  }
-  if (signalCount > 0) {
-    return getSignalCountLabel(signalCount);
-  }
+function pickSignalLabel(isLoading: boolean, signalsLength: number) {
+  if (isLoading) return "Loading signals…";
+  if (signalsLength > 0) return `${signalsLength} live signal${signalsLength !== 1 ? "s" : ""}`;
   return "Signal feed";
 }
 
-function getSignalTypeStyle(type: string): string {
-  if (type === "BUY") {
-    return "border-green/30 bg-[rgba(0,214,143,0.12)] text-green";
-  }
-  if (type === "SELL") {
-    return "border-red/30 bg-[rgba(255,77,106,0.12)] text-red";
-  }
+function pickSignalBadgeClass(signalType: string) {
+  if (signalType === "BUY") return "border-green/30 bg-[rgba(0,214,143,0.12)] text-green";
+  if (signalType === "SELL") return "border-red/30 bg-[rgba(255,77,106,0.12)] text-red";
   return "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold";
 }
+
+function pickStatusBadgeClass(status: string) {
+  if (status === "LIVE") return "border-cyan/30 bg-cyan-dim text-cyan";
+  return "border-border bg-bg-2 text-text-2";
+}
+
 
 export default function SignalsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterValue>("ALL");
@@ -73,7 +67,7 @@ export default function SignalsPage() {
               Live signals
             </div>
             <h2 className="mt-3 font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
-              {getSignalTitle(isLoading, signals.length)}
+              {pickSignalLabel(isLoading, signals.length)}
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-text-2">
               Review the latest signal feed, narrow the list with filters, and open a full signal detail page for more
@@ -134,12 +128,7 @@ export default function SignalsPage() {
                       <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">{signal.age}</div>
                     </td>
                     <td className="border-t border-border px-4 py-4">
-                      <span
-                        className={cn(
-                          "rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]",
-                          getSignalTypeStyle(signal.type)
-                        )}
-                      >
+                      <span className={cn("rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]", pickSignalBadgeClass(signal.type))}>
                         {signal.type}
                       </span>
                     </td>
@@ -162,14 +151,7 @@ export default function SignalsPage() {
                       </div>
                     </td>
                     <td className="border-t border-border px-4 py-4">
-                      <span
-                        className={cn(
-                          "rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]",
-                          signal.status === "LIVE"
-                            ? "border-cyan/30 bg-cyan-dim text-cyan"
-                            : "border-border bg-bg-2 text-text-2"
-                        )}
-                      >
+                      <span className={cn("rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]", pickStatusBadgeClass(signal.status))}>
                         {signal.status}
                       </span>
                     </td>

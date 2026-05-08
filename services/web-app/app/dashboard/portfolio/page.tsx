@@ -76,7 +76,7 @@ function pickTotalValueDetail(state: DataSourceState, unpricedCount: number) {
 }
 
 function pickUnrealizedValue(state: DataSourceState, unrealizedPnl: number | null) {
-  if (state === "empty") return "$0.00";
+  if (state === "empty") return formatMoney(0);
   if (state === "unavailable") return "Unavailable";
   if (unrealizedPnl != null) return formatSignedMoney(unrealizedPnl);
   return "N/A";
@@ -121,6 +121,11 @@ function pickWinRateTone(winRate: number | null | undefined) {
 function calculatePnlPct(pnl: number | null, costBasis: number) {
   if (pnl == null || costBasis <= 0) return null;
   return (pnl / costBasis) * 100;
+}
+
+function pickTotalValueTone(totalValue: number | null, totalCost: number) {
+  if (totalValue == null || totalCost <= 0 || totalValue === totalCost) return "text-white";
+  return totalValue > totalCost ? "text-green" : "text-red";
 }
 
 function formatPnlPctCell(lastPrice: number | null | undefined, pnlPct: number | null) {
@@ -320,13 +325,7 @@ export default function PortfolioPage() {
     const costBasisValue = showCostZero ? formatMoney(totalCost) : "—";
     const winRateValue = formatWinRate(portfolio.winRate);
     const totalValue = portfolio.totalCapital ?? null;
-    const getTotalValueTone = () => {
-      if (totalValue == null || totalCost <= 0 || totalValue === totalCost) {
-        return "text-white";
-      }
-      return totalValue > totalCost ? "text-green" : "text-red";
-    };
-    const totalValueTone = getTotalValueTone();
+    const totalValueTone = pickTotalValueTone(totalValue, totalCost);
 
     return [
       {
