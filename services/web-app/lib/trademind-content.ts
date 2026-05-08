@@ -169,7 +169,7 @@ export const footerColumns: FooterColumn[] = [
 
 export const dashboardNavItems: DashboardNavItem[] = [
   { href: "/dashboard", label: "Overview" },
-  { href: "/dashboard/signals", label: "Signals", badge: "3" },
+  { href: "/dashboard/signals", label: "Signals" },
   { href: "/dashboard/portfolio", label: "Portfolio" },
   { href: "/dashboard/backtests", label: "Backtests" },
   { href: "/dashboard/settings", label: "Settings" },
