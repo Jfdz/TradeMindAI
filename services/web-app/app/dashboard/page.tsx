@@ -10,6 +10,7 @@ import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
 import { type EnrichedHolding, type FilteredSignal } from "@/lib/dashboard/dashboard-api";
 import { fetchDashboardPageData } from "@/lib/dashboard/client-data";
+import { signedTone, TONE_NEUTRAL } from "@/lib/dashboard/format";
 import { formatConfidence } from "@/lib/signal-utils";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +38,24 @@ function formatMoney(value: number) {
 function formatSignedMoney(value: number) {
   const formatted = formatMoney(Math.abs(value));
   return value >= 0 ? `+${formatted}` : `-${formatted}`;
+}
+
+function getPortfolioValueDetail(marketDataUnavailable: boolean, partialMarketData: boolean): string {
+  if (marketDataUnavailable) return "Market data unavailable";
+  if (partialMarketData) return "Partial live pricing";
+  return "Marked to market";
+}
+
+function getUnrealizedPnlDetail(marketDataUnavailable: boolean, partialMarketData: boolean): string {
+  if (marketDataUnavailable) return "Market data unavailable";
+  if (partialMarketData) return "Priced holdings only";
+  return "Open position gains";
+}
+
+function getSignalTypeStyle(type: string): string {
+  if (type === "BUY") return "border-green/30 bg-[rgba(0,214,143,0.12)] text-green";
+  if (type === "SELL") return "border-red/30 bg-[rgba(255,77,106,0.12)] text-red";
+  return "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold";
 }
 
 function Sparkline({ values, color }: { values: number[]; color: string }) {
@@ -106,7 +125,7 @@ export default function DashboardHomePage() {
       {
         label: "Portfolio Value",
         value: totalCapital != null ? formatMoney(totalCapital) : "N/A",
-        detail: marketDataUnavailable ? "Market data unavailable" : partialMarketData ? "Partial live pricing" : "Marked to market",
+        detail: getPortfolioValueDetail(marketDataUnavailable, partialMarketData),
         tone: "text-green",
       },
       { label: "Open Positions", value: `${holdings.length}`, detail: "Backend portfolio book", tone: "text-white" },
@@ -114,8 +133,8 @@ export default function DashboardHomePage() {
       {
         label: "Unrealized P&L",
         value: unrealizedPnl != null ? formatSignedMoney(unrealizedPnl) : "N/A",
-        detail: marketDataUnavailable ? "Market data unavailable" : partialMarketData ? "Priced holdings only" : "Open position gains",
-        tone: unrealizedPnl == null ? "text-text-3" : unrealizedPnl >= 0 ? "text-green" : "text-red",
+        detail: getUnrealizedPnlDetail(marketDataUnavailable, partialMarketData),
+        tone: signedTone(unrealizedPnl, TONE_NEUTRAL),
       },
     ];
   }, [holdings.length, portfolio, signals]);
@@ -145,11 +164,11 @@ export default function DashboardHomePage() {
     onSuccess: (result) => {
       const count = result.predictions?.length ?? 0;
       setGenerateResult(`${count} signal${count !== 1 ? "s" : ""} queued for persistence`);
-      void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
-      void queryClient.invalidateQueries({ queryKey: SIGNALS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: SIGNALS_QUERY_KEY });
       setTimeout(() => {
-        void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
-        void queryClient.invalidateQueries({ queryKey: SIGNALS_QUERY_KEY });
+        queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
+        queryClient.invalidateQueries({ queryKey: SIGNALS_QUERY_KEY });
       }, 3000);
       setTimeout(() => setGenerateResult(null), 5000);
     },
@@ -202,15 +221,16 @@ export default function DashboardHomePage() {
               You have {signals.length} signals in the backend feed, {holdings.length} open positions, and a live book
               that is now fully tied to the tradeMindAI data model.
             </p>
-            {isMarketDataUnavailable(portfolio.dataSource) ? (
+            {isMarketDataUnavailable(portfolio.dataSource) && (
               <p className="mt-3 text-sm text-gold">
                 Market pricing is currently unavailable. Holdings remain visible, but current prices and P&amp;L are paused.
               </p>
-            ) : isPartialMarketData(portfolio.dataSource) ? (
+            )}
+            {isPartialMarketData(portfolio.dataSource) && !isMarketDataUnavailable(portfolio.dataSource) && (
               <p className="mt-3 text-sm text-gold">
                 Partial pricing returned from market data. Some holdings and signals are still waiting on fresh prices.
               </p>
-            ) : null}
+            )}
             {session?.isAdmin && (
               <div className="mt-4 flex items-center gap-3">
                 <Button
@@ -304,11 +324,7 @@ export default function DashboardHomePage() {
                   <div
                     className={cn(
                       "rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]",
-                      signal.type === "BUY"
-                        ? "border-green/30 bg-[rgba(0,214,143,0.12)] text-green"
-                        : signal.type === "SELL"
-                          ? "border-red/30 bg-[rgba(255,77,106,0.12)] text-red"
-                          : "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold"
+                      getSignalTypeStyle(signal.type)
                     )}
                   >
                     {signal.type}
@@ -377,13 +393,9 @@ export default function DashboardHomePage() {
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">{position.quantity}</td>
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.averageCost)}</td>
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">
-                      {position.lastPrice != null ? formatMoney(position.lastPrice) : "N/A"}
+                      {position.lastPrice ? formatMoney(position.lastPrice) : "N/A"}
                     </td>
-                    <td
-                      className={`border-t border-border px-4 py-4 font-mono ${
-                        pnl != null && pnl >= 0 ? "text-green" : pnl != null ? "text-red" : "text-text-3"
-                      }`}
-                    >
+                    <td className={`border-t border-border px-4 py-4 font-mono ${signedTone(pnl, TONE_NEUTRAL)}`}>
                       {pnl != null ? formatSignedMoney(pnl) : "N/A"}
                     </td>
                     <td className="border-t border-border px-4 py-4 text-text-2">{position.sector}</td>
