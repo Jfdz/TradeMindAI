@@ -61,6 +61,16 @@ function getPnlTone(pnl: number | null): string {
   return pnl >= 0 ? "text-green" : "text-red";
 }
 
+function getSignalTypeStyle(type: string): string {
+  if (type === "BUY") {
+    return "border-green/30 bg-[rgba(0,214,143,0.12)] text-green";
+  }
+  if (type === "SELL") {
+    return "border-red/30 bg-[rgba(255,77,106,0.12)] text-red";
+  }
+  return "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold";
+}
+
 function Sparkline({ values, color }: { values: number[]; color: string }) {
   if (values.length === 0) {
     return null;
@@ -327,11 +337,7 @@ export default function DashboardHomePage() {
                   <div
                     className={cn(
                       "rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]",
-                      signal.type === "BUY"
-                        ? "border-green/30 bg-[rgba(0,214,143,0.12)] text-green"
-                        : signal.type === "SELL"
-                          ? "border-red/30 bg-[rgba(255,77,106,0.12)] text-red"
-                          : "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold"
+                      getSignalTypeStyle(signal.type)
                     )}
                   >
                     {signal.type}

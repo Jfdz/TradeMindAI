@@ -28,6 +28,26 @@ function getSignalCountLabel(signalCount: number): string {
   return `${signalCount} live signal${signalCount !== 1 ? "s" : ""}`;
 }
 
+function getSignalTitle(isLoading: boolean, signalCount: number): string {
+  if (isLoading) {
+    return "Loading signals…";
+  }
+  if (signalCount > 0) {
+    return getSignalCountLabel(signalCount);
+  }
+  return "Signal feed";
+}
+
+function getSignalTypeStyle(type: string): string {
+  if (type === "BUY") {
+    return "border-green/30 bg-[rgba(0,214,143,0.12)] text-green";
+  }
+  if (type === "SELL") {
+    return "border-red/30 bg-[rgba(255,77,106,0.12)] text-red";
+  }
+  return "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold";
+}
+
 export default function SignalsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterValue>("ALL");
   const { data: signals = [], isLoading, error } = useQuery({
@@ -53,11 +73,7 @@ export default function SignalsPage() {
               Live signals
             </div>
             <h2 className="mt-3 font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
-              {isLoading
-                ? "Loading signals…"
-                : signals.length > 0
-                  ? getSignalCountLabel(signals.length)
-                  : "Signal feed"}
+              {getSignalTitle(isLoading, signals.length)}
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-text-2">
               Review the latest signal feed, narrow the list with filters, and open a full signal detail page for more
@@ -121,11 +137,7 @@ export default function SignalsPage() {
                       <span
                         className={cn(
                           "rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]",
-                          signal.type === "BUY"
-                            ? "border-green/30 bg-[rgba(0,214,143,0.12)] text-green"
-                            : signal.type === "SELL"
-                              ? "border-red/30 bg-[rgba(255,77,106,0.12)] text-red"
-                              : "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold"
+                          getSignalTypeStyle(signal.type)
                         )}
                       >
                         {signal.type}
