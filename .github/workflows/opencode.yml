@@ -101,15 +101,7 @@ jobs:
               -o /tmp/opencode-context/sonarqube-issues.json)
             echo "HTTP status: ${HTTP_STATUS}"
             # Validate with python3 (jq may not be installed on self-hosted runner)
-            if ! python3 - <<'PYEOF' 2>/dev/null
-import json, sys
-try:
-    d = json.load(open('/tmp/opencode-context/sonarqube-issues.json'))
-    sys.exit(0 if 'issues' in d else 1)
-except Exception:
-    sys.exit(1)
-PYEOF
-            then
+            if ! python3 -c "import json,sys; d=json.load(open('/tmp/opencode-context/sonarqube-issues.json')); sys.exit(0 if 'issues' in d else 1)" 2>/dev/null; then
               echo "ERROR: SonarCloud API returned non-JSON (status ${HTTP_STATUS})."
               echo "SONAR_HOST_URL must be bare server root, e.g. https://sonarcloud.io"
               echo "SONAR_PROJECT_KEY must match the key shown in sonarcloud.io → Project Information"
