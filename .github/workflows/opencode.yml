@@ -87,9 +87,12 @@ jobs:
             echo "WARNING: SONAR_HOST_URL / SONAR_TOKEN / SONAR_PROJECT_KEY not configured — skipping capture."
             echo '{"total":0,"issues":[]}' > /tmp/opencode-context/sonarqube-issues.json
           else
-            SONAR_API="${SONAR_HOST_URL}/api/issues/search?componentKeys=${SONAR_PROJECT_KEY}&resolved=false&ps=100"
+            # Strip any path/query from SONAR_HOST_URL — users often copy the
+            # project page URL (e.g. https://sonarcloud.io/project/overview?id=...)
+            # which makes the API path resolve to the SPA and return 200 HTML.
+            SONAR_BASE=$(echo "${SONAR_HOST_URL}" | grep -oP 'https?://[^/]+')
+            SONAR_API="${SONAR_BASE}/api/issues/search?componentKeys=${SONAR_PROJECT_KEY}&resolved=false&ps=100"
             echo "Calling SonarCloud API: ${SONAR_API}"
-            # Bearer token auth (Basic auth triggers Cloudflare SPA HTML on auth failure)
             HTTP_STATUS=$(curl -ss -w "%{http_code}" \
               -H "Accept: application/json" \
               -H "Authorization: Bearer ${SONAR_TOKEN}" \
@@ -99,7 +102,8 @@ jobs:
             echo "HTTP status: ${HTTP_STATUS}"
             if ! jq -e '.issues' /tmp/opencode-context/sonarqube-issues.json > /dev/null 2>&1; then
               echo "ERROR: SonarCloud API returned non-JSON (status ${HTTP_STATUS})."
-              echo "Check SONAR_HOST_URL / SONAR_TOKEN / SONAR_PROJECT_KEY secrets."
+              echo "SONAR_HOST_URL must be the bare server root, e.g. https://sonarcloud.io"
+              echo "SONAR_PROJECT_KEY must be the project key from sonarcloud.io → Project Information"
               echo "--- First 400 bytes ---"
               head -c 400 /tmp/opencode-context/sonarqube-issues.json
               exit 1
