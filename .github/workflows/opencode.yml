@@ -78,44 +78,52 @@ jobs:
         run: mkdir -p /tmp/opencode-context
       - name: Capture SonarQube issues
         shell: bash
-        if: env.SONAR_HOST_URL != '' && env.SONAR_TOKEN != '' && env.SONAR_PROJECT_KEY != ''
         env:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
         run: |
-          curl -sS -u "${SONAR_TOKEN}:" \
-            "${SONAR_HOST_URL}/api/issues/search?componentKeys=${SONAR_PROJECT_KEY}&resolved=false&ps=100" \
-            -o /tmp/opencode-context/sonarqube-issues.json || true
-
-          echo "SonarQube issues exported to /tmp/opencode-context/sonarqube-issues.json"
+          if [[ -z "${SONAR_HOST_URL}" || -z "${SONAR_TOKEN}" || -z "${SONAR_PROJECT_KEY}" ]]; then
+            echo "WARNING: SONAR_HOST_URL / SONAR_TOKEN / SONAR_PROJECT_KEY not configured — skipping capture."
+            echo '{"total":0,"issues":[]}' > /tmp/opencode-context/sonarqube-issues.json
+          else
+            curl -fsSL -u "${SONAR_TOKEN}:" \
+              "${SONAR_HOST_URL}/api/issues/search?componentKeys=${SONAR_PROJECT_KEY}&resolved=false&ps=100" \
+              -o /tmp/opencode-context/sonarqube-issues.json
+            echo "SonarQube issues exported. total=$(jq -r '.total // 0' /tmp/opencode-context/sonarqube-issues.json)"
+          fi
       - name: Build project context
         shell: bash
         run: |
           cat > /tmp/opencode-context/instructions.md <<'EOF'
-          You are acting as a Senior Backend Java Engineer.
+          You are acting as a Senior Full-Stack Engineer on the TradeMindAI platform.
+          The stack includes Java 21 / Spring Boot (backend) and Next.js 14 / TypeScript / Tailwind (frontend).
 
           Repository rules:
-          - Target branch for generated fixes: develop.
-          - Never merge automatically.
-          - Never approve your own PR.
-          - If fixing an issue, create a new branch from develop.
-          - Implement the smallest safe change.
+          - Target branch for all fix PRs: develop.
+          - Never merge automatically. Never approve your own PR.
+          - Implement the smallest safe change. Keep behaviour unchanged.
           - Add or update tests when possible.
           - Open a pull request targeting develop.
-          - Explain clearly what was changed and why.
+
+          Git workflow for any fix task (MUST follow this order):
+          1. git fetch origin develop
+          2. git checkout -b fix/sonarcloud-issues origin/develop
+          3. Make all changes on this branch.
+          4. git add <changed files only — never add workflow or context files>
+          5. git commit -m "<commit message from prompt>"
+          6. git push -u origin fix/sonarcloud-issues
+          7. gh pr create --base develop --title "<title from prompt>" --body "<body from prompt>"
 
           PR review rules:
-          - Review Java, Spring Boot, REST APIs, persistence, transactions, security, null safety, test coverage and clean architecture.
-          - Classify findings as HIGH, MEDIUM or LOW.
+          - Cover Java, Spring Boot, REST, TypeScript, React, Next.js, security, null safety, test coverage.
+          - Classify findings as HIGH / MEDIUM / LOW.
           - Do not modify code during pure review unless explicitly requested.
-          - Suggest exact files/classes/methods when possible.
 
           SonarQube rules:
-          - Read /tmp/opencode-context/sonarqube-issues.json if present.
-          - Group SonarQube issues by severity and component.
-          - If requested, create GitHub issues for relevant SonarQube findings.
-          - If requested to fix SonarQube issues, create a branch, fix them, add tests if needed, and open a PR to develop.
+          - Read /tmp/opencode-context/sonarqube-issues.json.
+          - If total == 0 or the file has no issues, post a comment on the issue/PR saying no open SonarCloud issues were found and no fix PR was opened.
+          - If issues exist: fix them, then follow the Git workflow above to open a PR.
           EOF
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -133,6 +141,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_args: "--model claude-haiku-4-5-20251001 --dangerously-skip-permissions"
           path_to_bun_executable: bun
+          show_full_output: "true"
           prompt: |
             Read /tmp/opencode-context/instructions.md first.
 
