@@ -123,11 +123,6 @@ function calculatePnlPct(pnl: number | null, costBasis: number) {
   return (pnl / costBasis) * 100;
 }
 
-function pickTotalValueTone(totalValue: number | null, totalCost: number) {
-  if (totalValue == null || totalCost <= 0 || totalValue === totalCost) return "text-white";
-  return totalValue > totalCost ? "text-green" : "text-red";
-}
-
 function formatPnlPctCell(lastPrice: number | null | undefined, pnlPct: number | null) {
   if (lastPrice == null) return "—";
   return formatSignedPercent(pnlPct ?? 0);

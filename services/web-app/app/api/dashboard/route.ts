@@ -18,17 +18,6 @@ import { signalTypeColor } from "@/lib/signal-utils";
 
 const API_BASE_URL = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
 
-function handleBackendError(portfolioResult: { ok: boolean; status?: number }, signalResult: { ok: boolean; status?: number }) {
-  if (!portfolioResult.ok || !signalResult.ok) {
-    const failed = (portfolioResult.ok === false ? portfolioResult : signalResult) as { ok: false; status: number };
-    if (failed.status === 401) {
-      return NextResponse.json({ message: "Authentication required" }, { status: 401 });
-    }
-    return NextResponse.json({ message: `Upstream error ${failed.status}` }, { status: 502 });
-  }
-  return null;
-}
-
 function buildChartMarker(
   lastCandle: DashboardCandle,
   targetSignal: ReturnType<typeof deriveSignal> | null,
@@ -37,14 +26,14 @@ function buildChartMarker(
     return null;
   }
   const signalType = targetSignal.type;
-  const getShape = (type: string) => {
+  const getShape = (type: string): "arrowDown" | "arrowUp" | "circle" => {
     if (type === "SELL") return "arrowDown";
     if (type === "BUY") return "arrowUp";
     return "circle";
   };
   return {
     time: lastCandle.time,
-    position: signalType === "SELL" ? "aboveBar" : "belowBar",
+    position: (signalType === "SELL" ? "aboveBar" : "belowBar") as "aboveBar" | "belowBar",
     color: signalTypeColor(signalType),
     shape: getShape(signalType),
     text: targetSignal.symbol,
@@ -106,9 +95,11 @@ export async function GET() {
       backendJson<PagedResponse<MarketSymbolResponse>>("/api/v1/symbols", token, true),
     ]);
 
-    const errorResponse = handleBackendError(portfolioResult, signalResult);
-    if (errorResponse) {
-      return errorResponse;
+    if (!portfolioResult.ok || !signalResult.ok) {
+      const failed = (!portfolioResult.ok ? portfolioResult : signalResult) as { ok: false; status: number };
+      return failed.status === 401
+        ? NextResponse.json({ message: "Authentication required" }, { status: 401 })
+        : NextResponse.json({ message: `Upstream error ${failed.status}` }, { status: 502 });
     }
 
     const portfolio = portfolioResult.data;
