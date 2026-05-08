@@ -1,0 +1,38 @@
+{
+  "userId": "test-user-1",
+  "totalCapital": 10000,
+  "cash": 3000,
+  "realizedPnl": 500,
+  "unrealizedPnl": 250,
+  "equity": 7250,
+  "winRate": 0.65,
+  "dataSource": "market-data",
+  "holdings": [
+    {
+      "id": "holding-1",
+      "symbol": "AAPL",
+      "quantity": 10,
+      "averageCost": 150.00,
+      "lastPrice": 175.00,
+      "marketValue": 1750.00,
+      "unrealizedPnl": 250.00,
+      "allocationPct": 24.14,
+      "status": "OPEN",
+      "openedAt": "2026-01-01T00:00:00Z",
+      "closedAt": null
+    }
+  ],
+  "closedPositions": [
+    {
+      "id": "closed-1",
+      "symbol": "MSFT",
+      "quantity": 5,
+      "averageCost": 300.00,
+      "exitPrice": 400.00,
+      "fees": 1.00,
+      "realizedPnl": 499.00,
+      "openedAt": "2025-11-01T00:00:00Z",
+      "closedAt": "2026-02-01T00:00:00Z"
+    }
+  ]
+}
