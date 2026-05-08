@@ -15,18 +15,23 @@ describe("apiClient", () => {
 
   it("sends bearer token when session includes accessToken", async () => {
     getSessionMock.mockResolvedValue({ accessToken: "token-123" });
+    const body = JSON.stringify({
+      id: "sig-1",
+      symbol: "AAPL",
+      type: "BUY",
+      confidence: 0.9,
+      generatedAt: "2026-04-28T10:00:00Z",
+      timeframe: "1D",
+    });
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({
-          id: "sig-1",
-          symbol: "AAPL",
-          type: "BUY",
-          confidence: 0.9,
-          generatedAt: "2026-04-28T10:00:00Z",
-          timeframe: "1D",
-        }),
+        status: 200,
+        statusText: "OK",
+        headers: new Headers({ "content-type": "application/json" }),
+        text: async () => body,
+        json: async () => JSON.parse(body),
       }),
     );
     const { apiClient } = await import("./api-client");
@@ -72,6 +77,9 @@ describe("apiClient", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
+        statusText: "Internal Server Error",
+        headers: new Headers(),
+        text: async () => "",
       }),
     );
     const { apiClient } = await import("./api-client");
