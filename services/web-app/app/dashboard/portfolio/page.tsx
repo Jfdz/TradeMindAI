@@ -76,7 +76,7 @@ function pickTotalValueDetail(state: DataSourceState, unpricedCount: number) {
 }
 
 function pickUnrealizedValue(state: DataSourceState, unrealizedPnl: number | null) {
-  if (state === "empty") return 
+  if (state === "empty") return formatMoney(0);
   if (state === "unavailable") return "Unavailable";
   if (unrealizedPnl != null) return formatSignedMoney(unrealizedPnl);
   return "N/A";
@@ -121,6 +121,11 @@ function pickWinRateTone(winRate: number | null | undefined) {
 function calculatePnlPct(pnl: number | null, costBasis: number) {
   if (pnl == null || costBasis <= 0) return null;
   return (pnl / costBasis) * 100;
+}
+
+function pickTotalValueTone(totalValue: number | null, totalCost: number) {
+  if (totalValue == null || totalCost <= 0 || totalValue === totalCost) return "text-white";
+  return totalValue > totalCost ? "text-green" : "text-red";
 }
 
 function formatPnlPctCell(lastPrice: number | null | undefined, pnlPct: number | null) {
@@ -188,7 +193,7 @@ function ClosePositionPanel({
   onClosed,
   onAlreadyClosed,
   onClose,
-}: {
+}: readonly {
   position: PortfolioHoldingResponse;
   onClosed: (payload: { realizedPnl: number }) => void;
   onAlreadyClosed: () => void;
@@ -314,15 +319,8 @@ export default function PortfolioPage() {
     const showCostZero = state === "empty" || totalCost > 0;
     const costBasisValue = showCostZero ? formatMoney(totalCost) : "—";
     const winRateValue = formatWinRate(portfolio.winRate);
-    const marketDataUnavailable = isMarketDataUnavailable(portfolio.dataSource);
-    const partialMarketData = isPartialMarketData(portfolio.dataSource);
     const totalValue = portfolio.totalCapital ?? null;
-    const totalValueTone =
-      totalValue == null || totalCost <= 0 || totalValue === totalCost
-        ? "text-white"
-        : totalValue > totalCost
-          ? "text-green"
-          : "text-red";
+    const totalValueTone = pickTotalValueTone(totalValue, totalCost);
 
     return [
       {
@@ -410,13 +408,13 @@ export default function PortfolioPage() {
           onClosed={({ realizedPnl }) => {
             const symbol = positionToClose.symbol;
             setPositionToClose(null);
-            void queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+            queryClient.invalidateQueries({ queryKey: ["portfolio"] });
             toast.success(`${symbol} closed with ${formatSignedMoney(realizedPnl)} realized`);
           }}
           onAlreadyClosed={() => {
             const symbol = positionToClose.symbol;
             setPositionToClose(null);
-            void queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+            queryClient.invalidateQueries({ queryKey: ["portfolio"] });
             toast.message(`${symbol} was already closed — refreshed your portfolio`);
           }}
           onClose={() => setPositionToClose(null)}
