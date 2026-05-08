@@ -75,7 +75,7 @@ function pickTotalValueDetail(state: DataSourceState, unpricedCount: number) {
 }
 
 function pickUnrealizedValue(state: DataSourceState, unrealizedPnl: number | null) {
-  if (state === "empty") return formatMoney(0);
+  if (state === "empty") return 
   if (state === "unavailable") return "Unavailable";
   if (unrealizedPnl != null) return formatSignedMoney(unrealizedPnl);
   return "N/A";
@@ -130,6 +130,14 @@ function formatDateTime(value: string | null | undefined) {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function synthTrend(position: EnrichedHolding): number[] {
+  if (position.trend.length > 0) return position.trend;
+  const start = position.averageCost;
+  const end = position.lastPrice ?? null;
+  if (end == null || start <= 0) return [];
+  return [start, end];
 }
 
 function getDonutTextClass(value: number) {
@@ -296,6 +304,15 @@ export default function PortfolioPage() {
     const showCostZero = state === "empty" || totalCost > 0;
     const costBasisValue = showCostZero ? formatMoney(totalCost) : "—";
     const winRateValue = formatWinRate(portfolio.winRate);
+    const marketDataUnavailable = isMarketDataUnavailable(portfolio.dataSource);
+    const partialMarketData = isPartialMarketData(portfolio.dataSource);
+    const totalValue = portfolio.totalCapital ?? null;
+    const totalValueTone =
+      totalValue == null || totalCost <= 0 || totalValue === totalCost
+        ? "text-white"
+        : totalValue > totalCost
+          ? "text-green"
+          : "text-red";
 
     return [
       {
@@ -516,7 +533,7 @@ export default function PortfolioPage() {
                           {pnlPctCell}
                         </td>
                         <td className="border-t border-border px-4 py-4">
-                          <Sparkline values={position.trend} color={position.color} />
+                          <Sparkline values={synthTrend(position)} color={position.color} />
                         </td>
                         <td className="border-t border-border px-4 py-4">
                           <button
