@@ -87,17 +87,20 @@ jobs:
             echo "WARNING: SONAR_HOST_URL / SONAR_TOKEN / SONAR_PROJECT_KEY not configured — skipping capture."
             echo '{"total":0,"issues":[]}' > /tmp/opencode-context/sonarqube-issues.json
           else
-            # Do NOT follow redirects (-L removed): auth/key failures return a redirect
-            # to the SonarCloud SPA (200 OK HTML), which -f would not catch.
-            curl -fss \
+            SONAR_API="${SONAR_HOST_URL}/api/issues/search?componentKeys=${SONAR_PROJECT_KEY}&resolved=false&ps=100"
+            echo "Calling SonarCloud API: ${SONAR_API}"
+            # Bearer token auth (Basic auth triggers Cloudflare SPA HTML on auth failure)
+            HTTP_STATUS=$(curl -ss -w "%{http_code}" \
               -H "Accept: application/json" \
-              -u "${SONAR_TOKEN}:" \
-              "${SONAR_HOST_URL}/api/issues/search?componentKeys=${SONAR_PROJECT_KEY}&resolved=false&ps=100" \
-              -o /tmp/opencode-context/sonarqube-issues.json
-            # Validate response is JSON, not an HTML redirect page
+              -H "Authorization: Bearer ${SONAR_TOKEN}" \
+              -H "User-Agent: GitHub-Actions-OpenCode/1.0" \
+              "${SONAR_API}" \
+              -o /tmp/opencode-context/sonarqube-issues.json)
+            echo "HTTP status: ${HTTP_STATUS}"
             if ! jq -e '.issues' /tmp/opencode-context/sonarqube-issues.json > /dev/null 2>&1; then
-              echo "ERROR: SonarCloud API returned non-JSON. Check SONAR_HOST_URL / SONAR_TOKEN / SONAR_PROJECT_KEY."
-              echo "--- First 400 bytes of response ---"
+              echo "ERROR: SonarCloud API returned non-JSON (status ${HTTP_STATUS})."
+              echo "Check SONAR_HOST_URL / SONAR_TOKEN / SONAR_PROJECT_KEY secrets."
+              echo "--- First 400 bytes ---"
               head -c 400 /tmp/opencode-context/sonarqube-issues.json
               exit 1
             fi
