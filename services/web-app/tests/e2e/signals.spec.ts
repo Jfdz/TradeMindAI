@@ -1,7 +1,9 @@
 import { test, expect } from "@playwright/test";
+import { mockSignalsApi } from "./helpers/mock-api";
 
 test.describe("signals page", () => {
   test.beforeEach(async ({ page }) => {
+    await mockSignalsApi(page);
     await page.goto("/dashboard/signals");
     await expect(page.locator("table")).toBeVisible({ timeout: 15_000 });
   });
