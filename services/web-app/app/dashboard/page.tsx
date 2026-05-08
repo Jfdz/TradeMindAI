@@ -10,6 +10,7 @@ import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
 import { type EnrichedHolding, type FilteredSignal } from "@/lib/dashboard/dashboard-api";
 import { fetchDashboardPageData } from "@/lib/dashboard/client-data";
+import { signedTone, TONE_NEUTRAL } from "@/lib/dashboard/format";
 import { formatConfidence } from "@/lib/signal-utils";
 import { cn } from "@/lib/utils";
 
@@ -403,8 +404,8 @@ export default function DashboardHomePage() {
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">
                       {position.lastPrice ? formatMoney(position.lastPrice) : "N/A"}
                     </td>
-                    <td className={`border-t border-border px-4 py-4 font-mono ${pickPnlTone(pnl)}`}>
-                      {formatPnlValue(pnl)}
+                    <td className={`border-t border-border px-4 py-4 font-mono ${signedTone(pnl, TONE_NEUTRAL)}`}>
+                      {pnl != null ? formatSignedMoney(pnl) : "N/A"}
                     </td>
                     <td className="border-t border-border px-4 py-4 text-text-2">{position.sector}</td>
                     <td className="border-t border-border px-4 py-4">
