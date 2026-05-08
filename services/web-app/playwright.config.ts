@@ -5,15 +5,23 @@ config({ path: ".env.local" });
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  fullyParallel: false,
-  retries: 0,
+  fullyParallel: true,
+  retries: process.env.CI ? 2 : 0,
   reporter: [["html", { open: "on-failure" }], ["list"]],
   use: {
-    baseURL: process.env.BASE_URL ?? "https://trademind.es",
+    baseURL: process.env.BASE_URL ?? "http://localhost:3000",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
+  webServer: process.env.CI
+    ? {
+        command: "npm run build && npm run start",
+        url: "http://localhost:3000",
+        reuseExistingServer: false,
+        timeout: 120_000,
+      }
+    : undefined,
   projects: [
     {
       name: "setup",
