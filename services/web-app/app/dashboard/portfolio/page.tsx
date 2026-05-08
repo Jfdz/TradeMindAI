@@ -15,6 +15,7 @@ import {
 import type { EnrichedHolding } from "@/lib/dashboard/dashboard-api";
 import { fetchPortfolioPageData } from "@/lib/dashboard/client-data";
 import {
+  TONE_NEGATIVE,
   TONE_NEUTRAL,
   formatMoney,
   formatMoneyOrDash,
@@ -111,6 +112,10 @@ function formatWinRate(winRate: number | null | undefined) {
 function pickWinRateDetail(winRate: number | null | undefined) {
   if (winRate == null) return "No closed trades yet";
   return "Position-level";
+}
+
+function pickWinRateTone(winRate: number | null | undefined) {
+  return signedTone(winRate ?? null, TONE_NEGATIVE);
 }
 
 function calculatePnlPct(pnl: number | null, costBasis: number) {
@@ -340,6 +345,7 @@ export default function PortfolioPage() {
         label: "Win Rate",
         value: winRateValue,
         detail: pickWinRateDetail(portfolio.winRate),
+        tone: pickWinRateTone(portfolio.winRate),
       },
     ];
   }, [portfolio, holdings]);
