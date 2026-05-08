@@ -104,8 +104,13 @@ function pickDonutCenterValue(state: DataSourceState, totalCapital: number | nul
 }
 
 function formatWinRate(winRate: number | null | undefined) {
-  if (winRate == null) return "N/A";
+  if (winRate == null) return "—";
   return `${Math.round(winRate * 100)}%`;
+}
+
+function pickWinRateDetail(winRate: number | null | undefined) {
+  if (winRate == null) return "No closed trades yet";
+  return "Position-level";
 }
 
 function calculatePnlPct(pnl: number | null, costBasis: number) {
@@ -334,7 +339,7 @@ export default function PortfolioPage() {
       {
         label: "Win Rate",
         value: winRateValue,
-        detail: "Position-level",
+        detail: pickWinRateDetail(portfolio.winRate),
       },
     ];
   }, [portfolio, holdings]);
