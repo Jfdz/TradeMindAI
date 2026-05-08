@@ -72,7 +72,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
           cache: maven
       - name: Create OpenCode context folder
         run: mkdir -p /tmp/opencode-context
@@ -117,14 +117,20 @@ jobs:
           - If requested, create GitHub issues for relevant SonarQube findings.
           - If requested to fix SonarQube issues, create a branch, fix them, add tests if needed, and open a PR to develop.
           EOF
-      - name: Run Claude
+      - name: Install unzip
+        shell: bash
+        run: command -v unzip &>/dev/null || (sudo apt-get update -q && sudo apt-get install -y unzip)
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Run OpenCode
         uses: anthropics/claude-code-action@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          model: claude-haiku-4-5-20251001
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: "--model claude-haiku-4-5-20251001"
+          path_to_bun_executable: bun
           prompt: |
             Read /tmp/opencode-context/instructions.md first.
 
