@@ -74,6 +74,16 @@ spec:
               value: /app/models
             - name: CORS_ALLOWED_ORIGINS
               value: https://trademind.es
+            - name: INTERNAL_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: internal-secret
+                  key: secret
+            - name: MARKET_DATA_INTERNAL_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: internal-service-secret
+                  key: market-data
           resources:
             requests:
               cpu: 500m
