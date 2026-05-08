@@ -49,7 +49,11 @@ export default function SignalsPage() {
               Live signals
             </div>
             <h2 className="mt-3 font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
-              Updating from the backend
+              {isLoading
+                ? "Loading signals…"
+                : signals.length > 0
+                  ? `${signals.length} live signal${signals.length !== 1 ? "s" : ""}`
+                  : "Signal feed"}
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-text-2">
               Review the latest signal feed, narrow the list with filters, and open a full signal detail page for more
