@@ -41,6 +41,7 @@ function pickStatusBadgeClass(status: string) {
   return "border-border bg-bg-2 text-text-2";
 }
 
+
 export default function SignalsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterValue>("ALL");
   const { data: signals = [], isLoading, error } = useQuery({

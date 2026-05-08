@@ -193,11 +193,11 @@ function ClosePositionPanel({
   onClosed,
   onAlreadyClosed,
   onClose,
-}: readonly {
-  position: PortfolioHoldingResponse;
-  onClosed: (payload: { realizedPnl: number }) => void;
-  onAlreadyClosed: () => void;
-  onClose: () => void;
+}: {
+  readonly position: PortfolioHoldingResponse;
+  readonly onClosed: (payload: { realizedPnl: number }) => void;
+  readonly onAlreadyClosed: () => void;
+  readonly onClose: () => void;
 }) {
   const [draft, setDraft] = useState<ClosePositionDraft>({
     exitPrice: "",
@@ -237,7 +237,12 @@ function ClosePositionPanel({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-end sm:items-center sm:justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+        aria-label="Close dialog"
+      />
       <div className="relative z-10 w-full max-w-md rounded-t-[28px] border border-border bg-bg-1 p-6 shadow-glow sm:rounded-[28px]">
         <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Close Position</div>
         <h3 className="mt-2 font-display text-2xl font-bold tracking-[-0.04em] text-white">{position.symbol}</h3>

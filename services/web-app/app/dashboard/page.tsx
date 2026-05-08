@@ -40,27 +40,22 @@ function formatSignedMoney(value: number) {
   return value >= 0 ? `+${formatted}` : `-${formatted}`;
 }
 
-function pickUnrealizedPnlTone(unrealizedPnl: number | null, marketDataUnavailable: boolean) {
-  if (unrealizedPnl == null) return "text-text-3";
-  if (marketDataUnavailable) return "text-text-3";
-  return unrealizedPnl >= 0 ? "text-green" : "text-red";
+function getPortfolioValueDetail(marketDataUnavailable: boolean, partialMarketData: boolean): string {
+  if (marketDataUnavailable) return "Market data unavailable";
+  if (partialMarketData) return "Partial live pricing";
+  return "Marked to market";
 }
 
-function pickDetailMessage(marketDataUnavailable: boolean, partialMarketData: boolean) {
+function getUnrealizedPnlDetail(marketDataUnavailable: boolean, partialMarketData: boolean): string {
   if (marketDataUnavailable) return "Market data unavailable";
   if (partialMarketData) return "Priced holdings only";
   return "Open position gains";
 }
 
-function pickPnlTone(pnl: number | null) {
-  if (pnl != null && pnl >= 0) return "text-green";
-  if (pnl != null) return "text-red";
-  return "text-text-3";
-}
-
-function formatPnlValue(pnl: number | null) {
-  if (pnl != null) return formatSignedMoney(pnl);
-  return "N/A";
+function getSignalTypeStyle(type: string): string {
+  if (type === "BUY") return "border-green/30 bg-[rgba(0,214,143,0.12)] text-green";
+  if (type === "SELL") return "border-red/30 bg-[rgba(255,77,106,0.12)] text-red";
+  return "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold";
 }
 
 function Sparkline({ values, color }: { values: number[]; color: string }) {
@@ -130,7 +125,7 @@ export default function DashboardHomePage() {
       {
         label: "Portfolio Value",
         value: totalCapital != null ? formatMoney(totalCapital) : "N/A",
-        detail: marketDataUnavailable ? "Market data unavailable" : partialMarketData ? "Partial live pricing" : "Marked to market",
+        detail: getPortfolioValueDetail(marketDataUnavailable, partialMarketData),
         tone: "text-green",
       },
       { label: "Open Positions", value: `${holdings.length}`, detail: "Backend portfolio book", tone: "text-white" },
@@ -138,8 +133,8 @@ export default function DashboardHomePage() {
       {
         label: "Unrealized P&L",
         value: unrealizedPnl != null ? formatSignedMoney(unrealizedPnl) : "N/A",
-        detail: pickDetailMessage(marketDataUnavailable, partialMarketData),
-        tone: pickUnrealizedPnlTone(unrealizedPnl, marketDataUnavailable),
+        detail: getUnrealizedPnlDetail(marketDataUnavailable, partialMarketData),
+        tone: signedTone(unrealizedPnl, TONE_NEUTRAL),
       },
     ];
   }, [holdings.length, portfolio, signals]);
@@ -231,7 +226,7 @@ export default function DashboardHomePage() {
                 Market pricing is currently unavailable. Holdings remain visible, but current prices and P&amp;L are paused.
               </p>
             )}
-            {isPartialMarketData(portfolio.dataSource) && (
+            {isPartialMarketData(portfolio.dataSource) && !isMarketDataUnavailable(portfolio.dataSource) && (
               <p className="mt-3 text-sm text-gold">
                 Partial pricing returned from market data. Some holdings and signals are still waiting on fresh prices.
               </p>
@@ -329,11 +324,7 @@ export default function DashboardHomePage() {
                   <div
                     className={cn(
                       "rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]",
-                      signal.type === "BUY"
-                        ? "border-green/30 bg-[rgba(0,214,143,0.12)] text-green"
-                        : signal.type === "SELL"
-                          ? "border-red/30 bg-[rgba(255,77,106,0.12)] text-red"
-                          : "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold"
+                      getSignalTypeStyle(signal.type)
                     )}
                   >
                     {signal.type}
