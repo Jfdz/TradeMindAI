@@ -117,25 +117,19 @@ jobs:
           - If requested, create GitHub issues for relevant SonarQube findings.
           - If requested to fix SonarQube issues, create a branch, fix them, add tests if needed, and open a PR to develop.
           EOF
-      - name: Set model
+      - name: Install unzip and Bun
         shell: bash
         run: |
-          echo "MODEL=anthropic/claude-haiku-4-5-20251001" >> "$GITHUB_ENV"
-
-      - name: Install OpenCode
-        shell: bash
-        run: |
-          curl -fsSL https://opencode.ai/install | bash
-          echo "$HOME/.opencode/bin" >> $GITHUB_PATH
+          sudo apt-get update -y && sudo apt-get install -y unzip
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
 
       - name: Run OpenCode
-        uses: anomalyco/opencode/github@latest
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        uses: anthropics/claude-code-action@v1
         with:
-          model: ${{ env.MODEL }}
-          use_github_token: true
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: "--model anthropic/claude-haiku-4-5-20251001"
           prompt: |
             Read /tmp/opencode-context/instructions.md first.
 
