@@ -27,6 +27,8 @@ test.describe("backtests page", () => {
   });
 
   test("date range fields are pre-filled with valid dates", async ({ page }) => {
+    // RHF sets defaultValues via JS after hydration; poll until DOM reflects them
+    await expect.poll(() => page.locator("input[name='from']").inputValue(), { timeout: 5_000 }).not.toBe("");
     const fromValue = await page.locator("input[name='from']").inputValue();
     const toValue = await page.locator("input[name='to']").inputValue();
     expect(fromValue).not.toBe("");

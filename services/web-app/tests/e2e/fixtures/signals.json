@@ -12,6 +12,17 @@
       "predictedChangePct": 0.08
     },
     {
+      "id": "sig-buy-2",
+      "symbol": "TSLA",
+      "type": "BUY",
+      "confidence": 0.78,
+      "generatedAt": "2026-05-08T11:00:00Z",
+      "timeframe": "DAILY",
+      "stopLossPct": -0.04,
+      "takeProfitPct": 0.09,
+      "predictedChangePct": 0.07
+    },
+    {
       "id": "sig-sell-1",
       "symbol": "MSFT",
       "type": "SELL",
@@ -35,7 +46,7 @@
     }
   ],
   "page": 0,
-  "size": 3,
-  "totalElements": 3,
+  "size": 4,
+  "totalElements": 4,
   "totalPages": 1
 }
