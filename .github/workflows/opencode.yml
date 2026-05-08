@@ -100,15 +100,25 @@ jobs:
               "${SONAR_API}" \
               -o /tmp/opencode-context/sonarqube-issues.json)
             echo "HTTP status: ${HTTP_STATUS}"
-            if ! jq -e '.issues' /tmp/opencode-context/sonarqube-issues.json > /dev/null 2>&1; then
+            # Validate with python3 (jq may not be installed on self-hosted runner)
+            if ! python3 - <<'PYEOF' 2>/dev/null
+import json, sys
+try:
+    d = json.load(open('/tmp/opencode-context/sonarqube-issues.json'))
+    sys.exit(0 if 'issues' in d else 1)
+except Exception:
+    sys.exit(1)
+PYEOF
+            then
               echo "ERROR: SonarCloud API returned non-JSON (status ${HTTP_STATUS})."
-              echo "SONAR_HOST_URL must be the bare server root, e.g. https://sonarcloud.io"
-              echo "SONAR_PROJECT_KEY must be the project key from sonarcloud.io → Project Information"
+              echo "SONAR_HOST_URL must be bare server root, e.g. https://sonarcloud.io"
+              echo "SONAR_PROJECT_KEY must match the key shown in sonarcloud.io → Project Information"
               echo "--- First 400 bytes ---"
               head -c 400 /tmp/opencode-context/sonarqube-issues.json
               exit 1
             fi
-            echo "SonarQube issues captured. total=$(jq -r '.total' /tmp/opencode-context/sonarqube-issues.json)"
+            TOTAL=$(python3 -c "import json; print(json.load(open('/tmp/opencode-context/sonarqube-issues.json'))['total'])")
+            echo "SonarQube issues captured. total=${TOTAL}"
           fi
       - name: Build project context
         shell: bash
