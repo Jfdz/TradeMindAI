@@ -1,0 +1,107 @@
+name: Cleanup Workflow Runs
+
+on:
+  schedule:
+    # Daily at 04:00 UTC
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      retention_days:
+        description: 'Delete runs older than N days'
+        required: false
+        default: '14'
+      dry_run:
+        description: 'List only, do not delete'
+        required: false
+        default: 'false'
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: cleanup-actions
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Delete old workflow runs
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RETENTION_DAYS: ${{ github.event.inputs.retention_days || '14' }}
+      DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+    steps:
+      - name: Delete runs older than ${{ env.RETENTION_DAYS }} days
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo="${GITHUB_REPOSITORY}"
+          cutoff_epoch=$(date -u -d "${RETENTION_DAYS} days ago" +%s)
+          cutoff_iso=$(date -u -d "${RETENTION_DAYS} days ago" +%Y-%m-%dT%H:%M:%SZ)
+          echo "Repo:     $repo"
+          echo "Cutoff:   $cutoff_iso"
+          echo "Dry run:  $DRY_RUN"
+
+          # Phase 1 — collect candidate IDs (paginate read-only).
+          tmpfile=$(mktemp)
+          trap 'rm -f "$tmpfile"' EXIT
+          per_page=100
+          page=1
+          total_seen=0
+
+          while :; do
+            mapfile -t lines < <(gh api \
+              -H "Accept: application/vnd.github+json" \
+              --paginate=false \
+              "repos/${repo}/actions/runs?per_page=${per_page}&page=${page}" \
+              --jq '.workflow_runs[] | "\(.id)\t\(.status)\t\(.created_at)\t\(.name)"')
+
+            [ "${#lines[@]}" -eq 0 ] && break
+            total_seen=$((total_seen + ${#lines[@]}))
+
+            for line in "${lines[@]}"; do
+              id=$(echo "$line"   | cut -f1)
+              status=$(echo "$line" | cut -f2)
+              created=$(echo "$line" | cut -f3)
+              name=$(echo "$line"   | cut -f4-)
+              created_epoch=$(date -u -d "$created" +%s)
+
+              if [ "$status" != "completed" ]; then
+                continue
+              fi
+              if [ "$created_epoch" -ge "$cutoff_epoch" ]; then
+                continue
+              fi
+              echo -e "${id}\t${created}\t${name}" >> "$tmpfile"
+            done
+
+            [ "${#lines[@]}" -lt "$per_page" ] && break
+            page=$((page + 1))
+          done
+
+          candidates=$(wc -l < "$tmpfile" | tr -d ' ')
+          echo "Total runs seen: ${total_seen}"
+          echo "Deletion candidates: ${candidates}"
+
+          # Phase 2 — delete.
+          deleted=0
+          failed=0
+          while IFS=$'\t' read -r id created name; do
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "WOULD DELETE: $id  $created  $name"
+            else
+              echo "DELETE:       $id  $created  $name"
+              if gh api -X DELETE "repos/${repo}/actions/runs/${id}" >/dev/null; then
+                deleted=$((deleted + 1))
+              else
+                failed=$((failed + 1))
+                echo "WARN: failed to delete $id"
+              fi
+            fi
+          done < "$tmpfile"
+
+          echo "----"
+          echo "Deleted: $deleted"
+          echo "Failed:  $failed"
+          echo "Kept:    $((total_seen - candidates))"
