@@ -76,7 +76,7 @@ function pickTotalValueDetail(state: DataSourceState, unpricedCount: number) {
 }
 
 function pickUnrealizedValue(state: DataSourceState, unrealizedPnl: number | null) {
-  if (state === "empty") return 
+  if (state === "empty") return "$0.00";
   if (state === "unavailable") return "Unavailable";
   if (unrealizedPnl != null) return formatSignedMoney(unrealizedPnl);
   return "N/A";
@@ -189,10 +189,10 @@ function ClosePositionPanel({
   onAlreadyClosed,
   onClose,
 }: {
-  position: PortfolioHoldingResponse;
-  onClosed: (payload: { realizedPnl: number }) => void;
-  onAlreadyClosed: () => void;
-  onClose: () => void;
+  readonly position: PortfolioHoldingResponse;
+  readonly onClosed: (payload: { realizedPnl: number }) => void;
+  readonly onAlreadyClosed: () => void;
+  readonly onClose: () => void;
 }) {
   const [draft, setDraft] = useState<ClosePositionDraft>({
     exitPrice: "",
@@ -232,7 +232,12 @@ function ClosePositionPanel({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-end sm:items-center sm:justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+        aria-label="Close dialog"
+      />
       <div className="relative z-10 w-full max-w-md rounded-t-[28px] border border-border bg-bg-1 p-6 shadow-glow sm:rounded-[28px]">
         <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Close Position</div>
         <h3 className="mt-2 font-display text-2xl font-bold tracking-[-0.04em] text-white">{position.symbol}</h3>
@@ -314,15 +319,14 @@ export default function PortfolioPage() {
     const showCostZero = state === "empty" || totalCost > 0;
     const costBasisValue = showCostZero ? formatMoney(totalCost) : "—";
     const winRateValue = formatWinRate(portfolio.winRate);
-    const marketDataUnavailable = isMarketDataUnavailable(portfolio.dataSource);
-    const partialMarketData = isPartialMarketData(portfolio.dataSource);
     const totalValue = portfolio.totalCapital ?? null;
-    const totalValueTone =
-      totalValue == null || totalCost <= 0 || totalValue === totalCost
-        ? "text-white"
-        : totalValue > totalCost
-          ? "text-green"
-          : "text-red";
+    const getTotalValueTone = () => {
+      if (totalValue == null || totalCost <= 0 || totalValue === totalCost) {
+        return "text-white";
+      }
+      return totalValue > totalCost ? "text-green" : "text-red";
+    };
+    const totalValueTone = getTotalValueTone();
 
     return [
       {
@@ -410,13 +414,13 @@ export default function PortfolioPage() {
           onClosed={({ realizedPnl }) => {
             const symbol = positionToClose.symbol;
             setPositionToClose(null);
-            void queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+            queryClient.invalidateQueries({ queryKey: ["portfolio"] });
             toast.success(`${symbol} closed with ${formatSignedMoney(realizedPnl)} realized`);
           }}
           onAlreadyClosed={() => {
             const symbol = positionToClose.symbol;
             setPositionToClose(null);
-            void queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+            queryClient.invalidateQueries({ queryKey: ["portfolio"] });
             toast.message(`${symbol} was already closed — refreshed your portfolio`);
           }}
           onClose={() => setPositionToClose(null)}
