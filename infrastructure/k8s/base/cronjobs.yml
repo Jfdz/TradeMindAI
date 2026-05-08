@@ -43,3 +43,59 @@ spec:
                 runAsUser: 65534
                 readOnlyRootFilesystem: true
                 allowPrivilegeEscalation: false
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: daily-signal-inference
+  namespace: trading-saas
+  labels:
+    app: daily-signal-inference
+spec:
+  # 21:00 UTC = 17:00 EST = 1h after US market close (no DST adjustment).
+  schedule: "0 21 * * 1-5"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: daily-signal-inference
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: trigger-inference
+              image: curlimages/curl:8.7.1
+              env:
+                - name: INTERNAL_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: internal-secret
+                      key: secret
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+                  curl --fail --silent --show-error \
+                    --retry 3 --retry-delay 30 --retry-all-errors \
+                    -X POST http://ai-engine.trading-saas.svc.cluster.local:8000/api/v1/predict/publish \
+                    -H "Content-Type: application/json" \
+                    -H "X-Internal-Secret: $INTERNAL_SECRET" \
+                    -d '{"tickers":["AAPL","MSFT","GOOGL","AMZN","NVDA","TSLA","META","JPM","V","NFLX","AMD","INTC","BA","DIS","WMT","PYPL","COIN","UBER","SPOT","PLTR"]}' \
+                    && echo "Signal inference published successfully"
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 32Mi
+                limits:
+                  cpu: 100m
+                  memory: 64Mi
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 65534
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
