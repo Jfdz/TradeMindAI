@@ -39,6 +39,28 @@ function formatSignedMoney(value: number) {
   return value >= 0 ? `+${formatted}` : `-${formatted}`;
 }
 
+function getPortfolioValueDetail(marketDataUnavailable: boolean, partialMarketData: boolean): string {
+  if (marketDataUnavailable) return "Market data unavailable";
+  if (partialMarketData) return "Partial live pricing";
+  return "Marked to market";
+}
+
+function getUnrealizedPnlDetail(marketDataUnavailable: boolean, partialMarketData: boolean): string {
+  if (marketDataUnavailable) return "Market data unavailable";
+  if (partialMarketData) return "Priced holdings only";
+  return "Open position gains";
+}
+
+function getUnrealizedPnlTone(unrealizedPnl: number | null): string {
+  if (unrealizedPnl == null) return "text-text-3";
+  return unrealizedPnl >= 0 ? "text-green" : "text-red";
+}
+
+function getPnlTone(pnl: number | null): string {
+  if (pnl == null) return "text-text-3";
+  return pnl >= 0 ? "text-green" : "text-red";
+}
+
 function Sparkline({ values, color }: { values: number[]; color: string }) {
   if (values.length === 0) {
     return null;
@@ -106,7 +128,7 @@ export default function DashboardHomePage() {
       {
         label: "Portfolio Value",
         value: totalCapital != null ? formatMoney(totalCapital) : "N/A",
-        detail: marketDataUnavailable ? "Market data unavailable" : partialMarketData ? "Partial live pricing" : "Marked to market",
+        detail: getPortfolioValueDetail(marketDataUnavailable, partialMarketData),
         tone: "text-green",
       },
       { label: "Open Positions", value: `${holdings.length}`, detail: "Backend portfolio book", tone: "text-white" },
@@ -114,8 +136,8 @@ export default function DashboardHomePage() {
       {
         label: "Unrealized P&L",
         value: unrealizedPnl != null ? formatSignedMoney(unrealizedPnl) : "N/A",
-        detail: marketDataUnavailable ? "Market data unavailable" : partialMarketData ? "Priced holdings only" : "Open position gains",
-        tone: unrealizedPnl == null ? "text-text-3" : unrealizedPnl >= 0 ? "text-green" : "text-red",
+        detail: getUnrealizedPnlDetail(marketDataUnavailable, partialMarketData),
+        tone: getUnrealizedPnlTone(unrealizedPnl),
       },
     ];
   }, [holdings.length, portfolio, signals]);
@@ -145,11 +167,11 @@ export default function DashboardHomePage() {
     onSuccess: (result) => {
       const count = result.predictions?.length ?? 0;
       setGenerateResult(`${count} signal${count !== 1 ? "s" : ""} queued for persistence`);
-      void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
-      void queryClient.invalidateQueries({ queryKey: SIGNALS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: SIGNALS_QUERY_KEY });
       setTimeout(() => {
-        void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
-        void queryClient.invalidateQueries({ queryKey: SIGNALS_QUERY_KEY });
+        queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
+        queryClient.invalidateQueries({ queryKey: SIGNALS_QUERY_KEY });
       }, 3000);
       setTimeout(() => setGenerateResult(null), 5000);
     },
@@ -202,15 +224,16 @@ export default function DashboardHomePage() {
               You have {signals.length} signals in the backend feed, {holdings.length} open positions, and a live book
               that is now fully tied to the tradeMindAI data model.
             </p>
-            {isMarketDataUnavailable(portfolio.dataSource) ? (
+            {isMarketDataUnavailable(portfolio.dataSource) && (
               <p className="mt-3 text-sm text-gold">
                 Market pricing is currently unavailable. Holdings remain visible, but current prices and P&amp;L are paused.
               </p>
-            ) : isPartialMarketData(portfolio.dataSource) ? (
+            )}
+            {isPartialMarketData(portfolio.dataSource) && !isMarketDataUnavailable(portfolio.dataSource) && (
               <p className="mt-3 text-sm text-gold">
                 Partial pricing returned from market data. Some holdings and signals are still waiting on fresh prices.
               </p>
-            ) : null}
+            )}
             {session?.isAdmin && (
               <div className="mt-4 flex items-center gap-3">
                 <Button
@@ -380,9 +403,7 @@ export default function DashboardHomePage() {
                       {position.lastPrice != null ? formatMoney(position.lastPrice) : "N/A"}
                     </td>
                     <td
-                      className={`border-t border-border px-4 py-4 font-mono ${
-                        pnl != null && pnl >= 0 ? "text-green" : pnl != null ? "text-red" : "text-text-3"
-                      }`}
+                      className={`border-t border-border px-4 py-4 font-mono ${getPnlTone(pnl)}`}
                     >
                       {pnl != null ? formatSignedMoney(pnl) : "N/A"}
                     </td>

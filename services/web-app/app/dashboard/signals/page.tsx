@@ -24,6 +24,10 @@ function formatPrice(value: number | null) {
   });
 }
 
+function getSignalCountLabel(signalCount: number): string {
+  return `${signalCount} live signal${signalCount !== 1 ? "s" : ""}`;
+}
+
 export default function SignalsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterValue>("ALL");
   const { data: signals = [], isLoading, error } = useQuery({
@@ -52,7 +56,7 @@ export default function SignalsPage() {
               {isLoading
                 ? "Loading signals…"
                 : signals.length > 0
-                  ? `${signals.length} live signal${signals.length !== 1 ? "s" : ""}`
+                  ? getSignalCountLabel(signals.length)
                   : "Signal feed"}
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-text-2">
