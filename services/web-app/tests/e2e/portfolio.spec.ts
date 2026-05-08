@@ -1,7 +1,9 @@
 import { test, expect } from "@playwright/test";
+import { mockPortfolioApi } from "./helpers/mock-api";
 
 test.describe("portfolio page", () => {
   test.beforeEach(async ({ page }) => {
+    await mockPortfolioApi(page);
     await page.goto("/dashboard/portfolio");
     await expect(page.locator("body")).not.toContainText("Application error");
   });

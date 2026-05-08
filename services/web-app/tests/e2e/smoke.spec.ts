@@ -1,6 +1,12 @@
 import { test, expect } from "@playwright/test";
+import { mockPortfolioApi, mockSignalsApi } from "./helpers/mock-api";
 
 test.describe("dashboard smoke", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockSignalsApi(page);
+    await mockPortfolioApi(page);
+  });
+
   test("dashboard home loads", async ({ page }) => {
     await page.goto("/dashboard");
     await expect(page.locator("body")).not.toContainText("Application error");

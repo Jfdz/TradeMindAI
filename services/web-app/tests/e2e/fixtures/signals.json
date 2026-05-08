@@ -1,0 +1,41 @@
+{
+  "content": [
+    {
+      "id": "sig-buy-1",
+      "symbol": "AAPL",
+      "type": "BUY",
+      "confidence": 0.85,
+      "generatedAt": "2026-05-08T10:00:00Z",
+      "timeframe": "DAILY",
+      "stopLossPct": -0.05,
+      "takeProfitPct": 0.10,
+      "predictedChangePct": 0.08
+    },
+    {
+      "id": "sig-sell-1",
+      "symbol": "MSFT",
+      "type": "SELL",
+      "confidence": 0.72,
+      "generatedAt": "2026-05-08T09:00:00Z",
+      "timeframe": "DAILY",
+      "stopLossPct": -0.03,
+      "takeProfitPct": 0.06,
+      "predictedChangePct": -0.05
+    },
+    {
+      "id": "sig-hold-1",
+      "symbol": "GOOGL",
+      "type": "HOLD",
+      "confidence": 0.60,
+      "generatedAt": "2026-05-08T08:00:00Z",
+      "timeframe": "DAILY",
+      "stopLossPct": null,
+      "takeProfitPct": null,
+      "predictedChangePct": 0.01
+    }
+  ],
+  "page": 0,
+  "size": 3,
+  "totalElements": 3,
+  "totalPages": 1
+}
