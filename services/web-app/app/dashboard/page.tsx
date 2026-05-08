@@ -39,6 +39,29 @@ function formatSignedMoney(value: number) {
   return value >= 0 ? `+${formatted}` : `-${formatted}`;
 }
 
+function pickUnrealizedPnlTone(unrealizedPnl: number | null, marketDataUnavailable: boolean) {
+  if (unrealizedPnl == null) return "text-text-3";
+  if (marketDataUnavailable) return "text-text-3";
+  return unrealizedPnl >= 0 ? "text-green" : "text-red";
+}
+
+function pickDetailMessage(marketDataUnavailable: boolean, partialMarketData: boolean) {
+  if (marketDataUnavailable) return "Market data unavailable";
+  if (partialMarketData) return "Priced holdings only";
+  return "Open position gains";
+}
+
+function pickPnlTone(pnl: number | null) {
+  if (pnl != null && pnl >= 0) return "text-green";
+  if (pnl != null) return "text-red";
+  return "text-text-3";
+}
+
+function formatPnlValue(pnl: number | null) {
+  if (pnl != null) return formatSignedMoney(pnl);
+  return "N/A";
+}
+
 function Sparkline({ values, color }: { values: number[]; color: string }) {
   if (values.length === 0) {
     return null;
@@ -114,8 +137,8 @@ export default function DashboardHomePage() {
       {
         label: "Unrealized P&L",
         value: unrealizedPnl != null ? formatSignedMoney(unrealizedPnl) : "N/A",
-        detail: marketDataUnavailable ? "Market data unavailable" : partialMarketData ? "Priced holdings only" : "Open position gains",
-        tone: unrealizedPnl == null ? "text-text-3" : unrealizedPnl >= 0 ? "text-green" : "text-red",
+        detail: pickDetailMessage(marketDataUnavailable, partialMarketData),
+        tone: pickUnrealizedPnlTone(unrealizedPnl, marketDataUnavailable),
       },
     ];
   }, [holdings.length, portfolio, signals]);
@@ -145,11 +168,11 @@ export default function DashboardHomePage() {
     onSuccess: (result) => {
       const count = result.predictions?.length ?? 0;
       setGenerateResult(`${count} signal${count !== 1 ? "s" : ""} queued for persistence`);
-      void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
-      void queryClient.invalidateQueries({ queryKey: SIGNALS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: SIGNALS_QUERY_KEY });
       setTimeout(() => {
-        void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
-        void queryClient.invalidateQueries({ queryKey: SIGNALS_QUERY_KEY });
+        queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
+        queryClient.invalidateQueries({ queryKey: SIGNALS_QUERY_KEY });
       }, 3000);
       setTimeout(() => setGenerateResult(null), 5000);
     },
@@ -202,15 +225,16 @@ export default function DashboardHomePage() {
               You have {signals.length} signals in the backend feed, {holdings.length} open positions, and a live book
               that is now fully tied to the tradeMindAI data model.
             </p>
-            {isMarketDataUnavailable(portfolio.dataSource) ? (
+            {isMarketDataUnavailable(portfolio.dataSource) && (
               <p className="mt-3 text-sm text-gold">
                 Market pricing is currently unavailable. Holdings remain visible, but current prices and P&amp;L are paused.
               </p>
-            ) : isPartialMarketData(portfolio.dataSource) ? (
+            )}
+            {isPartialMarketData(portfolio.dataSource) && (
               <p className="mt-3 text-sm text-gold">
                 Partial pricing returned from market data. Some holdings and signals are still waiting on fresh prices.
               </p>
-            ) : null}
+            )}
             {session?.isAdmin && (
               <div className="mt-4 flex items-center gap-3">
                 <Button
@@ -377,14 +401,10 @@ export default function DashboardHomePage() {
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">{position.quantity}</td>
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.averageCost)}</td>
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">
-                      {position.lastPrice != null ? formatMoney(position.lastPrice) : "N/A"}
+                      {position.lastPrice ? formatMoney(position.lastPrice) : "N/A"}
                     </td>
-                    <td
-                      className={`border-t border-border px-4 py-4 font-mono ${
-                        pnl != null && pnl >= 0 ? "text-green" : pnl != null ? "text-red" : "text-text-3"
-                      }`}
-                    >
-                      {pnl != null ? formatSignedMoney(pnl) : "N/A"}
+                    <td className={`border-t border-border px-4 py-4 font-mono ${pickPnlTone(pnl)}`}>
+                      {formatPnlValue(pnl)}
                     </td>
                     <td className="border-t border-border px-4 py-4 text-text-2">{position.sector}</td>
                     <td className="border-t border-border px-4 py-4">
