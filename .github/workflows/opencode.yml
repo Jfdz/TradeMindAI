@@ -87,10 +87,21 @@ jobs:
             echo "WARNING: SONAR_HOST_URL / SONAR_TOKEN / SONAR_PROJECT_KEY not configured — skipping capture."
             echo '{"total":0,"issues":[]}' > /tmp/opencode-context/sonarqube-issues.json
           else
-            curl -fsSL -u "${SONAR_TOKEN}:" \
+            # Do NOT follow redirects (-L removed): auth/key failures return a redirect
+            # to the SonarCloud SPA (200 OK HTML), which -f would not catch.
+            curl -fss \
+              -H "Accept: application/json" \
+              -u "${SONAR_TOKEN}:" \
               "${SONAR_HOST_URL}/api/issues/search?componentKeys=${SONAR_PROJECT_KEY}&resolved=false&ps=100" \
               -o /tmp/opencode-context/sonarqube-issues.json
-            echo "SonarQube issues exported. total=$(jq -r '.total // 0' /tmp/opencode-context/sonarqube-issues.json)"
+            # Validate response is JSON, not an HTML redirect page
+            if ! jq -e '.issues' /tmp/opencode-context/sonarqube-issues.json > /dev/null 2>&1; then
+              echo "ERROR: SonarCloud API returned non-JSON. Check SONAR_HOST_URL / SONAR_TOKEN / SONAR_PROJECT_KEY."
+              echo "--- First 400 bytes of response ---"
+              head -c 400 /tmp/opencode-context/sonarqube-issues.json
+              exit 1
+            fi
+            echo "SonarQube issues captured. total=$(jq -r '.total' /tmp/opencode-context/sonarqube-issues.json)"
           fi
       - name: Build project context
         shell: bash
