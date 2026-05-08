@@ -40,19 +40,19 @@ export default function AddPositionPage() {
     e.preventDefault();
     setError(null);
 
-    const quantity = parseFloat(form.quantity);
-    const entryPrice = parseFloat(form.entryPrice);
+    const quantity = Number.parseFloat(form.quantity);
+    const entryPrice = Number.parseFloat(form.entryPrice);
 
     if (!form.ticker) { setError("Ticker is required"); return; }
-    if (isNaN(quantity) || quantity <= 0) { setError("Quantity must be a positive number"); return; }
-    if (isNaN(entryPrice) || entryPrice <= 0) { setError("Entry price must be a positive number"); return; }
+    if (Number.isNaN(quantity) || quantity <= 0) { setError("Quantity must be a positive number"); return; }
+    if (Number.isNaN(entryPrice) || entryPrice <= 0) { setError("Entry price must be a positive number"); return; }
 
     const payload: AddPositionPayload = {
       ticker: form.ticker,
       quantity,
       entryPrice,
       purchaseDate: form.purchaseDate || undefined,
-      fees: form.fees ? parseFloat(form.fees) : undefined,
+      fees: form.fees ? Number.parseFloat(form.fees) : undefined,
       notes: form.notes || undefined,
     };
 
@@ -84,9 +84,10 @@ export default function AddPositionPage() {
         )}
 
         <div className="space-y-1">
-          <label className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Ticker</label>
+          <label htmlFor="ticker" className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Ticker</label>
           {symbols.length > 0 ? (
             <select
+              id="ticker"
               value={form.ticker}
               onChange={(e) => set("ticker", e.target.value)}
               className="w-full rounded-xl border border-border bg-bg-2 px-3 py-2 text-sm text-white focus:border-cyan focus:outline-none"
@@ -100,6 +101,7 @@ export default function AddPositionPage() {
             </select>
           ) : (
             <input
+              id="ticker"
               type="text"
               value={form.ticker}
               onChange={(e) => set("ticker", e.target.value.toUpperCase())}
@@ -112,8 +114,9 @@ export default function AddPositionPage() {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Quantity</label>
+            <label htmlFor="quantity" className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Quantity</label>
             <input
+              id="quantity"
               type="number"
               value={form.quantity}
               onChange={(e) => set("quantity", e.target.value)}
@@ -125,8 +128,9 @@ export default function AddPositionPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Entry Price (USD)</label>
+            <label htmlFor="entryPrice" className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Entry Price (USD)</label>
             <input
+              id="entryPrice"
               type="number"
               value={form.entryPrice}
               onChange={(e) => set("entryPrice", e.target.value)}
@@ -140,8 +144,9 @@ export default function AddPositionPage() {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Purchase Date</label>
+            <label htmlFor="purchaseDate" className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Purchase Date</label>
             <input
+              id="purchaseDate"
               type="date"
               value={form.purchaseDate}
               onChange={(e) => set("purchaseDate", e.target.value)}
@@ -150,8 +155,9 @@ export default function AddPositionPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Fees (optional)</label>
+            <label htmlFor="fees" className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Fees (optional)</label>
             <input
+              id="fees"
               type="number"
               value={form.fees}
               onChange={(e) => set("fees", e.target.value)}
@@ -164,8 +170,9 @@ export default function AddPositionPage() {
         </div>
 
         <div className="space-y-1">
-          <label className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Notes (optional)</label>
+          <label htmlFor="notes" className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Notes (optional)</label>
           <textarea
+            id="notes"
             value={form.notes}
             onChange={(e) => set("notes", e.target.value)}
             placeholder="e.g. Earnings play, long-term hold…"

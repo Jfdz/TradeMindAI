@@ -26,7 +26,7 @@ function formatPrice(value: number | null) {
 
 function pickSignalLabel(isLoading: boolean, signalsLength: number) {
   if (isLoading) return "Loading signals…";
-  if (signalsLength > 0) return `${signalsLength} live signal${signalsLength !== 1 ? "s" : ""}`;
+  if (signalsLength > 0) return `${signalsLength} live signal${signalsLength > 1 ? "s" : ""}`;
   return "Signal feed";
 }
 
@@ -64,7 +64,7 @@ export default function SignalsPage() {
           <div>
             <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-cyan">
               <span className="h-2 w-2 rounded-full bg-green animate-pulse-soft" />
-              Live signals
+              {" Live signals"}
             </div>
             <h2 className="mt-3 font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
               {pickSignalLabel(isLoading, signals.length)}
@@ -91,17 +91,24 @@ export default function SignalsPage() {
       </section>
 
       <section className="rounded-[24px] border border-border bg-bg-1/80 p-6 shadow-glow">
-        {isLoading ? (
-          <div className="space-y-4">
-            <div className="h-8 w-64 animate-pulse rounded-full bg-bg-2" />
-            <div className="h-[360px] animate-pulse rounded-[20px] bg-bg-2" />
-          </div>
-        ) : error ? (
-          <div className="rounded-2xl border border-red/30 bg-red/10 p-4 text-sm text-red">
-            {error instanceof Error ? error.message : "Unable to load signals"}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
+        {(() => {
+          if (isLoading) {
+            return (
+              <div className="space-y-4">
+                <div className="h-8 w-64 animate-pulse rounded-full bg-bg-2" />
+                <div className="h-[360px] animate-pulse rounded-[20px] bg-bg-2" />
+              </div>
+            );
+          }
+          if (error) {
+            return (
+              <div className="rounded-2xl border border-red/30 bg-red/10 p-4 text-sm text-red">
+                {error instanceof Error ? error.message : "Unable to load signals"}
+              </div>
+            );
+          }
+          return (
+            <div className="overflow-x-auto">
             <table className="min-w-[1200px] w-full border-separate border-spacing-0">
               <thead className="text-[11px] uppercase tracking-[0.22em] text-text-3">
                 <tr>
@@ -171,8 +178,9 @@ export default function SignalsPage() {
                 ) : null}
               </tbody>
             </table>
-          </div>
-        )}
+            </div>
+          );
+        })()}
       </section>
     </div>
   );

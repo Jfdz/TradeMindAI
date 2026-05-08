@@ -42,6 +42,26 @@ function formatSignalDate(value: string) {
   });
 }
 
+function calculateTakeProfit(signalType: string | undefined, takeProfitPct: number | null | undefined, entry: number | null | undefined): number | null {
+  if (signalType === "BUY") {
+    return takeProfitPct != null && entry != null ? entry * (1 + takeProfitPct / 100) : null;
+  }
+  if (signalType === "SELL") {
+    return takeProfitPct != null && entry != null ? entry * (1 - takeProfitPct / 100) : null;
+  }
+  return entry ?? null;
+}
+
+function calculateStopLoss(signalType: string | undefined, stopLossPct: number | null | undefined, entry: number | null | undefined): number | null {
+  if (signalType === "BUY") {
+    return stopLossPct != null && entry != null ? entry * (1 - stopLossPct / 100) : null;
+  }
+  if (signalType === "SELL") {
+    return stopLossPct != null && entry != null ? entry * (1 + stopLossPct / 100) : null;
+  }
+  return entry ?? null;
+}
+
 export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["signal", signalId],
@@ -66,26 +86,8 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
   }, [candles, signal]);
 
   const entry = latestPrice;
-  const takeProfit =
-    signal?.type === "BUY"
-      ? signal.takeProfitPct != null && entry != null
-        ? entry * (1 + signal.takeProfitPct / 100)
-        : null
-      : signal?.type === "SELL"
-        ? signal?.takeProfitPct != null && entry != null
-          ? entry * (1 - signal.takeProfitPct / 100)
-          : null
-        : entry;
-  const stopLoss =
-    signal?.type === "BUY"
-      ? signal.stopLossPct != null && entry != null
-        ? entry * (1 - signal.stopLossPct / 100)
-        : null
-      : signal?.type === "SELL"
-        ? signal.stopLossPct != null && entry != null
-          ? entry * (1 + signal.stopLossPct / 100)
-          : null
-        : entry;
+  const takeProfit = calculateTakeProfit(signal?.type, signal?.takeProfitPct, entry);
+  const stopLoss = calculateStopLoss(signal?.type, signal?.stopLossPct, entry);
 
   const reasoning = useMemo(() => {
     if (!signal) {

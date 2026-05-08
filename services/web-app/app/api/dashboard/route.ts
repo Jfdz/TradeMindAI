@@ -18,6 +18,27 @@ import { signalTypeColor } from "@/lib/signal-utils";
 
 const API_BASE_URL = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
 
+function buildChartMarker(
+  lastCandle: DashboardCandle,
+  targetSignal: ReturnType<typeof deriveSignal> | null,
+) {
+  if (!lastCandle || !targetSignal) {
+    return null;
+  }
+  const signalType = targetSignal.type;
+  const getShape = (type: string): "arrowDown" | "arrowUp" | "circle" => {
+    if (type === "SELL") return "arrowDown";
+    if (type === "BUY") return "arrowUp";
+    return "circle";
+  };
+  return {
+    time: lastCandle.time,
+    position: (signalType === "SELL" ? "aboveBar" : "belowBar") as "aboveBar" | "belowBar",
+    color: signalTypeColor(signalType),
+    shape: getShape(signalType),
+    text: targetSignal.symbol,
+  };
+}
 
 async function backendJson<T>(path: string, token?: string, optional = false): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -75,14 +96,10 @@ export async function GET() {
     ]);
 
     if (!portfolioResult.ok || !signalResult.ok) {
-      const failed = (portfolioResult.ok === false ? portfolioResult : signalResult) as {
-        ok: false;
-        status: number;
-      };
-      if (failed.status === 401) {
-        return NextResponse.json({ message: "Authentication required" }, { status: 401 });
-      }
-      return NextResponse.json({ message: `Upstream error ${failed.status}` }, { status: 502 });
+      const failed = (!portfolioResult.ok ? portfolioResult : signalResult) as { ok: false; status: number };
+      return failed.status === 401
+        ? NextResponse.json({ message: "Authentication required" }, { status: 401 })
+        : NextResponse.json({ message: `Upstream error ${failed.status}` }, { status: 502 });
     }
 
     const portfolio = portfolioResult.data;
@@ -159,16 +176,7 @@ export async function GET() {
         : [];
 
       const lastCandle = chartCandles[chartCandles.length - 1];
-      if (lastCandle && targetSignal) {
-        const signalType = targetSignal.type;
-        chartMarker = {
-          time: lastCandle.time,
-          position: signalType === "SELL" ? "aboveBar" : "belowBar",
-          color: signalTypeColor(signalType),
-          shape: signalType === "SELL" ? "arrowDown" : signalType === "BUY" ? "arrowUp" : "circle",
-          text: targetSignal.symbol,
-        };
-      }
+      chartMarker = buildChartMarker(lastCandle, targetSignal);
     }
 
     return NextResponse.json<DashboardPageData>({
