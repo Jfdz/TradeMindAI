@@ -2,6 +2,7 @@ package com.tradingsaas.tradingcore.adapter.out.persistence.mapper;
 
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.TradingSignalJpaEntity;
 import com.tradingsaas.tradingcore.domain.model.Confidence;
+import com.tradingsaas.tradingcore.domain.model.ReasoningStatus;
 import com.tradingsaas.tradingcore.domain.model.TradingSignal;
 import org.springframework.stereotype.Component;
 
@@ -20,7 +21,10 @@ public class TradingSignalEntityMapper {
                 signal.getStopLossPct(),
                 signal.getTakeProfitPct(),
                 signal.getPredictedChangePct(),
-                signal.getEntryPrice());
+                signal.getEntryPrice(),
+                signal.getReasoning(),
+                signal.getReasoningStatus() != null ? signal.getReasoningStatus() : ReasoningStatus.PENDING,
+                signal.getReasoningGeneratedAt());
     }
 
     public TradingSignal toDomain(TradingSignalJpaEntity entity) {
@@ -35,6 +39,9 @@ public class TradingSignalEntityMapper {
                 entity.getStopLossPct(),
                 entity.getTakeProfitPct(),
                 entity.getPredictedChangePct(),
-                entity.getEntryPrice());
+                entity.getEntryPrice(),
+                entity.getReasoning(),
+                entity.getReasoningStatus(),
+                entity.getReasoningGeneratedAt());
     }
 }
