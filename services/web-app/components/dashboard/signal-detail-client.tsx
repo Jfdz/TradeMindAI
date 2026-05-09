@@ -94,6 +94,13 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
       return "";
     }
 
+    if (
+      (signal.reasoningStatus === "READY" || signal.reasoningStatus === "FALLBACK") &&
+      signal.reasoning
+    ) {
+      return signal.reasoning;
+    }
+
     const predicted = signal.predictedChangePct ?? 0;
     const priceText = formatPrice(entry);
 
@@ -226,7 +233,15 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
 
           <div className="mt-6 rounded-[20px] border border-cyan/25 bg-cyan-dim p-5">
             <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Reasoning</div>
-            <p className="mt-3 text-sm leading-7 text-text-1">{reasoning}</p>
+            {!signal.reasoningStatus || signal.reasoningStatus === "PENDING" ? (
+              <div className="mt-3 space-y-2">
+                <div className="h-3 w-full animate-pulse rounded-full bg-bg-2" />
+                <div className="h-3 w-4/5 animate-pulse rounded-full bg-bg-2" />
+                <div className="h-3 w-3/5 animate-pulse rounded-full bg-bg-2" />
+              </div>
+            ) : (
+              <p className="mt-3 text-sm leading-7 text-text-1">{reasoning}</p>
+            )}
           </div>
 
           <div className="mt-6 rounded-2xl border border-border bg-bg-2 p-4 text-sm leading-7 text-text-2">

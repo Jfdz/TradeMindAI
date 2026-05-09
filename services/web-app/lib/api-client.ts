@@ -12,6 +12,8 @@ export type PagedResponse<T> = {
   last?: boolean;
 };
 
+export type ReasoningStatus = "PENDING" | "READY" | "FALLBACK" | "FAILED";
+
 export type SignalResponse = {
   id: string;
   symbol: string;
@@ -23,6 +25,9 @@ export type SignalResponse = {
   takeProfitPct?: number | null;
   predictedChangePct?: number | null;
   entryPrice?: number | null;
+  reasoning?: string | null;
+  reasoningStatus?: ReasoningStatus | null;
+  reasoningGeneratedAt?: string | null;
 };
 
 export type SubmitBacktestPayload = {

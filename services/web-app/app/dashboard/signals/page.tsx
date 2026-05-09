@@ -178,7 +178,16 @@ function SignalsContent() {
                             {signal.status}
                           </span>
                         </td>
-                        <td className="border-t border-border px-4 py-4 text-sm leading-6 text-text-2">{signal.reasoning}</td>
+                        <td className="border-t border-border px-4 py-4 text-sm leading-6 text-text-2">
+                          {!signal.reasoningStatus || signal.reasoningStatus === "PENDING" ? (
+                            <div className="space-y-1.5">
+                              <div className="h-3 w-40 animate-pulse rounded-full bg-bg-2" />
+                              <div className="h-3 w-28 animate-pulse rounded-full bg-bg-2" />
+                            </div>
+                          ) : (
+                            signal.reasoning
+                          )}
+                        </td>
                         <td className="border-t border-border px-4 py-4">
                           <div className="font-mono text-text-1">{signal.age}</div>
                           <div className="mt-1 text-xs text-text-3">{signal.generatedLabel}</div>
