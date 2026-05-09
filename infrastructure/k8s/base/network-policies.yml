@@ -58,7 +58,7 @@ spec:
           port: 8082
 
 ---
-# Ingress controller can reach market-data-service; trading-core can also call it
+# Ingress controller can reach market-data-service; trading-core and ai-engine can also call it
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -78,6 +78,9 @@ spec:
         - podSelector:
             matchLabels:
               app: trading-core-service
+        - podSelector:
+            matchLabels:
+              app: ai-engine
       ports:
         - protocol: TCP
           port: 8081
