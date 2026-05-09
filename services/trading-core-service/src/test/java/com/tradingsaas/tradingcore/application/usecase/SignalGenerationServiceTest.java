@@ -5,12 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.tradingsaas.tradingcore.domain.model.AiPrediction;
+import com.tradingsaas.tradingcore.domain.model.ReasoningStatus;
 import com.tradingsaas.tradingcore.domain.model.Confidence;
 import com.tradingsaas.tradingcore.domain.model.SignalType;
 import com.tradingsaas.tradingcore.domain.model.TradingSignal;
 import com.tradingsaas.tradingcore.domain.model.backtest.OhlcvBar;
 import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort;
 import com.tradingsaas.tradingcore.domain.port.out.TradingSignalRepository;
+import java.time.Instant;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -133,6 +135,9 @@ class SignalGenerationServiceTest {
         public java.util.Optional<TradingSignal> findLatest() {
             return java.util.Optional.empty();
         }
+
+        @Override
+        public void updateReasoning(java.util.UUID id, String reasoning, ReasoningStatus status, Instant at) {}
     }
 
     private static final class StubMarketDataPort implements HistoricalMarketDataPort {

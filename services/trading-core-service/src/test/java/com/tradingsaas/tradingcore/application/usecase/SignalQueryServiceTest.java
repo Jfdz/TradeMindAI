@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.tradingsaas.tradingcore.domain.model.Confidence;
+import com.tradingsaas.tradingcore.domain.model.ReasoningStatus;
 import com.tradingsaas.tradingcore.domain.model.SignalType;
 import com.tradingsaas.tradingcore.domain.model.Timeframe;
 import com.tradingsaas.tradingcore.domain.model.TradingSignal;
@@ -68,5 +69,8 @@ class SignalQueryServiceTest {
         public Optional<TradingSignal> findLatest() {
             return Optional.of(signal);
         }
+
+        @Override
+        public void updateReasoning(UUID id, String reasoning, ReasoningStatus status, Instant at) {}
     }
 }
