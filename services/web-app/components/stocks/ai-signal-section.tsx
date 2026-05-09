@@ -11,11 +11,6 @@ function formatConfidence(v: number): string {
   return `${(v * 100).toFixed(1)}%`;
 }
 
-function formatPrice(v: number | null | undefined): string {
-  if (v == null) return "N/A";
-  return v.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
-}
-
 function SignalBadge({ type }: { type: SignalResponse["type"] }) {
   const colors: Record<SignalResponse["type"], string> = {
     BUY: "text-green-400 border-green-400/30 bg-green-400/10",
@@ -86,12 +81,6 @@ export function AISignalSection({ ticker }: Props) {
           <p className="text-muted-foreground">Timeframe</p>
           <p className="font-mono font-semibold mt-0.5">{signal.timeframe}</p>
         </div>
-        {signal.entryPrice != null && (
-          <div className="rounded-lg bg-muted/50 p-2">
-            <p className="text-muted-foreground">Entry</p>
-            <p className="font-mono font-semibold mt-0.5">{formatPrice(signal.entryPrice)}</p>
-          </div>
-        )}
         {signal.predictedChangePct != null && (
           <div className="rounded-lg bg-muted/50 p-2">
             <p className="text-muted-foreground">Predicted Δ</p>

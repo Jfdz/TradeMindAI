@@ -11,7 +11,7 @@ import {
 
 export async function GET(
   _request: Request,
-  { params }: { params: { ticker: string } },
+  { params }: { params: Promise<{ ticker: string }> },
 ) {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -19,7 +19,7 @@ export async function GET(
   }
 
   const token = (session as { accessToken?: string })?.accessToken;
-  const { ticker } = params;
+  const { ticker } = await params;
   const now = new Date();
   const from = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString();
   const to = now.toISOString();

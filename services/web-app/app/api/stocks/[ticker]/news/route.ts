@@ -5,7 +5,7 @@ import { fetchTickerNews } from "@/lib/enrichment-client";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { ticker: string } },
+  { params }: { params: Promise<{ ticker: string }> },
 ) {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -14,7 +14,7 @@ export async function GET(
 
   const weeksAgo = Number(request.nextUrl.searchParams.get("weeksAgo") ?? "0");
   const token = (session as { accessToken?: string })?.accessToken;
-  const { ticker } = params;
+  const { ticker } = await params;
 
   const now = new Date();
   const to = new Date(now.getTime() - weeksAgo * 7 * 24 * 60 * 60 * 1000);
