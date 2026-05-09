@@ -1,9 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { PaginationControls } from "@/components/dashboard/pagination-controls";
 import { fetchSignalsPageData } from "@/lib/dashboard/client-data";
 import { formatConfidence } from "@/lib/signal-utils";
 import { cn } from "@/lib/utils";
@@ -41,19 +44,27 @@ function pickStatusBadgeClass(status: string) {
   return "border-border bg-bg-2 text-text-2";
 }
 
+function SignalsContent() {
+  const searchParams = useSearchParams();
+  const page = Math.max(0, parseInt(searchParams.get("page") ?? "0", 10));
 
-export default function SignalsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterValue>("ALL");
-  const { data: signals = [], isLoading, error } = useQuery({
-    queryKey: ["signals"],
-    queryFn: fetchSignalsPageData,
+  const {
+    data,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["signals", page],
+    queryFn: () => fetchSignalsPageData({ page }),
   });
+
+  const signals = useMemo(() => data?.items ?? [], [data?.items]);
+  const pageInfo = data?.pageInfo;
 
   const filteredSignals = useMemo(() => {
     if (activeFilter === "ALL") {
       return signals;
     }
-
     return signals.filter((signal) => signal.type === activeFilter);
   }, [activeFilter, signals]);
 
@@ -108,80 +119,102 @@ export default function SignalsPage() {
             );
           }
           return (
-            <div className="overflow-x-auto">
-            <table className="min-w-[1200px] w-full border-separate border-spacing-0">
-              <thead className="text-[11px] uppercase tracking-[0.22em] text-text-3">
-                <tr>
-                  <th className="px-4 py-3 text-left">Pair</th>
-                  <th className="px-4 py-3 text-left">Signal</th>
-                  <th className="px-4 py-3 text-left">TF</th>
-                  <th className="px-4 py-3 text-left">Entry</th>
-                  <th className="px-4 py-3 text-left">Take Profit</th>
-                  <th className="px-4 py-3 text-left">Stop Loss</th>
-                  <th className="px-4 py-3 text-left">Confidence</th>
-                  <th className="px-4 py-3 text-left">Status</th>
-                  <th className="px-4 py-3 text-left">Reasoning</th>
-                  <th className="px-4 py-3 text-left">Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSignals.map((signal, index) => (
-                  <tr
-                    key={signal.id}
-                    className={cn("transition hover:bg-white/[0.025]", index % 2 === 0 ? "bg-white/[0.012]" : "")}
-                  >
-                    <td className="border-t border-border px-4 py-4">
-                      <div className="font-display text-base font-semibold tracking-[-0.03em] text-white">{signal.symbol}</div>
-                      <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">{signal.age}</div>
-                    </td>
-                    <td className="border-t border-border px-4 py-4">
-                      <span className={cn("rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]", pickSignalBadgeClass(signal.type))}>
-                        {signal.type}
-                      </span>
-                    </td>
-                    <td className="border-t border-border px-4 py-4 font-mono text-text-1">{signal.timeframe}</td>
-                    <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatPrice(signal.entry)}</td>
-                    <td className="border-t border-border px-4 py-4 font-mono text-green">{formatPrice(signal.takeProfit)}</td>
-                    <td className="border-t border-border px-4 py-4 font-mono text-red">{formatPrice(signal.stopLoss)}</td>
-                    <td className="border-t border-border px-4 py-4">
-                      <div className="w-44">
-                        <div className="flex items-center justify-between text-xs text-text-2">
-                          <span>{formatConfidence(signal.confidence)}</span>
-                          <span>{signal.live ? "LIVE" : "PENDING"}</span>
-                        </div>
-                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-bg-3">
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-cyan to-cyan/60"
-                            style={{ width: `${signal.confidence * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    </td>
-                    <td className="border-t border-border px-4 py-4">
-                      <span className={cn("rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]", pickStatusBadgeClass(signal.status))}>
-                        {signal.status}
-                      </span>
-                    </td>
-                    <td className="border-t border-border px-4 py-4 text-sm leading-6 text-text-2">{signal.reasoning}</td>
-                    <td className="border-t border-border px-4 py-4">
-                      <div className="font-mono text-text-1">{signal.age}</div>
-                      <div className="mt-1 text-xs text-text-3">{signal.generatedLabel}</div>
-                    </td>
-                  </tr>
-                ))}
-                {filteredSignals.length === 0 ? (
-                  <tr>
-                    <td className="border-t border-border px-4 py-10 text-center text-sm text-text-2" colSpan={10}>
-                      No signals match the current filter.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-            </div>
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-[1200px] w-full border-separate border-spacing-0">
+                  <thead className="text-[11px] uppercase tracking-[0.22em] text-text-3">
+                    <tr>
+                      <th className="px-4 py-3 text-left">Pair</th>
+                      <th className="px-4 py-3 text-left">Signal</th>
+                      <th className="px-4 py-3 text-left">TF</th>
+                      <th className="px-4 py-3 text-left">Entry</th>
+                      <th className="px-4 py-3 text-left">Take Profit</th>
+                      <th className="px-4 py-3 text-left">Stop Loss</th>
+                      <th className="px-4 py-3 text-left">Confidence</th>
+                      <th className="px-4 py-3 text-left">Status</th>
+                      <th className="px-4 py-3 text-left">Reasoning</th>
+                      <th className="px-4 py-3 text-left">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredSignals.map((signal, index) => (
+                      <tr
+                        key={signal.id}
+                        className={cn("transition hover:bg-white/[0.025]", index % 2 === 0 ? "bg-white/[0.012]" : "")}
+                      >
+                        <td className="border-t border-border px-4 py-4">
+                          <Link href={`/dashboard/stocks/${signal.symbol}`} className="group">
+                            <div className="font-display text-base font-semibold tracking-[-0.03em] text-white group-hover:text-cyan transition-colors">
+                              {signal.symbol}
+                            </div>
+                            <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">{signal.age}</div>
+                          </Link>
+                        </td>
+                        <td className="border-t border-border px-4 py-4">
+                          <span className={cn("rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]", pickSignalBadgeClass(signal.type))}>
+                            {signal.type}
+                          </span>
+                        </td>
+                        <td className="border-t border-border px-4 py-4 font-mono text-text-1">{signal.timeframe}</td>
+                        <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatPrice(signal.entry)}</td>
+                        <td className="border-t border-border px-4 py-4 font-mono text-green">{formatPrice(signal.takeProfit)}</td>
+                        <td className="border-t border-border px-4 py-4 font-mono text-red">{formatPrice(signal.stopLoss)}</td>
+                        <td className="border-t border-border px-4 py-4">
+                          <div className="w-44">
+                            <div className="flex items-center justify-between text-xs text-text-2">
+                              <span>{formatConfidence(signal.confidence)}</span>
+                              <span>{signal.live ? "LIVE" : "PENDING"}</span>
+                            </div>
+                            <div className="mt-2 h-2 overflow-hidden rounded-full bg-bg-3">
+                              <div
+                                className="h-full rounded-full bg-gradient-to-r from-cyan to-cyan/60"
+                                style={{ width: `${signal.confidence * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="border-t border-border px-4 py-4">
+                          <span className={cn("rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]", pickStatusBadgeClass(signal.status))}>
+                            {signal.status}
+                          </span>
+                        </td>
+                        <td className="border-t border-border px-4 py-4 text-sm leading-6 text-text-2">{signal.reasoning}</td>
+                        <td className="border-t border-border px-4 py-4">
+                          <div className="font-mono text-text-1">{signal.age}</div>
+                          <div className="mt-1 text-xs text-text-3">{signal.generatedLabel}</div>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredSignals.length === 0 ? (
+                      <tr>
+                        <td className="border-t border-border px-4 py-10 text-center text-sm text-text-2" colSpan={10}>
+                          No signals match the current filter.
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+              {pageInfo && (
+                <PaginationControls
+                  pageNumber={pageInfo.pageNumber}
+                  totalPages={pageInfo.totalPages}
+                  isFirst={pageInfo.isFirst}
+                  isLast={pageInfo.isLast}
+                />
+              )}
+            </>
           );
         })()}
       </section>
     </div>
+  );
+}
+
+export default function SignalsPage() {
+  return (
+    <Suspense>
+      <SignalsContent />
+    </Suspense>
   );
 }

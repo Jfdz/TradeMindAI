@@ -71,7 +71,7 @@ function isLiveSignal(generatedAt: string): boolean {
 }
 
 export function deriveSignal(signal: SignalResponse, latestPrice: number | null): FilteredSignal {
-  const entry = latestPrice;
+  const entry = signal.entryPrice ?? latestPrice;
   const takeProfit = calculateTakeProfit(signal.type, signal.takeProfitPct, entry);
   const stopLoss = calculateStopLoss(signal.type, signal.stopLossPct, entry);
   const live = isLiveSignal(signal.generatedAt);
