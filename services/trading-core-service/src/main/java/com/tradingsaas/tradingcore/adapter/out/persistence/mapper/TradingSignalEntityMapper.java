@@ -19,7 +19,8 @@ public class TradingSignalEntityMapper {
                 signal.getGeneratedAt(),
                 signal.getStopLossPct(),
                 signal.getTakeProfitPct(),
-                signal.getPredictedChangePct());
+                signal.getPredictedChangePct(),
+                signal.getEntryPrice());
     }
 
     public TradingSignal toDomain(TradingSignalJpaEntity entity) {
@@ -33,6 +34,7 @@ public class TradingSignalEntityMapper {
                 entity.getGeneratedAt(),
                 entity.getStopLossPct(),
                 entity.getTakeProfitPct(),
-                entity.getPredictedChangePct());
+                entity.getPredictedChangePct(),
+                entity.getEntryPrice());
     }
 }

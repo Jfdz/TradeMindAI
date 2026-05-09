@@ -49,17 +49,27 @@ public class TradingSignalJpaEntity {
     @Column(name = "predicted_change_pct", precision = 8, scale = 4)
     private BigDecimal predictedChangePct;
 
+    @Column(name = "entry_price", precision = 18, scale = 6)
+    private BigDecimal entryPrice;
+
     protected TradingSignalJpaEntity() {}
 
     public TradingSignalJpaEntity(UUID id, UUID symbolId, SignalType signalType, BigDecimal confidence,
                                   Timeframe timeframe, Instant generatedAt,
                                   BigDecimal stopLossPct, BigDecimal takeProfitPct) {
-        this(id, symbolId, null, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, null);
+        this(id, symbolId, null, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, null, null);
     }
 
     public TradingSignalJpaEntity(UUID id, UUID symbolId, String ticker, SignalType signalType, BigDecimal confidence,
                                   Timeframe timeframe, Instant generatedAt,
                                   BigDecimal stopLossPct, BigDecimal takeProfitPct, BigDecimal predictedChangePct) {
+        this(id, symbolId, ticker, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, predictedChangePct, null);
+    }
+
+    public TradingSignalJpaEntity(UUID id, UUID symbolId, String ticker, SignalType signalType, BigDecimal confidence,
+                                  Timeframe timeframe, Instant generatedAt,
+                                  BigDecimal stopLossPct, BigDecimal takeProfitPct, BigDecimal predictedChangePct,
+                                  BigDecimal entryPrice) {
         this.id = id;
         this.symbolId = symbolId;
         this.ticker = ticker;
@@ -70,6 +80,7 @@ public class TradingSignalJpaEntity {
         this.stopLossPct = stopLossPct;
         this.takeProfitPct = takeProfitPct;
         this.predictedChangePct = predictedChangePct;
+        this.entryPrice = entryPrice;
     }
 
     public UUID getId() { return id; }
@@ -82,4 +93,5 @@ public class TradingSignalJpaEntity {
     public BigDecimal getStopLossPct() { return stopLossPct; }
     public BigDecimal getTakeProfitPct() { return takeProfitPct; }
     public BigDecimal getPredictedChangePct() { return predictedChangePct; }
+    public BigDecimal getEntryPrice() { return entryPrice; }
 }

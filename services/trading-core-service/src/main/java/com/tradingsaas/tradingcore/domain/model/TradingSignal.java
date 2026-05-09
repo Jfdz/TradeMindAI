@@ -21,6 +21,7 @@ public class TradingSignal {
     private final BigDecimal stopLossPct;
     private final BigDecimal takeProfitPct;
     private final BigDecimal predictedChangePct;
+    private final BigDecimal entryPrice;
 
     public TradingSignal(UUID id,
                          UUID symbolId,
@@ -28,7 +29,7 @@ public class TradingSignal {
                          Confidence confidence,
                          Timeframe timeframe,
                          Instant generatedAt) {
-        this(id, symbolId, null, type, confidence, timeframe, generatedAt, null, null);
+        this(id, symbolId, null, type, confidence, timeframe, generatedAt, null, null, null, null);
     }
 
     public TradingSignal(UUID id,
@@ -40,7 +41,7 @@ public class TradingSignal {
                          Instant generatedAt,
                          BigDecimal stopLossPct,
                          BigDecimal takeProfitPct) {
-        this(id, symbolId, ticker, type, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, null);
+        this(id, symbolId, ticker, type, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, null, null);
     }
 
     public TradingSignal(UUID id,
@@ -51,7 +52,7 @@ public class TradingSignal {
                          Instant generatedAt,
                          BigDecimal stopLossPct,
                          BigDecimal takeProfitPct) {
-        this(id, symbolId, null, type, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, null);
+        this(id, symbolId, null, type, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, null, null);
     }
 
     public TradingSignal(UUID id,
@@ -64,6 +65,20 @@ public class TradingSignal {
                          BigDecimal stopLossPct,
                          BigDecimal takeProfitPct,
                          BigDecimal predictedChangePct) {
+        this(id, symbolId, ticker, type, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, predictedChangePct, null);
+    }
+
+    public TradingSignal(UUID id,
+                         UUID symbolId,
+                         String ticker,
+                         SignalType type,
+                         Confidence confidence,
+                         Timeframe timeframe,
+                         Instant generatedAt,
+                         BigDecimal stopLossPct,
+                         BigDecimal takeProfitPct,
+                         BigDecimal predictedChangePct,
+                         BigDecimal entryPrice) {
         Objects.requireNonNull(type, "type must not be null");
         Objects.requireNonNull(confidence, "confidence must not be null");
         Objects.requireNonNull(timeframe, "timeframe must not be null");
@@ -87,6 +102,7 @@ public class TradingSignal {
         this.stopLossPct = stopLossPct;
         this.takeProfitPct = takeProfitPct;
         this.predictedChangePct = predictedChangePct;
+        this.entryPrice = entryPrice;
     }
 
     public UUID getId() {
@@ -129,6 +145,10 @@ public class TradingSignal {
         return predictedChangePct;
     }
 
+    public BigDecimal getEntryPrice() {
+        return entryPrice;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -143,6 +163,6 @@ public class TradingSignal {
 
     @Override
     public String toString() {
-        return "TradingSignal{id=" + id + ", symbolId=" + symbolId + ", ticker=" + ticker + ", type=" + type + ", confidence=" + confidence + ", timeframe=" + timeframe + ", generatedAt=" + generatedAt + ", stopLossPct=" + stopLossPct + ", takeProfitPct=" + takeProfitPct + ", predictedChangePct=" + predictedChangePct + '}';
+        return "TradingSignal{id=" + id + ", symbolId=" + symbolId + ", ticker=" + ticker + ", type=" + type + ", confidence=" + confidence + ", timeframe=" + timeframe + ", generatedAt=" + generatedAt + ", stopLossPct=" + stopLossPct + ", takeProfitPct=" + takeProfitPct + ", predictedChangePct=" + predictedChangePct + ", entryPrice=" + entryPrice + '}';
     }
 }

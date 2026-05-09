@@ -54,7 +54,8 @@ class SignalController {
             Instant generatedAt,
             BigDecimal stopLossPct,
             BigDecimal takeProfitPct,
-            BigDecimal predictedChangePct) {
+            BigDecimal predictedChangePct,
+            BigDecimal entryPrice) {
 
         static SignalResponse fromDomain(TradingSignal signal) {
             return new SignalResponse(
@@ -66,7 +67,8 @@ class SignalController {
                     signal.getGeneratedAt(),
                     signal.getStopLossPct(),
                     signal.getTakeProfitPct(),
-                    signal.getPredictedChangePct());
+                    signal.getPredictedChangePct(),
+                    signal.getEntryPrice());
         }
     }
 
