@@ -8,6 +8,9 @@ export default defineConfig({
     clearMocks: true,
     mockReset: true,
   },
+  esbuild: {
+    jsx: "automatic",
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname),
