@@ -93,6 +93,7 @@ services:
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
       MARKET_DATA_INTERNAL_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
