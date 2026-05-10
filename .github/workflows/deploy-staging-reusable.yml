@@ -97,11 +97,40 @@ jobs:
           kubectl rollout status deployment/market-data-service -n trading-saas --timeout=5m
 
       - name: Rolling deploy — trading-core-service
+        id: deploy-trading-core
         run: |
           kubectl set image deployment/trading-core-service \
             trading-core-service=ghcr.io/${GITHUB_REPOSITORY,,}/trading-core-service:${{ env.DEPLOY_SHA }} \
             -n trading-saas
           kubectl rollout status deployment/trading-core-service -n trading-saas --timeout=5m
+
+      - name: Diagnose trading-core-service rollout failure
+        if: failure() && steps.deploy-trading-core.conclusion == 'failure'
+        run: |
+          set +e
+          echo "::group::Deployment description"
+          kubectl describe deployment/trading-core-service -n trading-saas
+          echo "::endgroup::"
+          echo "::group::ReplicaSets"
+          kubectl get rs -n trading-saas -l app=trading-core-service -o wide
+          echo "::endgroup::"
+          echo "::group::Pods"
+          kubectl get pods -n trading-saas -l app=trading-core-service -o wide
+          echo "::endgroup::"
+          echo "::group::Pod descriptions"
+          kubectl describe pods -n trading-saas -l app=trading-core-service
+          echo "::endgroup::"
+          echo "::group::Recent events (namespace)"
+          kubectl get events -n trading-saas --sort-by=.lastTimestamp | tail -50
+          echo "::endgroup::"
+          echo "::group::Container logs (current)"
+          for pod in $(kubectl get pods -n trading-saas -l app=trading-core-service -o name); do
+            echo "--- $pod (current) ---"
+            kubectl logs "$pod" -n trading-saas --tail=200 || true
+            echo "--- $pod (previous) ---"
+            kubectl logs "$pod" -n trading-saas --previous --tail=200 || true
+          done
+          echo "::endgroup::"
 
       - name: Rolling deploy — ai-engine
         run: |
