@@ -19,6 +19,13 @@ const EMPTY_HOLDINGS: EnrichedHolding[] = [];
 const DASHBOARD_QUERY_KEY = ["dashboard"] as const;
 const SIGNALS_QUERY_KEY = ["signals"] as const;
 
+function timeGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 function isMarketDataUnavailable(dataSource: string | null | undefined) {
   return dataSource === "unavailable";
 }
@@ -105,10 +112,10 @@ export default function DashboardHomePage() {
     return chartMarker ? [chartMarker] : undefined;
   }, [chartMarker]);
 
-  const greeting = useMemo(() => {
-    const name = session?.user?.name?.split(" ")[0] ?? "Trader";
-    return `Good morning, ${name}`;
-  }, [session?.user?.name]);
+  const displayName = useMemo(
+    () => session?.user?.name?.split(" ")[0] ?? session?.user?.email?.split("@")[0] ?? "there",
+    [session?.user?.email, session?.user?.name]
+  );
 
   const summaryCards = useMemo(() => {
     if (!portfolio) {
@@ -129,7 +136,13 @@ export default function DashboardHomePage() {
         tone: "text-green",
       },
       { label: "Open Positions", value: `${holdings.length}`, detail: "Backend portfolio book", tone: "text-white" },
-      { label: "Live Signals", value: `${liveSignals}`, detail: `${signals.length} total signals`, tone: "text-cyan" },
+      {
+        label: "Live Signals",
+        value: `${liveSignals}`,
+        detail: `${signals.length} total · ${liveSignals} within 24 h`,
+        tone: "text-cyan",
+        title: "Generated within the last 24 hours",
+      },
       {
         label: "Unrealized P&L",
         value: unrealizedPnl === null ? "N/A" : formatSignedMoney(unrealizedPnl),
@@ -210,16 +223,21 @@ export default function DashboardHomePage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-[24px] border border-border bg-bg-1/80 p-6 shadow-glow">
+      <section className="rounded-[24px] border border-border bg-bg-1/80 bg-gradient-hero p-6 shadow-glow">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Overview</div>
+            <div className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-cyan animate-pulse-soft" />
+              {"LIVE · Overview"}
+            </div>
             <h2 className="mt-3 font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
-              {greeting}
+              <span className="bg-gradient-to-r from-cyan to-green bg-clip-text text-transparent">
+                {timeGreeting()}
+              </span>
+              {`, ${displayName}`}
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-text-2">
-              You have {signals.length} signals in the backend feed, {holdings.length} open positions, and a live book
-              that is now fully tied to the tradeMindAI data model.
+              {signals.length} signals tracked · {holdings.length} open positions
             </p>
             {isMarketDataUnavailable(portfolio.dataSource) && (
               <p className="mt-3 text-sm text-gold">
@@ -266,7 +284,7 @@ export default function DashboardHomePage() {
 
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {summaryCards.map((card) => (
-            <article key={card.label} className="rounded-[20px] border border-border bg-bg-2 p-5">
+            <article key={card.label} className="rounded-[20px] border border-border bg-bg-2 p-5 hover:shadow-neon-soft transition-shadow duration-200" title={card.title}>
               <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">{card.label}</div>
               <div className={cn("mt-3 font-display text-3xl font-bold tracking-[-0.05em]", card.tone)}>{card.value}</div>
               <div className="mt-2 text-sm text-text-2">{card.detail}</div>
@@ -400,7 +418,9 @@ export default function DashboardHomePage() {
                     </td>
                     <td className="border-t border-border px-4 py-4 text-text-2">{position.sector}</td>
                     <td className="border-t border-border px-4 py-4">
-                      <Sparkline values={position.trend} color={position.color} />
+                      {position.trend.length > 0
+                        ? <Sparkline values={position.trend} color={position.color} />
+                        : <span className="text-text-3 text-xs" title="Awaiting price history">—</span>}
                     </td>
                   </tr>
                 );

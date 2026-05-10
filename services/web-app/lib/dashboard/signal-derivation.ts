@@ -70,6 +70,13 @@ function isLiveSignal(generatedAt: string): boolean {
   return ageMs < 1000 * 60 * 60 * 24;
 }
 
+function deriveStatus(generatedAt: string): "NEW" | "LIVE" | "ACTIVE" {
+  const ageMs = Date.now() - new Date(generatedAt).getTime();
+  if (ageMs < 60 * 60 * 1000) return "NEW";
+  if (ageMs < 24 * 60 * 60 * 1000) return "LIVE";
+  return "ACTIVE";
+}
+
 export function deriveSignal(signal: SignalResponse, latestPrice: number | null): FilteredSignal {
   const entry = signal.entryPrice ?? latestPrice;
   const takeProfit = calculateTakeProfit(signal.type, signal.takeProfitPct, entry);
@@ -83,7 +90,7 @@ export function deriveSignal(signal: SignalResponse, latestPrice: number | null)
     takeProfit,
     stopLoss,
     live,
-    status: live ? "LIVE" : "PENDING",
+    status: deriveStatus(signal.generatedAt),
     age: formatAge(signal.generatedAt),
     generatedLabel: new Date(signal.generatedAt).toLocaleString("en-US", {
       month: "short",

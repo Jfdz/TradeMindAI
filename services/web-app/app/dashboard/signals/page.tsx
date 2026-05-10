@@ -17,7 +17,7 @@ const filterOptions: FilterValue[] = ["ALL", "BUY", "SELL", "HOLD"];
 
 function formatPrice(value: number | null) {
   if (value == null || Number.isNaN(value)) {
-    return "N/A";
+    return <span className="text-text-3" title="Awaiting market data">—</span>;
   }
 
   return value.toLocaleString("en-US", {
@@ -27,10 +27,10 @@ function formatPrice(value: number | null) {
   });
 }
 
-function pickSignalLabel(isLoading: boolean, signalsLength: number) {
+function pickSignalLabel(isLoading: boolean, total: number | undefined) {
   if (isLoading) return "Loading signals…";
-  if (signalsLength > 0) return `${signalsLength} live signal${signalsLength > 1 ? "s" : ""}`;
-  return "Signal feed";
+  if (!total) return "Signal feed";
+  return total === 1 ? "1 live signal" : `${total} live signals`;
 }
 
 function pickSignalBadgeClass(signalType: string) {
@@ -39,8 +39,10 @@ function pickSignalBadgeClass(signalType: string) {
   return "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold";
 }
 
-function pickStatusBadgeClass(status: string) {
-  if (status === "LIVE") return "border-cyan/30 bg-cyan-dim text-cyan";
+function pickStatusBadgeClass(status: "NEW" | "LIVE" | "ACTIVE") {
+  if (status === "NEW")
+    return "border-cyan-bright/50 bg-cyan-bright/[0.10] text-cyan-bright shadow-neon-soft animate-pulse-soft";
+  if (status === "LIVE") return "border-green/40 bg-green/[0.10] text-green";
   return "border-border bg-bg-2 text-text-2";
 }
 
@@ -78,7 +80,7 @@ function SignalsContent() {
               {" Live signals"}
             </div>
             <h2 className="mt-3 font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
-              {pickSignalLabel(isLoading, signals.length)}
+              {pickSignalLabel(isLoading, data?.pageInfo?.totalElements)}
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-text-2">
               Review the latest signal feed, narrow the list with filters, and open a full signal detail page for more
@@ -161,14 +163,13 @@ function SignalsContent() {
                         <td className="border-t border-border px-4 py-4 font-mono text-red">{formatPrice(signal.stopLoss)}</td>
                         <td className="border-t border-border px-4 py-4">
                           <div className="w-44">
-                            <div className="flex items-center justify-between text-xs text-text-2">
-                              <span>{formatConfidence(signal.confidence)}</span>
-                              <span>{signal.live ? "LIVE" : "PENDING"}</span>
+                            <div className="text-xs text-text-2">
+                              {formatConfidence(signal.confidence)}
                             </div>
                             <div className="mt-2 h-2 overflow-hidden rounded-full bg-bg-3">
                               <div
-                                className="h-full rounded-full bg-gradient-to-r from-cyan to-cyan/60"
-                                style={{ width: `${signal.confidence * 100}%` }}
+                                className="h-full rounded-full bg-gradient-to-r from-cyan via-cyan-bright to-green"
+                                style={{ width: `${signal.confidence * 100}%`, boxShadow: "0 0 8px rgba(0,200,212,0.35)" }}
                               />
                             </div>
                           </div>

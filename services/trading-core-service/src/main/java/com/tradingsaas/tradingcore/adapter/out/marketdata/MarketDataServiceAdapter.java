@@ -68,9 +68,15 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
                         .build(symbol))
                 .headers(this::addInternalSecret)
                 .retrieve()
+                .onStatus(status -> status.value() == 404, res -> Mono.empty())
                 .onStatus(
                         status -> status.is4xxClientError() || status.is5xxServerError(),
-                        res -> Mono.empty()
+                        res -> res.bodyToMono(String.class)
+                                .defaultIfEmpty("<no body>")
+                                .flatMap(body -> {
+                                    log.warn("market-data returned {} for {}/DAILY history: {}", res.statusCode(), symbol, body);
+                                    return Mono.<Throwable>empty();
+                                })
                 )
                 .bodyToMono(PriceHistoryResponse.class)
                 .defaultIfEmpty(new PriceHistoryResponse(List.of()))
@@ -213,7 +219,16 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
                 .uri("/api/v1/prices/{ticker}/latest", symbol)
                 .headers(this::addInternalSecret)
                 .retrieve()
-                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), res -> Mono.empty())
+                .onStatus(status -> status.value() == 404, res -> Mono.empty())
+                .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        res -> res.bodyToMono(String.class)
+                                .defaultIfEmpty("<no body>")
+                                .flatMap(body -> {
+                                    log.warn("market-data returned {} checking hasData for {}: {}", res.statusCode(), symbol, body);
+                                    return Mono.<Throwable>empty();
+                                })
+                )
                 .bodyToMono(String.class)
                 .map(body -> true)
                 .defaultIfEmpty(false)
@@ -227,7 +242,16 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
                         .build(ticker))
                 .headers(this::addInternalSecret)
                 .retrieve()
-                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), res -> Mono.empty())
+                .onStatus(status -> status.value() == 404, res -> Mono.empty())
+                .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        res -> res.bodyToMono(String.class)
+                                .defaultIfEmpty("<no body>")
+                                .flatMap(body -> {
+                                    log.warn("market-data returned {} for {}/{} latest price: {}", res.statusCode(), ticker, timeframe, body);
+                                    return Mono.<Throwable>empty();
+                                })
+                )
                 .bodyToMono(MarketPriceResponse.class)
                 .block();
         return Optional.ofNullable(response);
@@ -244,7 +268,16 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
                         .build())
                 .headers(this::addInternalSecret)
                 .retrieve()
-                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), res -> Mono.empty())
+                .onStatus(status -> status.value() == 404, res -> Mono.empty())
+                .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        res -> res.bodyToMono(String.class)
+                                .defaultIfEmpty("<no body>")
+                                .flatMap(body -> {
+                                    log.warn("market-data returned {} for {}/{} latest prices batch: {}", res.statusCode(), tickers, timeframe, body);
+                                    return Mono.<Throwable>empty();
+                                })
+                )
                 .bodyToMono(LatestPricesResponse.class)
                 .defaultIfEmpty(new LatestPricesResponse(List.of()))
                 .block();
@@ -267,7 +300,16 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
                         .build(ticker))
                 .headers(this::addInternalSecret)
                 .retrieve()
-                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), res -> Mono.empty())
+                .onStatus(status -> status.value() == 404, res -> Mono.empty())
+                .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        res -> res.bodyToMono(String.class)
+                                .defaultIfEmpty("<no body>")
+                                .flatMap(body -> {
+                                    log.warn("market-data returned {} for {}/{} history [{}/{}]: {}", res.statusCode(), ticker, timeframe, from, to, body);
+                                    return Mono.<Throwable>empty();
+                                })
+                )
                 .bodyToMono(MarketPricePageResponse.class)
                 .defaultIfEmpty(new MarketPricePageResponse(List.of(), page, size, 0, 0))
                 .block();
@@ -298,7 +340,16 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
                         .build())
                 .headers(this::addInternalSecret)
                 .retrieve()
-                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), res -> Mono.empty())
+                .onStatus(status -> status.value() == 404, res -> Mono.empty())
+                .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        res -> res.bodyToMono(String.class)
+                                .defaultIfEmpty("<no body>")
+                                .flatMap(body -> {
+                                    log.warn("market-data returned {} for symbols [page={} size={}]: {}", res.statusCode(), page, size, body);
+                                    return Mono.<Throwable>empty();
+                                })
+                )
                 .bodyToMono(MarketSymbolPageResponse.class)
                 .defaultIfEmpty(new MarketSymbolPageResponse(List.of(), page, size, 0, 0))
                 .block();
