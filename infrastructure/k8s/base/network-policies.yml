@@ -58,7 +58,7 @@ spec:
           port: 8082
 
 ---
-# Ingress controller can reach market-data-service; trading-core can also call it
+# Ingress controller can reach market-data-service; trading-core and ai-engine can also call it
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -78,12 +78,15 @@ spec:
         - podSelector:
             matchLabels:
               app: trading-core-service
+        - podSelector:
+            matchLabels:
+              app: ai-engine
       ports:
         - protocol: TCP
           port: 8081
 
 ---
-# ai-engine: only reachable from trading-core-service; NOT from web-app
+# ai-engine: reachable from trading-core-service and from the daily-signal-inference cronjob
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -100,6 +103,9 @@ spec:
         - podSelector:
             matchLabels:
               app: trading-core-service
+        - podSelector:
+            matchLabels:
+              app: daily-signal-inference
       ports:
         - protocol: TCP
           port: 8000
@@ -155,7 +161,7 @@ spec:
           port: 6379
 
 ---
-# trading-core-service can reach rabbitmq
+# market-data-service, trading-core-service and ai-engine can reach rabbitmq
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -172,6 +178,12 @@ spec:
         - podSelector:
             matchLabels:
               app: trading-core-service
+        - podSelector:
+            matchLabels:
+              app: market-data-service
+        - podSelector:
+            matchLabels:
+              app: ai-engine
       ports:
         - protocol: TCP
           port: 5672

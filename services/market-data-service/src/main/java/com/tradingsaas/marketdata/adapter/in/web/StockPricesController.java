@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class StockPricesController {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
-    private static final int MAX_PAGE_SIZE = 100;
+    private static final int MAX_PAGE_SIZE = 500;
     private static final int MAX_BATCH_SIZE = 100;
 
     private final GetHistoricalPricesUseCase getHistoricalPricesUseCase;
