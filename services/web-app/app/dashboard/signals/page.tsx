@@ -17,7 +17,7 @@ const filterOptions: FilterValue[] = ["ALL", "BUY", "SELL", "HOLD"];
 
 function formatPrice(value: number | null) {
   if (value == null || Number.isNaN(value)) {
-    return "N/A";
+    return <span className="text-text-3" title="Awaiting market data">—</span>;
   }
 
   return value.toLocaleString("en-US", {
@@ -39,8 +39,9 @@ function pickSignalBadgeClass(signalType: string) {
   return "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold";
 }
 
-function pickStatusBadgeClass(status: string) {
-  if (status === "LIVE") return "border-cyan/30 bg-cyan-dim text-cyan";
+function pickStatusBadgeClass(status: "NEW" | "LIVE" | "ACTIVE") {
+  if (status === "NEW") return "border-cyan/30 bg-cyan-dim text-cyan";
+  if (status === "LIVE") return "border-green/40 bg-green/[0.10] text-green";
   return "border-border bg-bg-2 text-text-2";
 }
 
@@ -161,9 +162,8 @@ function SignalsContent() {
                         <td className="border-t border-border px-4 py-4 font-mono text-red">{formatPrice(signal.stopLoss)}</td>
                         <td className="border-t border-border px-4 py-4">
                           <div className="w-44">
-                            <div className="flex items-center justify-between text-xs text-text-2">
-                              <span>{formatConfidence(signal.confidence)}</span>
-                              <span>{signal.live ? "LIVE" : "PENDING"}</span>
+                            <div className="text-xs text-text-2">
+                              {formatConfidence(signal.confidence)}
                             </div>
                             <div className="mt-2 h-2 overflow-hidden rounded-full bg-bg-3">
                               <div

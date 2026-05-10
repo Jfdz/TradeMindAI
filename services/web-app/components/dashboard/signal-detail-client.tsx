@@ -18,7 +18,7 @@ const EMPTY_CANDLES: ChartCandle[] = [];
 
 function formatPrice(value: number | null | undefined) {
   if (value == null || Number.isNaN(value)) {
-    return "N/A";
+    return "—";
   }
 
   return value.toLocaleString("en-US", {
@@ -26,6 +26,13 @@ function formatPrice(value: number | null | undefined) {
     currency: "USD",
     maximumFractionDigits: 2,
   });
+}
+
+function deriveStatus(generatedAt: string): "NEW" | "LIVE" | "ACTIVE" {
+  const ageMs = Date.now() - new Date(generatedAt).getTime();
+  if (ageMs < 60 * 60 * 1000) return "NEW";
+  if (ageMs < 24 * 60 * 60 * 1000) return "LIVE";
+  return "ACTIVE";
 }
 
 function formatConfidence(value: number) {
@@ -151,6 +158,7 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
   }
 
   const live = Date.now() - new Date(signal.generatedAt).getTime() < 1000 * 60 * 60 * 24;
+  const status = deriveStatus(signal.generatedAt);
 
   return (
     <div className="space-y-8">
@@ -185,7 +193,7 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
               </h3>
             </div>
             <span className="rounded-full border border-cyan/25 bg-cyan-dim px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-cyan">
-              {live ? "LIVE" : "PENDING"}
+              {status}
             </span>
           </div>
 
@@ -226,7 +234,7 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
               </div>
               <div className="rounded-2xl border border-border bg-bg-2 p-4">
                 <div className="text-xs uppercase tracking-[0.22em] text-text-3">State</div>
-                <div className="mt-2 font-mono text-lg text-white">{live ? "LIVE" : "PENDING"}</div>
+                <div className="mt-2 font-mono text-lg text-white">{status}</div>
               </div>
             </div>
           </div>

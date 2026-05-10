@@ -405,7 +405,9 @@ export default function DashboardHomePage() {
                     </td>
                     <td className="border-t border-border px-4 py-4 text-text-2">{position.sector}</td>
                     <td className="border-t border-border px-4 py-4">
-                      <Sparkline values={position.trend} color={position.color} />
+                      {position.trend.length > 0
+                        ? <Sparkline values={position.trend} color={position.color} />
+                        : <span className="text-text-3 text-xs" title="Awaiting price history">—</span>}
                     </td>
                   </tr>
                 );
