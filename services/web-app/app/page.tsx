@@ -1,7 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { HeroChartPanel } from "@/components/site/hero-chart-panel";
-import { PublicFooter, PublicHeader, TickerBar } from "@/components/site/site-chrome";
+import { TickerBar } from "@/components/site/ticker-bar";
+import { PublicFooter, PublicHeader } from "@/components/site/site-chrome";
 import { Button } from "@/components/ui/button";
 import {
   ArrowRightIcon,
@@ -24,11 +26,17 @@ const iconMap = {
   lock: LockIcon,
 } as const;
 
+export const metadata: Metadata = {
+  title: "AI Trading Signals & Portfolio Analytics",
+  description:
+    "Review live AI trading signals, manage strategies, and track portfolio performance — all in one dashboard.",
+};
+
 const heroStats = [
-  { label: "Signals generated", value: "12,400+" },
-  { label: "Model accuracy (30d)", value: "94.2%" },
-  { label: "Volume tracked", value: "$2.8B" },
-  { label: "Active traders", value: "4,200+" },
+  { label: "Signals generated", value: "28,000+" },
+  { label: "Model accuracy (30d)", value: "91.4%" },
+  { label: "Volume tracked", value: "$6.1B" },
+  { label: "Active traders", value: "9,800+" },
 ];
 
 export default function HomePage() {

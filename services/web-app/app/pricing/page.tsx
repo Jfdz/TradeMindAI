@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
-import { PublicFooter, PublicHeader, TickerBar } from "@/components/site/site-chrome";
+import { TickerBar } from "@/components/site/ticker-bar";
+import { PublicFooter, PublicHeader } from "@/components/site/site-chrome";
+
+export const metadata: Metadata = {
+  title: "Pricing",
+  description:
+    "Three subscription tiers for AI trading signals. Free plan, Basic at $19/mo, and Premium at $49/mo with unlimited signals and backtesting.",
+};
 import { ArrowRightIcon, CheckIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
 import { pricingPlans, pricingComparisonRows } from "@/lib/trademind-content";

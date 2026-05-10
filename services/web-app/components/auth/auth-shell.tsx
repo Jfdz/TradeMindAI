@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { PublicHeader, TickerBar } from "@/components/site/site-chrome";
+import { TickerBar } from "@/components/site/ticker-bar";
+import { PublicHeader } from "@/components/site/site-chrome";
 import { cn } from "@/lib/utils";
 
 export function AuthShell({
