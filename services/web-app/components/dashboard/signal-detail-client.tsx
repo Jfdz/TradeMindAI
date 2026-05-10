@@ -157,7 +157,6 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
     );
   }
 
-  const live = Date.now() - new Date(signal.generatedAt).getTime() < 1000 * 60 * 60 * 24;
   const status = deriveStatus(signal.generatedAt);
 
   return (
