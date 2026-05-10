@@ -27,10 +27,10 @@ function formatPrice(value: number | null) {
   });
 }
 
-function pickSignalLabel(isLoading: boolean, signalsLength: number) {
+function pickSignalLabel(isLoading: boolean, total: number | undefined) {
   if (isLoading) return "Loading signals…";
-  if (signalsLength > 0) return `${signalsLength} live signal${signalsLength > 1 ? "s" : ""}`;
-  return "Signal feed";
+  if (!total) return "Signal feed";
+  return total === 1 ? "1 live signal" : `${total} live signals`;
 }
 
 function pickSignalBadgeClass(signalType: string) {
@@ -78,7 +78,7 @@ function SignalsContent() {
               {" Live signals"}
             </div>
             <h2 className="mt-3 font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
-              {pickSignalLabel(isLoading, signals.length)}
+              {pickSignalLabel(isLoading, data?.pageInfo?.totalElements)}
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-text-2">
               Review the latest signal feed, narrow the list with filters, and open a full signal detail page for more

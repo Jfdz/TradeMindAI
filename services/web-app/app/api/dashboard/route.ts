@@ -91,7 +91,7 @@ export async function GET() {
   try {
     const [portfolioResult, signalResult, symbolResponse] = await Promise.all([
       backendJsonSafe<PortfolioOverviewResponse>("/api/v1/portfolio", token),
-      backendJsonSafe<PagedResponse<SignalResponse>>("/api/v1/signals", token),
+      backendJsonSafe<PagedResponse<SignalResponse>>("/api/v1/signals?size=200&sort=generatedAt,desc", token),
       backendJson<PagedResponse<MarketSymbolResponse>>("/api/v1/symbols", token, true),
     ]);
 

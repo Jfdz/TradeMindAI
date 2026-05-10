@@ -129,7 +129,13 @@ export default function DashboardHomePage() {
         tone: "text-green",
       },
       { label: "Open Positions", value: `${holdings.length}`, detail: "Backend portfolio book", tone: "text-white" },
-      { label: "Live Signals", value: `${liveSignals}`, detail: `${signals.length} total signals`, tone: "text-cyan" },
+      {
+        label: "Live Signals",
+        value: `${liveSignals}`,
+        detail: `${signals.length} total · ${liveSignals} within 24 h`,
+        tone: "text-cyan",
+        title: "Generated within the last 24 hours",
+      },
       {
         label: "Unrealized P&L",
         value: unrealizedPnl === null ? "N/A" : formatSignedMoney(unrealizedPnl),
@@ -218,8 +224,7 @@ export default function DashboardHomePage() {
               {greeting}
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-text-2">
-              You have {signals.length} signals in the backend feed, {holdings.length} open positions, and a live book
-              that is now fully tied to the tradeMindAI data model.
+              {signals.length} signals tracked · {holdings.length} open positions
             </p>
             {isMarketDataUnavailable(portfolio.dataSource) && (
               <p className="mt-3 text-sm text-gold">
@@ -266,7 +271,7 @@ export default function DashboardHomePage() {
 
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {summaryCards.map((card) => (
-            <article key={card.label} className="rounded-[20px] border border-border bg-bg-2 p-5">
+            <article key={card.label} className="rounded-[20px] border border-border bg-bg-2 p-5" title={card.title}>
               <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">{card.label}</div>
               <div className={cn("mt-3 font-display text-3xl font-bold tracking-[-0.05em]", card.tone)}>{card.value}</div>
               <div className="mt-2 text-sm text-text-2">{card.detail}</div>
