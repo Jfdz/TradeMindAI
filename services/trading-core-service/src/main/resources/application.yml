@@ -99,6 +99,20 @@ trading-core:
     free-per-minute: ${RATE_LIMIT_FREE_PER_MINUTE:5}
     basic-per-minute: ${RATE_LIMIT_BASIC_PER_MINUTE:50}
     premium-per-minute: ${RATE_LIMIT_PREMIUM_PER_MINUTE:500}
+  llm:
+    gemini:
+      base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+      api-key: ${GEMINI_API_KEY:}
+      timeout-seconds: 10
+      max-output-tokens: 100
+      temperature: 0.7
+    groq:
+      base-url: ${GROQ_BASE_URL:https://api.groq.com}
+      api-key: ${GROQ_API_KEY:}
+      model: ${GROQ_MODEL:llama-3.1-8b-instant}
+      timeout-seconds: 10
+      max-output-tokens: 100
+      temperature: 0.7
   jwt:
     secret: ${JWT_SECRET:changeme-use-a-256-bit-secret-in-production}
     access-token-expiry: ${JWT_ACCESS_TOKEN_EXPIRY:900}

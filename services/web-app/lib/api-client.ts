@@ -4,11 +4,15 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8
 
 export type PagedResponse<T> = {
   content: T[];
-  page?: number;
+  number?: number;
   size?: number;
   totalElements?: number;
   totalPages?: number;
+  first?: boolean;
+  last?: boolean;
 };
+
+export type ReasoningStatus = "PENDING" | "READY" | "FALLBACK" | "FAILED";
 
 export type SignalResponse = {
   id: string;
@@ -20,6 +24,10 @@ export type SignalResponse = {
   stopLossPct?: number | null;
   takeProfitPct?: number | null;
   predictedChangePct?: number | null;
+  entryPrice?: number | null;
+  reasoning?: string | null;
+  reasoningStatus?: ReasoningStatus | null;
+  reasoningGeneratedAt?: string | null;
 };
 
 export type SubmitBacktestPayload = {
@@ -217,8 +225,15 @@ async function requestJson<T>(path: string, options: RequestInit = {}): Promise<
 }
 
 export const apiClient = {
-  async getSignals(): Promise<PagedResponse<SignalResponse>> {
-    return requestJson<PagedResponse<SignalResponse>>("/api/v1/signals");
+  async getSignals(opts?: {
+    page?: number;
+    size?: number;
+    sort?: string;
+  }): Promise<PagedResponse<SignalResponse>> {
+    const { page = 0, size = 10, sort = "generatedAt,desc" } = opts ?? {};
+    return requestJson<PagedResponse<SignalResponse>>(
+      `/api/v1/signals?page=${page}&size=${size}&sort=${sort}`
+    );
   },
 
   async checkSymbolAvailability(symbol: string): Promise<boolean> {
@@ -282,7 +297,7 @@ export const apiClient = {
         `/api/v1/prices/${ticker}/history?timeframe=DAILY&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&size=${size}`
       );
     } catch {
-      return { content: [], page: 0, size, totalElements: 0, totalPages: 0 };
+      return { content: [], number: 0, size, totalElements: 0, totalPages: 0 };
     }
   },
 
@@ -317,7 +332,7 @@ export const apiClient = {
     try {
       return await requestJson<PagedResponse<MarketSymbolResponse>>("/api/v1/symbols");
     } catch {
-      return { content: [], page: 0, size: 0, totalElements: 0, totalPages: 0 };
+      return { content: [], number: 0, size: 0, totalElements: 0, totalPages: 0 };
     }
   },
 

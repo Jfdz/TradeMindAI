@@ -1,5 +1,6 @@
 package com.tradingsaas.tradingcore.adapter.out.persistence.entity;
 
+import com.tradingsaas.tradingcore.domain.model.ReasoningStatus;
 import com.tradingsaas.tradingcore.domain.model.SignalType;
 import com.tradingsaas.tradingcore.domain.model.Timeframe;
 import jakarta.persistence.Column;
@@ -49,17 +50,45 @@ public class TradingSignalJpaEntity {
     @Column(name = "predicted_change_pct", precision = 8, scale = 4)
     private BigDecimal predictedChangePct;
 
+    @Column(name = "entry_price", precision = 18, scale = 6)
+    private BigDecimal entryPrice;
+
+    @Column(name = "reasoning", columnDefinition = "TEXT")
+    private String reasoning;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "reasoning_status", nullable = false, length = 16)
+    private ReasoningStatus reasoningStatus;
+
+    @Column(name = "reasoning_generated_at")
+    private Instant reasoningGeneratedAt;
+
     protected TradingSignalJpaEntity() {}
 
     public TradingSignalJpaEntity(UUID id, UUID symbolId, SignalType signalType, BigDecimal confidence,
                                   Timeframe timeframe, Instant generatedAt,
                                   BigDecimal stopLossPct, BigDecimal takeProfitPct) {
-        this(id, symbolId, null, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, null);
+        this(id, symbolId, null, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, null, null, null, ReasoningStatus.PENDING, null);
     }
 
     public TradingSignalJpaEntity(UUID id, UUID symbolId, String ticker, SignalType signalType, BigDecimal confidence,
                                   Timeframe timeframe, Instant generatedAt,
                                   BigDecimal stopLossPct, BigDecimal takeProfitPct, BigDecimal predictedChangePct) {
+        this(id, symbolId, ticker, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, predictedChangePct, null, null, ReasoningStatus.PENDING, null);
+    }
+
+    public TradingSignalJpaEntity(UUID id, UUID symbolId, String ticker, SignalType signalType, BigDecimal confidence,
+                                  Timeframe timeframe, Instant generatedAt,
+                                  BigDecimal stopLossPct, BigDecimal takeProfitPct, BigDecimal predictedChangePct,
+                                  BigDecimal entryPrice) {
+        this(id, symbolId, ticker, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, predictedChangePct, entryPrice, null, ReasoningStatus.PENDING, null);
+    }
+
+    public TradingSignalJpaEntity(UUID id, UUID symbolId, String ticker, SignalType signalType, BigDecimal confidence,
+                                  Timeframe timeframe, Instant generatedAt,
+                                  BigDecimal stopLossPct, BigDecimal takeProfitPct, BigDecimal predictedChangePct,
+                                  BigDecimal entryPrice, String reasoning, ReasoningStatus reasoningStatus,
+                                  Instant reasoningGeneratedAt) {
         this.id = id;
         this.symbolId = symbolId;
         this.ticker = ticker;
@@ -70,6 +99,10 @@ public class TradingSignalJpaEntity {
         this.stopLossPct = stopLossPct;
         this.takeProfitPct = takeProfitPct;
         this.predictedChangePct = predictedChangePct;
+        this.entryPrice = entryPrice;
+        this.reasoning = reasoning;
+        this.reasoningStatus = reasoningStatus;
+        this.reasoningGeneratedAt = reasoningGeneratedAt;
     }
 
     public UUID getId() { return id; }
@@ -82,4 +115,8 @@ public class TradingSignalJpaEntity {
     public BigDecimal getStopLossPct() { return stopLossPct; }
     public BigDecimal getTakeProfitPct() { return takeProfitPct; }
     public BigDecimal getPredictedChangePct() { return predictedChangePct; }
+    public BigDecimal getEntryPrice() { return entryPrice; }
+    public String getReasoning() { return reasoning; }
+    public ReasoningStatus getReasoningStatus() { return reasoningStatus; }
+    public Instant getReasoningGeneratedAt() { return reasoningGeneratedAt; }
 }

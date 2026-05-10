@@ -14,6 +14,15 @@ import {
 import { convertPricesToCandles, deriveSignal } from "@/lib/dashboard/signal-derivation";
 import { assignSymbolColors } from "@/lib/dashboard/symbol-colors";
 
+export type SignalsPageInfo = {
+  pageNumber: number;
+  pageSize: number;
+  totalElements: number;
+  totalPages: number;
+  isFirst: boolean;
+  isLast: boolean;
+};
+
 export async function fetchSettingsPageData(): Promise<SettingsPageData> {
   const [profile, preferences] = await Promise.all([
     apiClient.getCurrentUser(),
@@ -23,8 +32,11 @@ export async function fetchSettingsPageData(): Promise<SettingsPageData> {
   return { profile, preferences };
 }
 
-export async function fetchSignalsPageData(): Promise<FilteredSignal[]> {
-  const response = await apiClient.getSignals();
+export async function fetchSignalsPageData(opts?: {
+  page?: number;
+  size?: number;
+}): Promise<{ items: FilteredSignal[]; pageInfo: SignalsPageInfo }> {
+  const response = await apiClient.getSignals(opts);
   const content = response.content ?? [];
   const uniqueSymbols = Array.from(new Set(content.map((signal) => signal.symbol)));
   const latestPrices = await apiClient.getLatestPrices(uniqueSymbols);
@@ -32,7 +44,19 @@ export async function fetchSignalsPageData(): Promise<FilteredSignal[]> {
     latestPrices.prices.map((price) => [price.ticker, price.adjustedClose ?? price.ohlcv.close] as const)
   );
 
-  return content.map((signal) => deriveSignal(signal, latestPriceBySymbol.get(signal.symbol) ?? null));
+  const items = content.map((signal) => deriveSignal(signal, latestPriceBySymbol.get(signal.symbol) ?? null));
+
+  return {
+    items,
+    pageInfo: {
+      pageNumber: response.number ?? 0,
+      pageSize: response.size ?? 10,
+      totalElements: response.totalElements ?? 0,
+      totalPages: response.totalPages ?? 1,
+      isFirst: response.first ?? true,
+      isLast: response.last ?? true,
+    },
+  };
 }
 
 export async function fetchSignalDetailData(signalId: string): Promise<SignalDetailData> {

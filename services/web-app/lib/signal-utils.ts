@@ -24,6 +24,13 @@ export function signalTypeColor(type: SignalResponse["type"]): string {
 }
 
 export function buildSignalReasoning(signal: SignalResponse, latestPrice: number | null): string {
+  if (
+    (signal.reasoningStatus === "READY" || signal.reasoningStatus === "FALLBACK") &&
+    signal.reasoning
+  ) {
+    return signal.reasoning;
+  }
+
   const predicted = signal.predictedChangePct ?? 0;
   const move = `${Math.abs(predicted).toFixed(1)}%`;
   const priceText =

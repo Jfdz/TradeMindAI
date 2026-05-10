@@ -2,8 +2,10 @@ package com.tradingsaas.tradingcore.adapter.out.persistence;
 
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.TradingSignalJpaEntity;
 import com.tradingsaas.tradingcore.adapter.out.persistence.mapper.TradingSignalEntityMapper;
+import com.tradingsaas.tradingcore.domain.model.ReasoningStatus;
 import com.tradingsaas.tradingcore.domain.model.TradingSignal;
 import com.tradingsaas.tradingcore.domain.port.out.TradingSignalRepository;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -45,5 +47,11 @@ class TradingSignalRepositoryAdapter implements TradingSignalRepository {
     @Transactional(readOnly = true)
     public Optional<TradingSignal> findLatest() {
         return repository.findTopByOrderByGeneratedAtDesc().map(mapper::toDomain);
+    }
+
+    @Override
+    @Transactional
+    public void updateReasoning(UUID id, String reasoning, ReasoningStatus status, Instant reasoningGeneratedAt) {
+        repository.updateReasoning(id, reasoning, status, reasoningGeneratedAt);
     }
 }
