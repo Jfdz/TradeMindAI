@@ -3,6 +3,7 @@ package com.tradingsaas.tradingcore.adapter.out.news;
 import com.tradingsaas.tradingcore.domain.port.out.NewsContextProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -35,6 +36,7 @@ public class GoogleNewsRssAdapter implements NewsContextProvider {
     private final WebClient webClient;
     private final int timeoutSeconds;
 
+    @Autowired
     public GoogleNewsRssAdapter(
             @Value("${trading-core.news.google-rss.base-url:https://news.google.com}") String baseUrl,
             @Value("${trading-core.news.google-rss.timeout-seconds:8}") int timeoutSeconds) {
