@@ -239,8 +239,8 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
             </div>
           </div>
 
-          <div className="mt-6 rounded-[20px] border border-cyan/25 bg-cyan-dim p-5">
-            <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Reasoning</div>
+          <div className="mt-6 rounded-[20px] border border-cyan/30 bg-cyan/[0.04] shadow-neon-soft p-5">
+            <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Signal Rationale</div>
             {!signal.reasoningStatus || signal.reasoningStatus === "PENDING" ? (
               <div className="mt-3 space-y-2">
                 <div className="h-3 w-full animate-pulse rounded-full bg-bg-2" />
