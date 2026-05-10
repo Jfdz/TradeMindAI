@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -76,9 +75,16 @@ export function LoginForm() {
           <label className="block text-xs uppercase tracking-[0.22em] text-text-3" htmlFor="password">
             Password
           </label>
-          <Link className="text-xs text-cyan transition hover:text-white" href="/auth/login">
+          <button
+            type="button"
+            aria-disabled="true"
+            tabIndex={-1}
+            title="Password reset coming soon"
+            onClick={(e) => e.preventDefault()}
+            className="text-xs text-text-3 cursor-not-allowed"
+          >
             Forgot password?
-          </Link>
+          </button>
         </div>
         <input
           id="password"

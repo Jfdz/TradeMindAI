@@ -65,7 +65,12 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: internal-secret
-                  key: secret                   
+                  key: secret
+            - name: FINNHUB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: finnhub-credentials
+                  key: api-key
           resources:
             requests:
               cpu: 250m

@@ -7,7 +7,7 @@ export default function LoginPage() {
       mode="login"
       eyebrow="Secure access"
       title="Sign in to TradeMindAI"
-      description="Use your trading-core credentials to open the dashboard, signals, and portfolio tools."
+      description="Sign in with your email and password to access the dashboard, signals, and portfolio tools."
     >
       <LoginForm />
     </AuthShell>
