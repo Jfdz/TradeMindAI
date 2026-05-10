@@ -210,6 +210,7 @@ services:
       NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-TradeMindAI}
       NEXTAUTH_SECRET: ${SESSION_SECRET:-dev-session-secret-change-in-production}
       NEXTAUTH_URL: http://localhost:3000
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
     depends_on:
       - trading-core-service
     networks:
