@@ -1,6 +1,8 @@
 package com.tradingsaas.tradingcore.domain.port.out;
 
+import com.tradingsaas.tradingcore.domain.model.ReasoningStatus;
 import com.tradingsaas.tradingcore.domain.model.TradingSignal;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -15,4 +17,6 @@ public interface TradingSignalRepository {
     Optional<TradingSignal> findById(UUID id);
 
     Optional<TradingSignal> findLatest();
+
+    void updateReasoning(UUID id, String reasoning, ReasoningStatus status, Instant reasoningGeneratedAt);
 }

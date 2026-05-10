@@ -3,7 +3,7 @@ import signalsMock from "../fixtures/signals.json";
 import portfolioMock from "../fixtures/portfolio.json";
 
 export async function mockSignalsApi(page: Page) {
-  await page.route("**/api/v1/signals", (route) =>
+  await page.route("**/api/v1/signals**", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",

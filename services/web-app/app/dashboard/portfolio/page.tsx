@@ -535,7 +535,12 @@ export default function PortfolioPage() {
                           <div className="flex items-center gap-3">
                             <span className="h-3 w-3 rounded-full" style={{ backgroundColor: position.color }} />
                             <div>
-                              <div className="font-semibold text-white">{position.symbol}</div>
+                              <Link
+                                href={`/dashboard/stocks/${position.symbol}`}
+                                className="font-semibold text-white hover:text-cyan transition-colors"
+                              >
+                                {position.symbol}
+                              </Link>
                               <div className="text-xs text-text-3">{position.name}</div>
                             </div>
                           </div>

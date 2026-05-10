@@ -31,7 +31,8 @@ class SignalControllerTest {
                 Instant.parse("2026-04-17T10:00:00Z"),
                 new BigDecimal("2.00"),
                 new BigDecimal("4.00"),
-                new BigDecimal("-1.50"));
+                new BigDecimal("-1.50"),
+                new BigDecimal("430.50"));
 
         SignalController controller = new SignalController(new StubUseCase(signal));
 
@@ -41,6 +42,7 @@ class SignalControllerTest {
         assertEquals("NVDA", page.getContent().get(0).symbol());
         assertEquals("SELL", page.getContent().get(0).type());
         assertEquals(new BigDecimal("-1.50"), page.getContent().get(0).predictedChangePct());
+        assertEquals(new BigDecimal("430.50"), page.getContent().get(0).entryPrice());
     }
 
     @Test
