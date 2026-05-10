@@ -5,6 +5,7 @@ import com.tradingsaas.tradingcore.adapter.out.llm.dto.GroqResponse;
 import com.tradingsaas.tradingcore.domain.port.out.ReasoningGenerator.ReasoningContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -27,6 +28,7 @@ public class GroqReasoningAdapter {
     private final double temperature;
     private final LlmOutputValidator validator = new LlmOutputValidator();
 
+    @Autowired
     public GroqReasoningAdapter(
             @Value("${trading-core.llm.groq.base-url:https://api.groq.com}") String baseUrl,
             @Value("${trading-core.llm.groq.api-key:}") String apiKey,
