@@ -25,6 +25,7 @@ const config: Config = {
           DEFAULT: "#00c8d4",
           dim: "rgba(0,200,212,0.15)",
           glow: "rgba(0,200,212,0.35)",
+          bright: "#22e6ef",
         },
         gold: {
           DEFAULT: "#e8b84b",
@@ -79,6 +80,11 @@ const config: Config = {
       boxShadow: {
         glow: "0 0 0 1px rgba(0, 200, 212, 0.12), 0 0 40px rgba(0, 200, 212, 0.10)",
         goldGlow: "0 0 0 1px rgba(232, 184, 75, 0.18), 0 0 40px rgba(232, 184, 75, 0.10)",
+        neon: "0 0 12px rgba(0,200,212,0.45), 0 0 32px rgba(0,200,212,0.18)",
+        "neon-soft": "0 0 6px rgba(0,200,212,0.25), 0 0 16px rgba(0,200,212,0.10)",
+      },
+      backgroundImage: {
+        "gradient-hero": "radial-gradient(ellipse at 30% 0%, rgba(0,200,212,0.12) 0%, transparent 65%)",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "Inter", "sans-serif"],

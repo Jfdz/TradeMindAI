@@ -40,7 +40,8 @@ function pickSignalBadgeClass(signalType: string) {
 }
 
 function pickStatusBadgeClass(status: "NEW" | "LIVE" | "ACTIVE") {
-  if (status === "NEW") return "border-cyan/30 bg-cyan-dim text-cyan";
+  if (status === "NEW")
+    return "border-cyan-bright/50 bg-cyan-bright/[0.10] text-cyan-bright shadow-neon-soft animate-pulse-soft";
   if (status === "LIVE") return "border-green/40 bg-green/[0.10] text-green";
   return "border-border bg-bg-2 text-text-2";
 }
@@ -167,8 +168,8 @@ function SignalsContent() {
                             </div>
                             <div className="mt-2 h-2 overflow-hidden rounded-full bg-bg-3">
                               <div
-                                className="h-full rounded-full bg-gradient-to-r from-cyan to-cyan/60"
-                                style={{ width: `${signal.confidence * 100}%` }}
+                                className="h-full rounded-full bg-gradient-to-r from-cyan via-cyan-bright to-green"
+                                style={{ width: `${signal.confidence * 100}%`, boxShadow: "0 0 8px rgba(0,200,212,0.35)" }}
                               />
                             </div>
                           </div>
