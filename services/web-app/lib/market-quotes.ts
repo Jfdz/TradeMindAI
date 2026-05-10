@@ -3,16 +3,60 @@ import { tickerQuotes, type TickerQuote } from "@/lib/trademind-content";
 const FINNHUB_BASE = "https://finnhub.io/api/v1";
 
 const SYMBOLS: { pair: string; finnhub: string }[] = [
-  { pair: "BTC/USDT", finnhub: "BINANCE:BTCUSDT" },
-  { pair: "ETH/USDT", finnhub: "BINANCE:ETHUSDT" },
-  { pair: "SOL/USDT", finnhub: "BINANCE:SOLUSDT" },
-  { pair: "NVDA", finnhub: "NVDA" },
-  { pair: "AAPL", finnhub: "AAPL" },
-  { pair: "TSLA", finnhub: "TSLA" },
-  { pair: "SPY", finnhub: "SPY" },
-  { pair: "QQQ", finnhub: "QQQ" },
-  { pair: "EUR/USD", finnhub: "OANDA:EUR_USD" },
-  { pair: "GOLD", finnhub: "OANDA:XAU_USD" },
+  // Crypto
+  { pair: "BTC/USDT",  finnhub: "BINANCE:BTCUSDT" },
+  { pair: "ETH/USDT",  finnhub: "BINANCE:ETHUSDT" },
+  { pair: "SOL/USDT",  finnhub: "BINANCE:SOLUSDT" },
+  // AI leaders
+  { pair: "NVDA",      finnhub: "NVDA" },
+  { pair: "MSFT",      finnhub: "MSFT" },
+  { pair: "GOOGL",     finnhub: "GOOGL" },
+  { pair: "META",      finnhub: "META" },
+  { pair: "AMZN",      finnhub: "AMZN" },
+  { pair: "AMD",       finnhub: "AMD" },
+  { pair: "AVGO",      finnhub: "AVGO" },
+  { pair: "ORCL",      finnhub: "ORCL" },
+  { pair: "CRM",       finnhub: "CRM" },
+  { pair: "PLTR",      finnhub: "PLTR" },
+  { pair: "NOW",       finnhub: "NOW" },
+  { pair: "IBM",       finnhub: "IBM" },
+  { pair: "QCOM",      finnhub: "QCOM" },
+  // S&P 500 top by market cap
+  { pair: "AAPL",      finnhub: "AAPL" },
+  { pair: "TSLA",      finnhub: "TSLA" },
+  { pair: "BRK.B",     finnhub: "BRK.B" },
+  { pair: "JPM",       finnhub: "JPM" },
+  { pair: "LLY",       finnhub: "LLY" },
+  { pair: "V",         finnhub: "V" },
+  { pair: "XOM",       finnhub: "XOM" },
+  { pair: "MA",        finnhub: "MA" },
+  { pair: "COST",      finnhub: "COST" },
+  { pair: "HD",        finnhub: "HD" },
+  { pair: "PG",        finnhub: "PG" },
+  { pair: "NFLX",      finnhub: "NFLX" },
+  { pair: "JNJ",       finnhub: "JNJ" },
+  { pair: "BAC",       finnhub: "BAC" },
+  { pair: "WMT",       finnhub: "WMT" },
+  { pair: "MRK",       finnhub: "MRK" },
+  { pair: "KO",        finnhub: "KO" },
+  { pair: "ABBV",      finnhub: "ABBV" },
+  { pair: "GE",        finnhub: "GE" },
+  { pair: "UNH",       finnhub: "UNH" },
+  { pair: "TXN",       finnhub: "TXN" },
+  { pair: "PFE",       finnhub: "PFE" },
+  { pair: "RTX",       finnhub: "RTX" },
+  { pair: "CAT",       finnhub: "CAT" },
+  { pair: "AXP",       finnhub: "AXP" },
+  { pair: "GS",        finnhub: "GS" },
+  { pair: "BKNG",      finnhub: "BKNG" },
+  { pair: "MU",        finnhub: "MU" },
+  { pair: "UBER",      finnhub: "UBER" },
+  // ETFs
+  { pair: "SPY",       finnhub: "SPY" },
+  { pair: "QQQ",       finnhub: "QQQ" },
+  // Forex & commodities
+  { pair: "EUR/USD",   finnhub: "OANDA:EUR_USD" },
+  { pair: "GOLD",      finnhub: "OANDA:XAU_USD" },
 ];
 
 type FinnhubQuote = {
@@ -58,10 +102,9 @@ export async function fetchMarketQuotes(): Promise<TickerQuote[]> {
   const token = process.env.FINNHUB_API_KEY;
   if (!token) return tickerQuotes;
 
-  try {
-    const results = await Promise.all(SYMBOLS.map((s) => fetchQuote(s, token)));
-    return results;
-  } catch {
-    return tickerQuotes;
-  }
+  const settled = await Promise.allSettled(SYMBOLS.map((s) => fetchQuote(s, token)));
+  const results = settled
+    .filter((r): r is PromiseFulfilledResult<TickerQuote> => r.status === "fulfilled")
+    .map((r) => r.value);
+  return results.length >= 5 ? results : tickerQuotes;
 }
