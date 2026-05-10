@@ -92,7 +92,11 @@ class SignalGenerationService implements GenerateSignalUseCase {
         }
         try {
             Map<String, BigDecimal> prices = marketDataPort.loadLatestPrices(List.of(ticker));
-            return prices.get(ticker);
+            BigDecimal price = prices.get(ticker);
+            if (price == null) {
+                log.warn("signal-generation: no entry_price captured for ticker={} (market-data returned empty)", ticker);
+            }
+            return price;
         } catch (Exception e) {
             log.warn("Could not fetch entry price for ticker={}: {}", ticker, e.getMessage());
             return null;
