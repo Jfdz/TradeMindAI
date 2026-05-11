@@ -176,7 +176,7 @@ export default function DashboardHomePage() {
     staleTime: 60_000,
   });
   const activeCandles = useMemo(
-    () => (selectedSignal?.id !== topSignal?.id ? (dynamicCandles ?? []) : chartCandles),
+    () => (selectedSignal?.id === topSignal?.id ? chartCandles : (dynamicCandles ?? [])),
     [selectedSignal?.id, topSignal?.id, dynamicCandles, chartCandles]
   );
   const activeMarker = useMemo(

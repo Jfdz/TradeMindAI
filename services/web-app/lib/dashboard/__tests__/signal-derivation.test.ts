@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildSignalMarker } from "../signal-derivation";
-import type { DashboardCandle } from "../dashboard-api";
-import type { FilteredSignal } from "../dashboard-api";
+import type { DashboardCandle, FilteredSignal } from "../dashboard-api";
 
 function makeCandle(year: number, month: number, day: number): DashboardCandle {
   return { time: { year, month, day }, open: 100, high: 105, low: 95, close: 102, volume: 1_000_000 };

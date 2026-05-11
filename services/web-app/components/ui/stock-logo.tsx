@@ -27,7 +27,7 @@ export function StockLogo({ ticker, symbol, logoUrl, size = 32, className }: Sto
 
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-full bg-bg-3 font-mono font-bold text-text-1${className ? ` ${className}` : ""}`}
+      className={["inline-flex items-center justify-center rounded-full bg-bg-3 font-mono font-bold text-text-1", className].filter(Boolean).join(" ")}
       style={{ width: size, height: size, fontSize: size * 0.35 }}
       aria-label={label}
     >

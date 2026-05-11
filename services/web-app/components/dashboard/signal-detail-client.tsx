@@ -259,6 +259,7 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
             const { label, colorClass } = formatPredictedChange(signal.predictedChangePct, signal.type);
             const pct = signal.predictedChangePct ?? 0;
             const barWidth = Math.min(Math.abs(pct) / 10, 1) * 100;
+            const barColor = signal.type === "BUY" ? "bg-emerald-400" : signal.type === "SELL" ? "bg-rose-400" : "bg-amber-400";
             return (
               <div className="mt-6 rounded-2xl border border-border bg-bg-2 p-4">
                 <div className="flex items-start justify-between gap-4">
@@ -269,10 +270,10 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
                   <div className="flex-1 max-w-[140px]">
                     <div
                       className="mt-1 h-2 rounded-full bg-bg-3 overflow-hidden"
-                      title={entry != null ? `From ${formatPrice(entry)} to ~${formatPrice(entry * (1 + pct / 100))}` : undefined}
+                      title={entry == null ? undefined : `From ${formatPrice(entry)} to ~${formatPrice(entry * (1 + pct / 100))}`}
                     >
                       <div
-                        className={`h-full rounded-full ${signal.type === "BUY" ? "bg-emerald-400" : signal.type === "SELL" ? "bg-rose-400" : "bg-amber-400"}`}
+                        className={`h-full rounded-full ${barColor}`}
                         style={{ width: `${barWidth}%` }}
                       />
                     </div>
