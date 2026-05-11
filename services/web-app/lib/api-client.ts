@@ -118,6 +118,9 @@ export type PortfolioHoldingResponse = {
   status: string;
   openedAt?: string;
   closedAt?: string | null;
+  name?: string;
+  sector?: string | null;
+  trend7d?: number[];
 };
 
 export type PortfolioClosedPositionResponse = {
@@ -191,12 +194,23 @@ export type LatestPricesResponse = {
 export class ApiError extends Error {
   readonly status: number;
   readonly body: string;
+  readonly isRateLimit: boolean;
+  readonly rateLimit?: { limit: number; remaining: number; resetEpoch: number };
 
-  constructor(status: number, body: string, statusText: string) {
+  constructor(status: number, body: string, statusText: string, headers?: Headers) {
     super(`Request failed with status ${status}: ${body || statusText}`);
     this.name = "ApiError";
     this.status = status;
     this.body = body;
+    this.isRateLimit = status === 429;
+    if (this.isRateLimit && headers) {
+      const limit = parseInt(headers.get("X-RateLimit-Limit") ?? "0", 10);
+      const remaining = parseInt(headers.get("X-RateLimit-Remaining") ?? "0", 10);
+      const reset = parseInt(headers.get("X-RateLimit-Reset") ?? "0", 10);
+      if (reset > 0) {
+        this.rateLimit = { limit, remaining, resetEpoch: reset };
+      }
+    }
   }
 }
 
@@ -222,7 +236,7 @@ async function requestJson<T>(path: string, options: RequestInit = {}): Promise<
 
   if (!response.ok) {
     const body = await response.text().catch(() => "");
-    throw new ApiError(response.status, body, response.statusText);
+    throw new ApiError(response.status, body, response.statusText, response.headers);
   }
 
   // 204 No Content / empty body endpoints (e.g., POST /positions/{id}/close)

@@ -1,10 +1,8 @@
 import {
   apiClient,
   type BacktestJobResponse,
-  type MarketSymbolResponse,
 } from "@/lib/api-client";
 import {
-  buildHoldingTrend,
   type DashboardPageData,
   type PortfolioPageData,
   type SettingsPageData,
@@ -80,31 +78,16 @@ export async function fetchSignalDetailData(signalId: string): Promise<SignalDet
 }
 
 export async function fetchPortfolioPageData(): Promise<PortfolioPageData> {
-  const [portfolio, symbolResponse] = await Promise.all([apiClient.getPortfolio(), apiClient.getSymbols()]);
-  const symbolMap = new Map<string, MarketSymbolResponse>(symbolResponse.content.map((symbol) => [symbol.ticker, symbol]));
-
+  const portfolio = await apiClient.getPortfolio();
   const colorMap = assignSymbolColors(portfolio.holdings.map((h) => h.symbol));
 
-  const holdingSymbols = portfolio.holdings.map((h) => h.symbol);
-  const from = new Date();
-  from.setUTCDate(from.getUTCDate() - 7);
-  const historyBatch = await apiClient.getHistoricalPricesBatch(
-    holdingSymbols,
-    from.toISOString().slice(0, 10),
-    new Date().toISOString().slice(0, 10),
-    8
-  );
-
-  const holdings = portfolio.holdings.map((holding) => {
-    const symbol = symbolMap.get(holding.symbol);
-    return {
-      ...holding,
-      name: symbol?.name ?? holding.symbol,
-      sector: symbol?.sector ?? "Portfolio holding",
-      color: colorMap.get(holding.symbol)!,
-      trend: buildHoldingTrend(historyBatch[holding.symbol] ?? []),
-    };
-  });
+  const holdings = portfolio.holdings.map((holding) => ({
+    ...holding,
+    name: holding.name ?? holding.symbol,
+    sector: holding.sector ?? "Portfolio holding",
+    color: colorMap.get(holding.symbol)!,
+    trend: holding.trend7d ?? [],
+  }));
 
   return { portfolio, holdings };
 }
