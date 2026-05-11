@@ -191,7 +191,7 @@ export function CandlestickChart({
   return (
     <div className="space-y-4">
       <div ref={chartRef} className="w-full" style={{ height }} />
-      {showVolume ? (
+      {showVolume && candles.some((c) => c.volume > 0) ? (
         <div className="rounded-3xl border border-white/10 bg-ink-800/70 p-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Volume</p>
