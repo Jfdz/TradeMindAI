@@ -80,6 +80,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/subscriptions/plans").permitAll()
                 .requestMatchers("/api/v1/backtests/symbols/*/available").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/prices/latest", "/api/v1/prices/*/latest").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // Admin-only endpoints
                 .requestMatchers("/api/v1/ingestion/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/models/**").hasRole("ADMIN")
