@@ -64,19 +64,13 @@ export function DashboardShell({ children }: { readonly children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-bg-0 text-text-1">
-      <div
+      <button
+        type="button"
         className={cn(
           "fixed inset-0 z-40 bg-black/60 transition-opacity lg:hidden",
           sidebarOpen ? "opacity-100" : "pointer-events-none opacity-0"
         )}
-        role="button"
-        tabIndex={0}
         onClick={() => setSidebarOpen(false)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            setSidebarOpen(false);
-          }
-        }}
         aria-label="Close sidebar"
       />
 

@@ -24,7 +24,7 @@ type Props = {
 
 export const revalidate = 600;
 
-export default async function StockDetailPage({ params }: readonly Props) {
+export default async function StockDetailPage({ params }: Props) {
   const session = await getServerSession(authOptions);
   if (!session) {
     notFound();
