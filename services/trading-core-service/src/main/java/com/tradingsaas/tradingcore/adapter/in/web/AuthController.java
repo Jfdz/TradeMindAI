@@ -60,8 +60,12 @@ class AuthController {
     }
 
     @PostMapping("/login")
-    LoginResponse login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
-        LoginUseCase.AuthTokens tokens = loginUseCase.login(request.email(), request.password());
+    LoginResponse login(@Valid @RequestBody LoginRequest request,
+                        HttpServletRequest httpRequest,
+                        HttpServletResponse response) {
+        String ip = resolveClientIp(httpRequest);
+        String ua = httpRequest.getHeader("User-Agent");
+        LoginUseCase.AuthTokens tokens = loginUseCase.login(request.email(), request.password(), ip, ua);
         setRefreshTokenCookie(response, tokens.refreshToken());
         return new LoginResponse(tokens.accessToken(), "Bearer", jwtProperties.getAccessTokenExpiry());
     }
@@ -89,6 +93,14 @@ class AuthController {
             logoutUseCase.logout(refreshToken, accessToken);
         }
         clearRefreshTokenCookie(response);
+    }
+
+    private static String resolveClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 
     private String extractBearer(HttpServletRequest request) {
