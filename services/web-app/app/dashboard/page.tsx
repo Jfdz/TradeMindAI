@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
 import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
+import { LiveLed } from "@/components/ui/live-led";
 import { type EnrichedHolding, type FilteredSignal } from "@/lib/dashboard/dashboard-api";
 import { fetchDashboardPageData } from "@/lib/dashboard/client-data";
 import { signedTone, TONE_NEUTRAL } from "@/lib/dashboard/format";
@@ -60,9 +61,9 @@ function getUnrealizedPnlDetail(marketDataUnavailable: boolean, partialMarketDat
 }
 
 function getSignalTypeStyle(type: string): string {
-  if (type === "BUY") return "border-green/30 bg-[rgba(0,214,143,0.12)] text-green";
-  if (type === "SELL") return "border-red/30 bg-[rgba(255,77,106,0.12)] text-red";
-  return "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold";
+  if (type === "BUY") return "ring-1 ring-buy-ring bg-buy-gradient text-white shadow-buy-glow";
+  if (type === "SELL") return "ring-1 ring-sell-ring bg-sell-gradient text-white shadow-sell-glow";
+  return "ring-1 ring-hold-ring bg-hold-gradient text-white shadow-hold-glow";
 }
 
 function Sparkline({ values, color }: { readonly values: number[]; readonly color: string }) {
@@ -227,8 +228,7 @@ export default function DashboardHomePage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-cyan animate-pulse-soft" />
-              {"LIVE · Overview"}
+              <LiveLed label="LIVE · Overview" />
             </div>
             <h2 className="mt-3 font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
               <span className="bg-gradient-to-r from-cyan to-green bg-clip-text text-transparent">

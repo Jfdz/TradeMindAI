@@ -63,6 +63,18 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        buy: {
+          DEFAULT: "#10b981",
+          ring: "#6ee7b7",
+        },
+        sell: {
+          DEFAULT: "#f43f5e",
+          ring: "#fda4af",
+        },
+        hold: {
+          DEFAULT: "#f59e0b",
+          ring: "#fcd34d",
+        },
         ink: {
           950: "#08121f",
           900: "#0d1728",
@@ -82,9 +94,15 @@ const config: Config = {
         goldGlow: "0 0 0 1px rgba(232, 184, 75, 0.18), 0 0 40px rgba(232, 184, 75, 0.10)",
         neon: "0 0 12px rgba(0,200,212,0.45), 0 0 32px rgba(0,200,212,0.18)",
         "neon-soft": "0 0 6px rgba(0,200,212,0.25), 0 0 16px rgba(0,200,212,0.10)",
+        "buy-glow": "0 0 24px rgba(16,185,129,0.35)",
+        "sell-glow": "0 0 24px rgba(244,63,94,0.35)",
+        "hold-glow": "0 0 24px rgba(245,158,11,0.35)",
       },
       backgroundImage: {
         "gradient-hero": "radial-gradient(ellipse at 30% 0%, rgba(0,200,212,0.12) 0%, transparent 65%)",
+        "buy-gradient": "linear-gradient(to right, #10b981, #34d399)",
+        "sell-gradient": "linear-gradient(to right, #f43f5e, #fb7185)",
+        "hold-gradient": "linear-gradient(to right, #f59e0b, #fcd34d)",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "Inter", "sans-serif"],

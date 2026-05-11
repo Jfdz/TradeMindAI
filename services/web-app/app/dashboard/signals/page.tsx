@@ -34,9 +34,9 @@ function pickSignalLabel(isLoading: boolean, total: number | undefined) {
 }
 
 function pickSignalBadgeClass(signalType: string) {
-  if (signalType === "BUY") return "border-green/30 bg-[rgba(0,214,143,0.12)] text-green";
-  if (signalType === "SELL") return "border-red/30 bg-[rgba(255,77,106,0.12)] text-red";
-  return "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold";
+  if (signalType === "BUY") return "ring-1 ring-buy-ring bg-buy-gradient text-white shadow-buy-glow";
+  if (signalType === "SELL") return "ring-1 ring-sell-ring bg-sell-gradient text-white shadow-sell-glow";
+  return "ring-1 ring-hold-ring bg-hold-gradient text-white shadow-hold-glow";
 }
 
 function pickStatusBadgeClass(status: "NEW" | "LIVE" | "ACTIVE") {
