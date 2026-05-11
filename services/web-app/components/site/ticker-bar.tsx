@@ -15,7 +15,7 @@ function formatPrice(value: number): string {
 
 function toTickerQuote(price: MarketPriceResponse): TickerQuote {
   const { open, close } = price.ohlcv;
-  const pct = open !== 0 ? ((close - open) / open) * 100 : 0;
+  const pct = open === 0 ? 0 : ((close - open) / open) * 100;
   const sign = pct >= 0 ? "+" : "";
   return {
     pair: price.ticker,
