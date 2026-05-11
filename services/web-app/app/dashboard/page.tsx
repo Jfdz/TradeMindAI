@@ -6,10 +6,12 @@ import { useSession } from "next-auth/react";
 import { useMemo, useState } from "react";
 
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
+import { LiveSignalsStrip } from "@/components/dashboard/live-signals-strip";
 import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
 import { LiveLed } from "@/components/ui/live-led";
 import { StockLogo } from "@/components/ui/stock-logo";
+import type { DashboardCandle } from "@/lib/dashboard/dashboard-api";
 import { type EnrichedHolding, type FilteredSignal } from "@/lib/dashboard/dashboard-api";
 import { fetchDashboardPageData } from "@/lib/dashboard/client-data";
 import { signedTone, TONE_NEUTRAL } from "@/lib/dashboard/format";
@@ -155,6 +157,23 @@ export default function DashboardHomePage() {
   }, [holdings.length, portfolio, signals]);
 
   const topSignal = signals[0] ?? null;
+  const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
+  const activeSymbol = selectedSymbol ?? topSignal?.symbol ?? null;
+
+  const { data: dynamicCandles } = useQuery<DashboardCandle[]>({
+    queryKey: ["candles", activeSymbol],
+    queryFn: async () => {
+      if (!activeSymbol) return [];
+      const res = await fetch(`/api/dashboard/candles?symbol=${encodeURIComponent(activeSymbol)}`);
+      if (!res.ok) return [];
+      return res.json() as Promise<DashboardCandle[]>;
+    },
+    enabled: !!activeSymbol && activeSymbol !== topSignal?.symbol,
+    staleTime: 60_000,
+  });
+  const activeCandles = selectedSymbol && selectedSymbol !== topSignal?.symbol
+    ? (dynamicCandles ?? [])
+    : chartCandles;
 
   const [generateResult, setGenerateResult] = useState<string | null>(null);
   const generateSignals = useMutation({
@@ -300,7 +319,7 @@ export default function DashboardHomePage() {
             <div>
               <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Live chart</div>
               <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">
-                {topSignal ? `${topSignal.symbol} ${topSignal.timeframe}` : "Portfolio market view"}
+                {activeSymbol ?? (topSignal ? `${topSignal.symbol} ${topSignal.timeframe}` : "Portfolio market view")}
               </h3>
             </div>
             <Button asChild variant="outlineCyan" size="sm">
@@ -311,9 +330,19 @@ export default function DashboardHomePage() {
             </Button>
           </div>
 
-          <div className="mt-6 rounded-[22px] border border-border bg-bg-0/70 p-3">
-            {chartCandles.length > 0 ? (
-              <CandlestickChart candles={chartCandles} markers={chartMarkers} showVolume={false} height={320} />
+          {signals.length > 0 && (
+            <div className="mt-4">
+              <LiveSignalsStrip
+                signals={signals}
+                selectedSymbol={activeSymbol ?? ""}
+                onSymbolChange={setSelectedSymbol}
+              />
+            </div>
+          )}
+
+          <div className="mt-4 rounded-[22px] border border-border bg-bg-0/70 p-3">
+            {activeCandles.length > 0 ? (
+              <CandlestickChart candles={activeCandles} markers={chartMarkers} showVolume={false} height={320} />
             ) : (
               <div className="flex h-[320px] items-center justify-center rounded-[18px] border border-dashed border-border text-sm text-text-2">
                 No chart data available yet.
