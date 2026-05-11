@@ -17,7 +17,7 @@ class MarketDataClient:
         self._internal_secret = internal_secret
         self._timeout = timeout
 
-    def fetch_ohlcv(self, ticker: str, size: int = 100) -> pd.DataFrame:
+    def fetch_ohlcv(self, ticker: str, size: int = 250) -> pd.DataFrame:
         """Return a DataFrame with columns [date, open, high, low, close, volume].
 
         Rows are ordered oldest-first (ascending date) as required by the

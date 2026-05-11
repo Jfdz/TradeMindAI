@@ -55,6 +55,26 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev
 | `GET` | `/api/v1/indicators/{ticker}` | No | Technical indicators |
 | `POST` | `/api/v1/ingestion/trigger` | ADMIN | Manual ingestion trigger |
 
+### Enrichment endpoints (require `X-Internal-Secret` header)
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/v1/enrichment/profile/{ticker}` | Company profile (name, logo, exchange, market cap, etc.) |
+| `GET` | `/api/v1/enrichment/news?category=general&limit=20` | Market-wide news |
+| `GET` | `/api/v1/enrichment/news/{ticker}?from=&to=&limit=20` | Company-specific news |
+| `GET` | `/api/v1/enrichment/earnings/{ticker}` | Latest earnings (EPS actual vs estimate) |
+| `GET` | `/api/v1/enrichment/recommendations/{ticker}` | Analyst buy/hold/sell consensus |
+| `GET` | `/api/v1/enrichment/peers/{ticker}` | Peer company tickers |
+
+Data sourced from Finnhub. Responses are Redis-cached (TTL configurable via `enrichment.cache.*`).
+
+### Environment variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `FINNHUB_API_KEY` | Yes | Finnhub API key (free tier available at https://finnhub.io) |
+| `enrichment.cache.ttl-minutes` | No | Cache TTL in minutes (default: 60) |
+
 ## Testing
 
 ```bash

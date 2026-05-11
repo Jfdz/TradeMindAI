@@ -1,70 +1,103 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { NewsItem } from "@/lib/enrichment/yahoo-news";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import Image from "next/image";
+import type { NewsItemResponse } from "@/lib/enrichment-client";
 
-type NewsFeedProps = {
+type Props = {
   ticker: string;
 };
 
-function formatDate(unix: number) {
-  return new Date(unix * 1000).toLocaleDateString("en-US", {
+export async function fetchNewsPage(
+  ticker: string,
+  weeksAgo: number,
+): Promise<NewsItemResponse[]> {
+  const res = await fetch(`/api/stocks/${ticker}/news?weeksAgo=${weeksAgo}`);
+  if (!res.ok) return [];
+  return res.json() as Promise<NewsItemResponse[]>;
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
+    year: "numeric",
   });
 }
 
-export function NewsFeed({ ticker }: NewsFeedProps) {
-  const [items, setItems] = useState<NewsItem[]>([]);
-  const [loading, setLoading] = useState(true);
+export function NewsFeed({ ticker }: Props) {
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
+    useInfiniteQuery({
+      queryKey: ["news", ticker],
+      queryFn: ({ pageParam }) => fetchNewsPage(ticker, pageParam as number),
+      getNextPageParam: (_last, pages) => pages.length,
+      initialPageParam: 0,
+    });
 
-  useEffect(() => {
-    setLoading(true);
-    fetch(`/api/stocks/${encodeURIComponent(ticker)}/news`)
-      .then((r) => r.json())
-      .then((data: NewsItem[]) => { setItems(data); })
-      .catch(() => setItems([]))
-      .finally(() => setLoading(false));
-  }, [ticker]);
+  const articles = data?.pages.flat() ?? [];
 
-  if (loading) {
+  if (status === "pending") {
     return (
       <div className="space-y-3">
-        {Array.from({ length: 3 }, (_, i) => (
-          <div key={i} className="h-20 animate-pulse rounded-2xl bg-bg-2" />
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-24 animate-pulse rounded-xl bg-card"
+          />
         ))}
       </div>
     );
   }
 
-  if (items.length === 0) {
+  if (status === "error" || articles.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-border bg-bg-2 px-4 py-6 text-sm text-text-2">
-        No news available for {ticker}.
+      <div className="rounded-xl border bg-card p-6 text-center text-sm text-muted-foreground">
+        No news available.
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Market news</div>
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
-        {items.map((item) => (
-          <a
-            key={item.id}
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block min-w-[240px] max-w-[280px] shrink-0 rounded-2xl border border-border bg-bg-2 p-4 transition hover:border-border-strong"
-          >
-            <div className="line-clamp-3 text-sm text-text-1 leading-6">{item.headline}</div>
-            <div className="mt-3 flex items-center justify-between text-[11px] text-text-3">
-              <span className="truncate">{item.source}</span>
-              {item.datetime ? <span>{formatDate(item.datetime)}</span> : null}
+    <div className="space-y-3">
+      {articles.map((item) => (
+        <a
+          key={item.id}
+          href={item.url ?? "#"}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex gap-3 rounded-xl border bg-card p-3 hover:bg-accent/50 transition-colors"
+        >
+          {item.image && (
+            <div className="relative hidden sm:block h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
+              <Image
+                src={item.image}
+                alt={item.headline}
+                fill
+                className="object-cover"
+                sizes="64px"
+                unoptimized
+              />
             </div>
-          </a>
-        ))}
-      </div>
+          )}
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-sm font-medium leading-snug line-clamp-2">
+              {item.headline}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {item.source ?? "Unknown"} · {formatDate(item.publishedAt)}
+            </p>
+          </div>
+        </a>
+      ))}
+      {hasNextPage && (
+        <button
+          onClick={() => void fetchNextPage()}
+          disabled={isFetchingNextPage}
+          className="w-full rounded-xl border bg-card py-2 text-sm text-muted-foreground hover:bg-accent/50 transition-colors disabled:opacity-50"
+        >
+          {isFetchingNextPage ? "Loading…" : "Load more"}
+        </button>
+      )}
     </div>
   );
 }
