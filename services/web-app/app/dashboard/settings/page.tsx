@@ -3,15 +3,33 @@
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 
-import { apiClient } from "@/lib/api-client";
+import { apiClient, ApiError, type SessionResponse } from "@/lib/api-client";
 import { fetchSettingsPageData } from "@/lib/dashboard/client-data";
 import { Button } from "@/components/ui/button";
 import { pricingPlans } from "@/lib/trademind-content";
 import { cn } from "@/lib/utils";
 
 type SettingsTab = "profile" | "plan" | "notifications";
+
+function parseDeviceLabel(ua: string | null): string {
+  if (!ua) return "Unknown device";
+  const browser = /Chrome/.test(ua) ? "Chrome" : /Firefox/.test(ua) ? "Firefox" : /Safari/.test(ua) ? "Safari" : "Browser";
+  const os = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Mac OS X/.test(ua) ? "macOS" : /Windows/.test(ua) ? "Windows" : "Unknown OS";
+  return `${browser} on ${os}`;
+}
+
+function timeAgo(isoString: string): string {
+  const diff = Date.now() - new Date(isoString).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
 
 const notificationRows = [
   { key: "signalDigest", label: "Signal digest", description: "Receive a daily summary of signals and portfolio changes." },
@@ -44,6 +62,12 @@ export default function SettingsPage() {
   const { data, error } = useQuery({
     queryKey: ["settings"],
     queryFn: fetchSettingsPageData,
+  });
+
+  const { data: sessions } = useQuery({
+    queryKey: ["sessions"],
+    queryFn: () => apiClient.listMySessions(),
+    refetchInterval: 60_000,
   });
 
   useEffect(() => {
@@ -84,8 +108,17 @@ export default function SettingsPage() {
       setCurrentPlan(updated.plan);
       queryClient.invalidateQueries({ queryKey: ["settings"] });
       setMessage("Profile changes saved to the backend.");
-    } catch {
-      setMessage("Unable to save profile changes right now.");
+    } catch (err) {
+      const status = err instanceof ApiError ? err.status : 0;
+      console.error("settings/profile save failed", err);
+      setMessage(
+        status === 0   ? "Network blocked the request — likely CORS or offline." :
+        status === 401 ? "Session expired — please sign in again." :
+        status === 403 ? "Request blocked by the API gateway." :
+        status >= 500  ? "Backend error — try again in a minute." :
+                         "Unable to save profile changes right now."
+      );
+      if (status === 401) void signOut({ callbackUrl: "/auth/login" });
     } finally {
       setIsSaving(false);
     }
@@ -99,8 +132,16 @@ export default function SettingsPage() {
       await apiClient.updateNotificationPreferences(notifications);
       queryClient.invalidateQueries({ queryKey: ["settings"] });
       setMessage("Notification preferences saved to the backend.");
-    } catch {
-      setMessage("Unable to save notification preferences right now.");
+    } catch (err) {
+      const status = err instanceof ApiError ? err.status : 0;
+      console.error("settings/notifications save failed", err);
+      setMessage(
+        status === 0   ? "Network blocked the request — likely CORS or offline." :
+        status === 401 ? "Session expired — please sign in again." :
+        status >= 500  ? "Backend error — try again in a minute." :
+                         "Unable to save notification preferences right now."
+      );
+      if (status === 401) void signOut({ callbackUrl: "/auth/login" });
     } finally {
       setIsSaving(false);
     }
@@ -199,23 +240,31 @@ export default function SettingsPage() {
           </article>
 
           <article className="rounded-[24px] border border-border bg-bg-1/80 p-6 shadow-glow">
-            <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Account</div>
-            <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">Session summary</h3>
-
-            <div className="mt-6 space-y-3 rounded-[20px] border border-cyan/25 bg-cyan-dim p-5">
-              <div className="text-xs uppercase tracking-[0.22em] text-cyan">Current user</div>
-              <div className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">{name}</div>
-              <div className="text-sm text-text-1">{email}</div>
-              <div className="mt-4 text-xs uppercase tracking-[0.22em] text-text-3">Timezone: {timezone}</div>
-            </div>
+            <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Security</div>
+            <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">Active sessions</h3>
 
             <div className="mt-6 space-y-3">
-              <div className="rounded-2xl border border-border bg-bg-2 p-4 text-sm text-text-2">
-                Trading limits and subscription gates are enforced by the backend services.
-              </div>
-              <div className="rounded-2xl border border-border bg-bg-2 p-4 text-sm text-text-2">
-                Profile settings now sync through the account API.
-              </div>
+              {sessions && sessions.length > 0 ? (
+                sessions.map((s: SessionResponse, idx: number) => (
+                  <div key={s.id} className="rounded-2xl border border-border bg-bg-2 p-4">
+                    {idx === 0 && (
+                      <span className="mb-2 inline-block rounded-full border border-cyan/30 bg-cyan-dim px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-cyan">
+                        Current session
+                      </span>
+                    )}
+                    <div className="text-sm font-semibold text-white">
+                      {s.ipAddress ?? "Unknown IP"}
+                    </div>
+                    <div className="mt-1 text-xs text-text-2">
+                      {parseDeviceLabel(s.userAgent)} · {timeAgo(s.loggedInAt)}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-border bg-bg-2 p-4 text-sm text-text-2">
+                  {sessions ? "This is your first login on the new session log." : "Loading sessions..."}
+                </div>
+              )}
             </div>
           </article>
         </section>

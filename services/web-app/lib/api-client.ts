@@ -85,6 +85,13 @@ export type NotificationPreferencesResponse = {
   updatedAt?: string;
 };
 
+export type SessionResponse = {
+  id: string;
+  loggedInAt: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+};
+
 export type UpdateUserProfilePayload = {
   firstName: string;
   lastName: string;
@@ -195,6 +202,11 @@ export class ApiError extends Error {
 
 async function requestJson<T>(path: string, options: RequestInit = {}): Promise<T> {
   const session = await getSession();
+  if ((session as { error?: string } | null)?.error === "RefreshAccessTokenError") {
+    const { signOut } = await import("next-auth/react");
+    await signOut({ callbackUrl: "/auth/login" });
+    throw new ApiError(401, "Session expired", "Unauthorized");
+  }
   const token = (session as { accessToken?: string } | null)?.accessToken;
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -352,6 +364,10 @@ export const apiClient = {
       method: "PUT",
       body: JSON.stringify(payload),
     });
+  },
+
+  async listMySessions(): Promise<SessionResponse[]> {
+    return requestJson<SessionResponse[]>("/api/v1/users/me/sessions");
   },
 
   async getPortfolio(): Promise<PortfolioOverviewResponse> {
