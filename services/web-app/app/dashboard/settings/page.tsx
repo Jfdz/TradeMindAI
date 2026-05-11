@@ -31,6 +31,22 @@ function timeAgo(isoString: string): string {
   return `${days}d ago`;
 }
 
+function parseName(raw: string): { firstName: string; lastName: string } {
+  const [first, ...rest] = raw.trim().split(/\s+/);
+  return {
+    firstName: first || "TradeMind",
+    lastName: rest.length > 0 ? rest.join(" ") : "Operator",
+  };
+}
+
+function saveErrorMessage(status: number, fallback: string): string {
+  if (status === 0) return "Network blocked the request — likely CORS or offline.";
+  if (status === 401) return "Session expired — please sign in again.";
+  if (status === 403) return "Request blocked by the API gateway.";
+  if (status >= 500) return "Backend error — try again in a minute.";
+  return fallback;
+}
+
 const notificationRows = [
   { key: "signalDigest", label: "Signal digest", description: "Receive a daily summary of signals and portfolio changes." },
   { key: "liveAlerts", label: "Live alerts", description: "Notify me when a new BUY, SELL, or HOLD signal is published." },
@@ -92,16 +108,9 @@ export default function SettingsPage() {
   async function handleSaveProfile() {
     setIsSaving(true);
     setMessage("Saving profile changes...");
-
     try {
-      const [firstName, ...rest] = name.trim().split(/\s+/);
-      const lastName = rest.length > 0 ? rest.join(" ") : "Operator";
-      const updated = await apiClient.updateCurrentUser({
-        firstName: firstName || "TradeMind",
-        lastName,
-        timezone,
-      });
-
+      const { firstName, lastName } = parseName(name);
+      const updated = await apiClient.updateCurrentUser({ firstName, lastName, timezone });
       setName(`${updated.firstName} ${updated.lastName}`.trim());
       setEmail(updated.email);
       setTimezone(updated.timezone);
@@ -111,13 +120,7 @@ export default function SettingsPage() {
     } catch (err) {
       const status = err instanceof ApiError ? err.status : 0;
       console.error("settings/profile save failed", err);
-      setMessage(
-        status === 0   ? "Network blocked the request — likely CORS or offline." :
-        status === 401 ? "Session expired — please sign in again." :
-        status === 403 ? "Request blocked by the API gateway." :
-        status >= 500  ? "Backend error — try again in a minute." :
-                         "Unable to save profile changes right now."
-      );
+      setMessage(saveErrorMessage(status, "Unable to save profile changes right now."));
       if (status === 401) void signOut({ callbackUrl: "/auth/login" });
     } finally {
       setIsSaving(false);
@@ -135,12 +138,7 @@ export default function SettingsPage() {
     } catch (err) {
       const status = err instanceof ApiError ? err.status : 0;
       console.error("settings/notifications save failed", err);
-      setMessage(
-        status === 0   ? "Network blocked the request — likely CORS or offline." :
-        status === 401 ? "Session expired — please sign in again." :
-        status >= 500  ? "Backend error — try again in a minute." :
-                         "Unable to save notification preferences right now."
-      );
+      setMessage(saveErrorMessage(status, "Unable to save notification preferences right now."));
       if (status === 401) void signOut({ callbackUrl: "/auth/login" });
     } finally {
       setIsSaving(false);
