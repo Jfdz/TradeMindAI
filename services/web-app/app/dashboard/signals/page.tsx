@@ -145,12 +145,20 @@ function SignalsContent() {
                         className={cn("transition hover:bg-white/[0.025]", index % 2 === 0 ? "bg-white/[0.012]" : "")}
                       >
                         <td className="border-t border-border px-4 py-4">
-                          <Link href={`/dashboard/stocks/${signal.symbol}`} className="group">
-                            <div className="font-display text-base font-semibold tracking-[-0.03em] text-white group-hover:text-cyan transition-colors">
-                              {signal.symbol}
-                            </div>
-                            <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">{signal.age}</div>
-                          </Link>
+                          <div className="flex items-start justify-between gap-3">
+                            <Link href={`/dashboard/stocks/${signal.symbol}`} className="group">
+                              <div className="font-display text-base font-semibold tracking-[-0.03em] text-white group-hover:text-cyan transition-colors">
+                                {signal.symbol}
+                              </div>
+                              <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">{signal.age}</div>
+                            </Link>
+                            <Link
+                              href={`/dashboard/signals/${signal.id}`}
+                              className="shrink-0 rounded-full border border-cyan/30 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-cyan transition hover:border-cyan/60 hover:bg-cyan/[0.08]"
+                            >
+                              Detail →
+                            </Link>
+                          </div>
                         </td>
                         <td className="border-t border-border px-4 py-4">
                           <span className={cn("rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]", pickSignalBadgeClass(signal.type))}>

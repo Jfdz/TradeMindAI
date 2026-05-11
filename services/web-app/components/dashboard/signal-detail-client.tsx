@@ -8,6 +8,7 @@ import { SignalChart } from "@/components/dashboard/signal-chart";
 import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
 import { fetchSignalDetailData } from "@/lib/dashboard/client-data";
+import { deriveSignal } from "@/lib/dashboard/signal-derivation";
 import type { ChartCandle, ChartMarker } from "@/lib/dashboard/signals";
 
 type SignalDetailClientProps = {
@@ -49,25 +50,6 @@ function formatSignalDate(value: string) {
   });
 }
 
-function calculateTakeProfit(signalType: string | undefined, takeProfitPct: number | null | undefined, entry: number | null | undefined): number | null {
-  if (signalType === "BUY") {
-    return takeProfitPct != null && entry != null ? entry * (1 + takeProfitPct / 100) : null;
-  }
-  if (signalType === "SELL") {
-    return takeProfitPct != null && entry != null ? entry * (1 - takeProfitPct / 100) : null;
-  }
-  return entry ?? null;
-}
-
-function calculateStopLoss(signalType: string | undefined, stopLossPct: number | null | undefined, entry: number | null | undefined): number | null {
-  if (signalType === "BUY") {
-    return stopLossPct != null && entry != null ? entry * (1 - stopLossPct / 100) : null;
-  }
-  if (signalType === "SELL") {
-    return stopLossPct != null && entry != null ? entry * (1 + stopLossPct / 100) : null;
-  }
-  return entry ?? null;
-}
 
 export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
   const { data, isLoading, error } = useQuery({
@@ -92,9 +74,10 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
     };
   }, [candles, signal]);
 
-  const entry = latestPrice;
-  const takeProfit = calculateTakeProfit(signal?.type, signal?.takeProfitPct, entry);
-  const stopLoss = calculateStopLoss(signal?.type, signal?.stopLossPct, entry);
+  const derived = signal ? deriveSignal(signal, latestPrice) : null;
+  const entry = derived?.entry ?? null;
+  const takeProfit = derived?.takeProfit ?? null;
+  const stopLoss = derived?.stopLoss ?? null;
 
   const reasoning = useMemo(() => {
     if (!signal) {
@@ -221,7 +204,11 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-border bg-bg-2 p-4">
                 <div className="text-xs uppercase tracking-[0.22em] text-text-3">Entry</div>
-                <div className="mt-2 font-mono text-lg text-white">{formatPrice(entry)}</div>
+                <div className="mt-2 font-mono text-lg text-white">
+                  {signal?.entryPrice == null && entry == null
+                    ? <span title="Entry price not captured for legacy signals" className="cursor-help text-text-3">—</span>
+                    : formatPrice(entry)}
+                </div>
               </div>
               <div className="rounded-2xl border border-border bg-bg-2 p-4">
                 <div className="text-xs uppercase tracking-[0.22em] text-text-3">Target</div>
