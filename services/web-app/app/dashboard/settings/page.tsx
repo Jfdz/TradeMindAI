@@ -134,7 +134,7 @@ export default function SettingsPage() {
       const status = err instanceof ApiError ? err.status : 0;
       console.error("settings/profile save failed", err);
       setMessage(saveErrorMessage(status, "Unable to save profile changes right now."));
-      if (status === 401) void signOut({ callbackUrl: "/auth/login" });
+      if (status === 401) await signOut({ callbackUrl: "/auth/login" });
     } finally {
       setIsSaving(false);
     }
@@ -152,7 +152,7 @@ export default function SettingsPage() {
       const status = err instanceof ApiError ? err.status : 0;
       console.error("settings/notifications save failed", err);
       setMessage(saveErrorMessage(status, "Unable to save notification preferences right now."));
-      if (status === 401) void signOut({ callbackUrl: "/auth/login" });
+      if (status === 401) await signOut({ callbackUrl: "/auth/login" });
     } finally {
       setIsSaving(false);
     }
