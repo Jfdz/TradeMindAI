@@ -13,11 +13,24 @@ import { cn } from "@/lib/utils";
 
 type SettingsTab = "profile" | "plan" | "notifications";
 
+function detectBrowser(ua: string): string {
+  if (/Chrome/.test(ua)) return "Chrome";
+  if (/Firefox/.test(ua)) return "Firefox";
+  if (/Safari/.test(ua)) return "Safari";
+  return "Browser";
+}
+
+function detectOS(ua: string): string {
+  if (/iPhone|iPad/.test(ua)) return "iOS";
+  if (/Android/.test(ua)) return "Android";
+  if (/Mac OS X/.test(ua)) return "macOS";
+  if (/Windows/.test(ua)) return "Windows";
+  return "Unknown OS";
+}
+
 function parseDeviceLabel(ua: string | null): string {
   if (!ua) return "Unknown device";
-  const browser = /Chrome/.test(ua) ? "Chrome" : /Firefox/.test(ua) ? "Firefox" : /Safari/.test(ua) ? "Safari" : "Browser";
-  const os = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Mac OS X/.test(ua) ? "macOS" : /Windows/.test(ua) ? "Windows" : "Unknown OS";
-  return `${browser} on ${os}`;
+  return `${detectBrowser(ua)} on ${detectOS(ua)}`;
 }
 
 function timeAgo(isoString: string): string {
