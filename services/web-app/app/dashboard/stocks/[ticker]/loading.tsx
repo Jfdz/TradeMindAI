@@ -12,12 +12,12 @@ export default function Loading() {
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-xl bg-card" />
+            <div key={`left-skeleton-${i}`} className="h-24 animate-pulse rounded-xl bg-card" />
           ))}
         </div>
         <div className="space-y-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-xl bg-card" />
+            <div key={`right-skeleton-${i}`} className="h-24 animate-pulse rounded-xl bg-card" />
           ))}
         </div>
       </div>

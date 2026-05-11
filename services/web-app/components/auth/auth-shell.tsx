@@ -12,11 +12,11 @@ export function AuthShell({
   description,
   children,
 }: {
-  mode: "login" | "register";
-  eyebrow: string;
-  title: string;
-  description: string;
-  children: ReactNode;
+  readonly mode: "login" | "register";
+  readonly eyebrow: string;
+  readonly title: string;
+  readonly description: string;
+  readonly children: ReactNode;
 }) {
   return (
     <main className="min-h-screen bg-bg-0 text-text-1">

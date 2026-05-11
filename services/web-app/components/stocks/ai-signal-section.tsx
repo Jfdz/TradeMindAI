@@ -4,14 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient, type SignalResponse } from "@/lib/api-client";
 
 type Props = {
-  ticker: string;
+  readonly ticker: string;
 };
 
 function formatConfidence(v: number): string {
   return `${(v * 100).toFixed(1)}%`;
 }
 
-function SignalBadge({ type }: { type: SignalResponse["type"] }) {
+function SignalBadge({ type }: { readonly type: SignalResponse["type"] }) {
   const colors: Record<SignalResponse["type"], string> = {
     BUY: "text-green-400 border-green-400/30 bg-green-400/10",
     SELL: "text-red-400 border-red-400/30 bg-red-400/10",

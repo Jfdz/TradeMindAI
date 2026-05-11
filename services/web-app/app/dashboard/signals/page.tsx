@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { PaginationControls } from "@/components/dashboard/pagination-controls";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { fetchSignalsPageData } from "@/lib/dashboard/client-data";
+import { useStockLogos } from "@/lib/dashboard/use-stock-logos";
 import { formatConfidence } from "@/lib/signal-utils";
 import { cn } from "@/lib/utils";
 
@@ -35,9 +36,9 @@ function pickSignalLabel(isLoading: boolean, total: number | undefined) {
 }
 
 function pickSignalBadgeClass(signalType: string) {
-  if (signalType === "BUY") return "ring-1 ring-buy-ring bg-buy-gradient text-white shadow-buy-glow";
-  if (signalType === "SELL") return "ring-1 ring-sell-ring bg-sell-gradient text-white shadow-sell-glow";
-  return "ring-1 ring-hold-ring bg-hold-gradient text-white shadow-hold-glow";
+  if (signalType === "BUY") return "ring-1 ring-buy-ring bg-buy/10 text-emerald-200 border-buy/40 shadow-buy-glow";
+  if (signalType === "SELL") return "ring-1 ring-sell-ring bg-sell/10 text-rose-200 border-sell/40 shadow-sell-glow";
+  return "ring-1 ring-hold-ring bg-hold/10 text-amber-200 border-hold/40 shadow-hold-glow";
 }
 
 function pickStatusBadgeClass(status: "NEW" | "LIVE" | "ACTIVE") {
@@ -49,7 +50,7 @@ function pickStatusBadgeClass(status: "NEW" | "LIVE" | "ACTIVE") {
 
 function SignalsContent() {
   const searchParams = useSearchParams();
-  const page = Math.max(0, parseInt(searchParams.get("page") ?? "0", 10));
+  const page = Math.max(0, Number.parseInt(searchParams.get("page") ?? "0", 10));
 
   const [activeFilter, setActiveFilter] = useState<FilterValue>("ALL");
   const {
@@ -63,6 +64,8 @@ function SignalsContent() {
 
   const signals = useMemo(() => data?.items ?? [], [data?.items]);
   const pageInfo = data?.pageInfo;
+
+  const signalLogos = useStockLogos(useMemo(() => signals.map((s) => s.symbol), [signals]));
 
   const filteredSignals = useMemo(() => {
     if (activeFilter === "ALL") {
@@ -148,7 +151,7 @@ function SignalsContent() {
                         <td className="border-t border-border px-4 py-4">
                           <div className="flex items-start justify-between gap-3">
                             <Link href={`/dashboard/stocks/${signal.symbol}`} className="group flex items-center gap-2">
-                              <StockLogo ticker={signal.symbol} size={24} />
+                              <StockLogo ticker={signal.symbol} logoUrl={signalLogos?.[signal.symbol]} size={24} />
                               <div>
                                 <div className="font-display text-base font-semibold tracking-[-0.03em] text-white group-hover:text-cyan transition-colors">
                                   {signal.symbol}

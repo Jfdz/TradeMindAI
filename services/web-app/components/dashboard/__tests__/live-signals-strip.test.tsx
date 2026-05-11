@@ -26,7 +26,7 @@ function makeSignal(id: string, symbol: string, type: "BUY" | "SELL" | "HOLD", l
     status: "LIVE",
     age: "1h ago",
     generatedLabel: "May 11",
-  } as FilteredSignal;
+  };
 }
 
 describe("LiveSignalsStrip", () => {
@@ -40,8 +40,8 @@ describe("LiveSignalsStrip", () => {
     const html = renderToStaticMarkup(
       React.createElement(LiveSignalsStrip, {
         signals,
-        selectedSymbol: "AAPL",
-        onSymbolChange: vi.fn(),
+        selectedSignalId: "1",
+        onSignalChange: vi.fn(),
       })
     );
     expect(html).toContain("AAPL");
@@ -55,8 +55,8 @@ describe("LiveSignalsStrip", () => {
     const html = renderToStaticMarkup(
       React.createElement(LiveSignalsStrip, {
         signals,
-        selectedSymbol: "AAPL",
-        onSymbolChange: vi.fn(),
+        selectedSignalId: "1",
+        onSignalChange: vi.fn(),
       })
     );
     expect(html).toBe("");

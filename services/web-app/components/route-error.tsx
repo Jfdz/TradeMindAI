@@ -5,10 +5,10 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 type RouteErrorProps = {
-  error: Error & { digest?: string };
-  reset: () => void;
-  eyebrow: string;
-  title: string;
+  readonly error: Error & { digest?: string };
+  readonly reset: () => void;
+  readonly eyebrow: string;
+  readonly title: string;
 };
 
 export function RouteError({ error, reset, eyebrow, title }: RouteErrorProps) {

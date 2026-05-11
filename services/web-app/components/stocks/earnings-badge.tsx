@@ -1,7 +1,7 @@
 import type { EarningsEventResponse } from "@/lib/enrichment-client";
 
 type Props = {
-  earnings: EarningsEventResponse[];
+  readonly earnings: EarningsEventResponse[];
 };
 
 export function EarningsBadge({ earnings }: Props) {

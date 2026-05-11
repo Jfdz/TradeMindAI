@@ -1,8 +1,8 @@
 "use client";
 
 type LiveLedProps = {
-  label?: string;
-  size?: "sm" | "md";
+  readonly label?: string;
+  readonly size?: "sm" | "md";
 };
 
 export function LiveLed({ label = "LIVE", size = "sm" }: LiveLedProps) {
