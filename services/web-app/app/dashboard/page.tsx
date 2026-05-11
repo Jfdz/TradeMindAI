@@ -6,8 +6,12 @@ import { useSession } from "next-auth/react";
 import { useMemo, useState } from "react";
 
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
+import { LiveSignalsStrip } from "@/components/dashboard/live-signals-strip";
 import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
+import { LiveLed } from "@/components/ui/live-led";
+import { StockLogo } from "@/components/ui/stock-logo";
+import type { DashboardCandle } from "@/lib/dashboard/dashboard-api";
 import { type EnrichedHolding, type FilteredSignal } from "@/lib/dashboard/dashboard-api";
 import { fetchDashboardPageData } from "@/lib/dashboard/client-data";
 import { signedTone, TONE_NEUTRAL } from "@/lib/dashboard/format";
@@ -60,9 +64,9 @@ function getUnrealizedPnlDetail(marketDataUnavailable: boolean, partialMarketDat
 }
 
 function getSignalTypeStyle(type: string): string {
-  if (type === "BUY") return "border-green/30 bg-[rgba(0,214,143,0.12)] text-green";
-  if (type === "SELL") return "border-red/30 bg-[rgba(255,77,106,0.12)] text-red";
-  return "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold";
+  if (type === "BUY") return "ring-1 ring-buy-ring bg-buy-gradient text-white shadow-buy-glow";
+  if (type === "SELL") return "ring-1 ring-sell-ring bg-sell-gradient text-white shadow-sell-glow";
+  return "ring-1 ring-hold-ring bg-hold-gradient text-white shadow-hold-glow";
 }
 
 function Sparkline({ values, color }: { readonly values: number[]; readonly color: string }) {
@@ -153,6 +157,23 @@ export default function DashboardHomePage() {
   }, [holdings.length, portfolio, signals]);
 
   const topSignal = signals[0] ?? null;
+  const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
+  const activeSymbol = selectedSymbol ?? topSignal?.symbol ?? null;
+
+  const { data: dynamicCandles } = useQuery<DashboardCandle[]>({
+    queryKey: ["candles", activeSymbol],
+    queryFn: async () => {
+      if (!activeSymbol) return [];
+      const res = await fetch(`/api/dashboard/candles?symbol=${encodeURIComponent(activeSymbol)}`);
+      if (!res.ok) return [];
+      return res.json() as Promise<DashboardCandle[]>;
+    },
+    enabled: !!activeSymbol && activeSymbol !== topSignal?.symbol,
+    staleTime: 60_000,
+  });
+  const activeCandles = selectedSymbol && selectedSymbol !== topSignal?.symbol
+    ? (dynamicCandles ?? [])
+    : chartCandles;
 
   const [generateResult, setGenerateResult] = useState<string | null>(null);
   const generateSignals = useMutation({
@@ -227,8 +248,7 @@ export default function DashboardHomePage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-cyan animate-pulse-soft" />
-              {"LIVE · Overview"}
+              <LiveLed label="LIVE · Overview" />
             </div>
             <h2 className="mt-3 font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
               <span className="bg-gradient-to-r from-cyan to-green bg-clip-text text-transparent">
@@ -299,7 +319,7 @@ export default function DashboardHomePage() {
             <div>
               <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Live chart</div>
               <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">
-                {topSignal ? `${topSignal.symbol} ${topSignal.timeframe}` : "Portfolio market view"}
+                {activeSymbol ?? (topSignal ? `${topSignal.symbol} ${topSignal.timeframe}` : "Portfolio market view")}
               </h3>
             </div>
             <Button asChild variant="outlineCyan" size="sm">
@@ -310,9 +330,19 @@ export default function DashboardHomePage() {
             </Button>
           </div>
 
-          <div className="mt-6 rounded-[22px] border border-border bg-bg-0/70 p-3">
-            {chartCandles.length > 0 ? (
-              <CandlestickChart candles={chartCandles} markers={chartMarkers} showVolume={false} height={320} />
+          {signals.length > 0 && (
+            <div className="mt-4">
+              <LiveSignalsStrip
+                signals={signals}
+                selectedSymbol={activeSymbol ?? ""}
+                onSymbolChange={setSelectedSymbol}
+              />
+            </div>
+          )}
+
+          <div className="mt-4 rounded-[22px] border border-border bg-bg-0/70 p-3">
+            {activeCandles.length > 0 ? (
+              <CandlestickChart candles={activeCandles} markers={chartMarkers} showVolume={false} height={320} />
             ) : (
               <div className="flex h-[320px] items-center justify-center rounded-[18px] border border-dashed border-border text-sm text-text-2">
                 No chart data available yet.
@@ -333,10 +363,13 @@ export default function DashboardHomePage() {
                 className="block rounded-[20px] border border-border bg-bg-2 p-4 transition hover:border-border-strong hover:bg-bg-3"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="font-display text-lg font-semibold tracking-[-0.03em] text-white">{signal.symbol}</div>
-                    <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">
-                      {signal.timeframe} · {signal.age}
+                  <div className="flex items-center gap-3">
+                    <StockLogo ticker={signal.symbol} size={28} />
+                    <div>
+                      <div className="font-display text-lg font-semibold tracking-[-0.03em] text-white">{signal.symbol}</div>
+                      <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">
+                        {signal.timeframe} · {signal.age}
+                      </div>
                     </div>
                   </div>
                   <div

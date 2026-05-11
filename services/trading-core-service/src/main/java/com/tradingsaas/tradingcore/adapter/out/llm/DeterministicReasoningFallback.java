@@ -10,7 +10,6 @@ import java.math.RoundingMode;
 public class DeterministicReasoningFallback {
 
     public String build(ReasoningContext ctx) {
-        String direction = resolveDirection(ctx.signalType());
         String confStr = ctx.confidence() != null
                 ? ctx.confidence().multiply(BigDecimal.valueOf(100))
                         .setScale(0, RoundingMode.HALF_UP) + "%"
@@ -18,8 +17,14 @@ public class DeterministicReasoningFallback {
         String changeStr = ctx.newsContext() != null && !ctx.newsContext().isBlank()
                 ? " | Context: " + truncate(ctx.newsContext(), 80)
                 : "";
-        return String.format("%s %s with %s confidence%s.",
-                ctx.ticker(), direction, confStr, changeStr);
+        return switch (ReasoningPromptBuilder.bandOf(ctx.confidence())) {
+            case LOW -> String.format("Weak setup, awaiting confirmation for %s %s signal at %s confidence%s.",
+                    ctx.ticker(), ctx.signalType(), confStr, changeStr);
+            case MEDIUM -> String.format("%s %s with %s confidence%s.",
+                    ctx.ticker(), resolveDirection(ctx.signalType()), confStr, changeStr);
+            case HIGH -> String.format("High-conviction %s setup — strong catalyst detected. %s at %s confidence%s.",
+                    ctx.signalType(), ctx.ticker(), confStr, changeStr);
+        };
     }
 
     private String resolveDirection(String signalType) {
