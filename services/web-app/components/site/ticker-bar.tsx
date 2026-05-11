@@ -1,8 +1,8 @@
 import { TickerBarMarquee } from "./ticker-bar-marquee";
 import type { TickerQuote } from "@/lib/trademind-content";
 
-const MARKET_DATA_BASE_URL =
-  process.env.MARKET_DATA_BASE_URL ?? "http://localhost:8081";
+const MARKET_DATA_SERVICE_URL =
+  process.env.MARKET_DATA_SERVICE_URL ?? "http://localhost:8081";
 
 const TICKERS = ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL", "META", "BTC-USD", "ETH-USD"];
 
@@ -50,15 +50,12 @@ function TickerBarUnavailable() {
 }
 
 export async function TickerBar() {
+  const url = `${MARKET_DATA_SERVICE_URL}/api/v1/prices/latest?${TICKERS.map((t) => `tickers=${encodeURIComponent(t)}`).join("&")}&timeframe=DAILY`;
   try {
-    const params = TICKERS.map((t) => `tickers=${encodeURIComponent(t)}`).join("&");
-    const url = `${MARKET_DATA_BASE_URL}/api/v1/prices/latest?${params}&timeframe=DAILY`;
     const res = await fetch(url, { next: { revalidate: 60 } });
 
     if (!res.ok) {
-      console.error(
-        `event=ticker_bar.fetch_failed status=${res.status} tickers=${TICKERS.join(",")}`
-      );
+      console.error("[ticker-bar] fetch failed", { url, status: res.status });
       return <TickerBarUnavailable />;
     }
 
@@ -71,9 +68,10 @@ export async function TickerBar() {
 
     return <TickerBarMarquee quotes={quotes} />;
   } catch (err) {
-    console.error(
-      `event=ticker_bar.fetch_failed error=${String(err)} tickers=${TICKERS.join(",")}`
-    );
+    console.error("[ticker-bar] fetch failed", {
+      url,
+      error: err instanceof Error ? err.message : String(err),
+    });
     return <TickerBarUnavailable />;
   }
 }
