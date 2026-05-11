@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import { useState } from "react";
 
 type StockLogoProps = {
   readonly ticker: string;
@@ -9,10 +12,11 @@ type StockLogoProps = {
 };
 
 export function StockLogo({ ticker, symbol, logoUrl, size = 32, className }: StockLogoProps) {
+  const [errored, setErrored] = useState(false);
   const label = symbol ?? ticker;
   const initials = label.slice(0, 2).toUpperCase();
 
-  if (logoUrl) {
+  if (logoUrl && !errored) {
     return (
       <Image
         src={logoUrl}
@@ -21,6 +25,7 @@ export function StockLogo({ ticker, symbol, logoUrl, size = 32, className }: Sto
         height={size}
         className={className ?? "rounded-full object-contain"}
         unoptimized
+        onError={() => setErrored(true)}
       />
     );
   }

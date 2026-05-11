@@ -4,11 +4,14 @@ import com.tradingsaas.marketdata.enrichment.adapter.out.external.FinnhubDtos.Ea
 import com.tradingsaas.marketdata.enrichment.adapter.out.external.FinnhubDtos.NewsDto;
 import com.tradingsaas.marketdata.enrichment.adapter.out.external.FinnhubDtos.ProfileDto;
 import com.tradingsaas.marketdata.enrichment.adapter.out.external.FinnhubDtos.RecommendationDto;
+import com.tradingsaas.marketdata.enrichment.domain.exception.EnrichmentUnavailableException;
 import com.tradingsaas.marketdata.enrichment.domain.model.AnalystRecommendation;
 import com.tradingsaas.marketdata.enrichment.domain.model.CompanyProfile;
 import com.tradingsaas.marketdata.enrichment.domain.model.EarningsEvent;
 import com.tradingsaas.marketdata.enrichment.domain.model.NewsItem;
 import com.tradingsaas.marketdata.enrichment.domain.port.out.MarketEnrichmentProvider;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -16,53 +19,97 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 @Component
 public class FinnhubAdapter implements MarketEnrichmentProvider {
 
+    private static final Logger log = LoggerFactory.getLogger(FinnhubAdapter.class);
     private static final String TOKEN_HEADER = "X-Finnhub-Token";
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ISO_LOCAL_DATE;
 
     private final WebClient webClient;
     private final String apiKey;
+    private final Counter okCounter;
+    private final Counter noLogoCounter;
+    private final Counter unauthorizedCounter;
+    private final Counter rateLimitedCounter;
+    private final Counter upstreamErrorCounter;
 
     public FinnhubAdapter(
             WebClient finnhubWebClient,
-            @Value("${market-data.finnhub.api-key:}") String apiKey) {
+            @Value("${market-data.finnhub.api-key:}") String apiKey,
+            MeterRegistry meterRegistry) {
         this.webClient = Objects.requireNonNull(finnhubWebClient, "finnhubWebClient must not be null");
         this.apiKey = apiKey;
+        this.okCounter          = counter(meterRegistry, "ok");
+        this.noLogoCounter      = counter(meterRegistry, "no_logo");
+        this.unauthorizedCounter = counter(meterRegistry, "unauthorized");
+        this.rateLimitedCounter  = counter(meterRegistry, "rate_limited");
+        this.upstreamErrorCounter = counter(meterRegistry, "upstream_error");
+    }
+
+    private static Counter counter(MeterRegistry registry, String outcome) {
+        return Counter.builder("finnhub_requests_total")
+                .tag("endpoint", "profile")
+                .tag("outcome", outcome)
+                .register(registry);
     }
 
     @Override
     public CompanyProfile fetchProfile(String ticker) {
-        ProfileDto dto = webClient.get()
-                .uri(b -> b.path("/stock/profile2").queryParam("symbol", ticker).build())
-                .header(TOKEN_HEADER, apiKey)
-                .accept(MediaType.APPLICATION_JSON)
-                .retrieve()
-                .bodyToMono(ProfileDto.class)
-                .block();
+        try {
+            ProfileDto dto = webClient.get()
+                    .uri(b -> b.path("/stock/profile2").queryParam("symbol", ticker).build())
+                    .header(TOKEN_HEADER, apiKey)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .bodyToMono(ProfileDto.class)
+                    .block();
 
-        if (dto == null || dto.ticker() == null || dto.name() == null) {
-            throw new IllegalStateException("Finnhub returned empty profile for ticker: " + ticker);
+            if (dto == null || dto.ticker() == null || dto.name() == null) {
+                throw new IllegalStateException("Finnhub returned empty profile for ticker: " + ticker);
+            }
+            if (dto.logo() == null || dto.logo().isBlank()) {
+                log.info("event=finnhub.profile.no_logo ticker={}", ticker);
+                noLogoCounter.increment();
+            } else {
+                okCounter.increment();
+            }
+            return new CompanyProfile(
+                    dto.ticker(),
+                    dto.name(),
+                    dto.logo(),
+                    dto.country(),
+                    dto.currency(),
+                    dto.exchange(),
+                    parseLocalDate(dto.ipo()),
+                    dto.marketCap() != null ? BigDecimal.valueOf(dto.marketCap()) : null,
+                    dto.phone(),
+                    dto.weburl(),
+                    dto.industry());
+
+        } catch (WebClientResponseException.Unauthorized e) {
+            unauthorizedCounter.increment();
+            log.error("event=finnhub.profile.unauthorized ticker={} key_present={}", ticker, !apiKey.isBlank());
+            throw new EnrichmentUnavailableException(ticker, "unauthorized", e);
+        } catch (WebClientResponseException.TooManyRequests e) {
+            rateLimitedCounter.increment();
+            log.warn("event=finnhub.profile.rate_limited ticker={} retryAfter={}",
+                    ticker, e.getHeaders().getFirst("Retry-After"));
+            throw new EnrichmentUnavailableException(ticker, "rate_limited", e);
+        } catch (WebClientResponseException e) {
+            upstreamErrorCounter.increment();
+            log.warn("event=finnhub.profile.upstream_error ticker={} status={}", ticker, e.getStatusCode().value());
+            throw new EnrichmentUnavailableException(ticker, "upstream_" + e.getStatusCode().value(), e);
         }
-        return new CompanyProfile(
-                dto.ticker(),
-                dto.name(),
-                dto.logo(),
-                dto.country(),
-                dto.currency(),
-                dto.exchange(),
-                parseLocalDate(dto.ipo()),
-                dto.marketCap() != null ? BigDecimal.valueOf(dto.marketCap()) : null,
-                dto.phone(),
-                dto.weburl(),
-                dto.industry());
     }
 
     @Override
@@ -147,6 +194,10 @@ public class FinnhubAdapter implements MarketEnrichmentProvider {
                 .block();
 
         return peers != null ? peers : List.of();
+    }
+
+    public boolean isApiKeyPresent() {
+        return !apiKey.isBlank();
     }
 
     private NewsItem toNewsItem(NewsDto dto) {

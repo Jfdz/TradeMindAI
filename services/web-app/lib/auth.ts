@@ -141,9 +141,9 @@ export const authOptions: NextAuthOptions = {
         return token;
       }
 
-      // Token still valid (60s buffer before real expiry)
+      // Token still valid (120s buffer before real expiry)
       const expires = typeof token.accessTokenExpires === "number" ? token.accessTokenExpires : 0;
-      if (Date.now() < expires - 60_000) {
+      if (Date.now() < expires - 120_000) {
         return token;
       }
 

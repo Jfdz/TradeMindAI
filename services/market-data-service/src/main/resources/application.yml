@@ -96,6 +96,16 @@ market-data:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
   internal-secret: ${INTERNAL_API_SECRET:${MARKET_DATA_INTERNAL_SECRET:}}
+  finnhub:
+    base-url: ${FINNHUB_BASE_URL:https://finnhub.io/api/v1}
+    api-key: ${FINNHUB_API_KEY:}
+    timeout-seconds: ${FINNHUB_TIMEOUT_SECONDS:10}
+    cache:
+      profile-ttl: ${FINNHUB_PROFILE_TTL:PT24H}
+      news-ttl: ${FINNHUB_NEWS_TTL:PT15M}
+      earnings-ttl: ${FINNHUB_EARNINGS_TTL:PT24H}
+      recommendations-ttl: ${FINNHUB_RECOMMENDATIONS_TTL:PT24H}
+      peers-ttl: ${FINNHUB_PEERS_TTL:PT24H}
   yahoo:
     base-url: https://query1.finance.yahoo.com
     timeout-seconds: 10
