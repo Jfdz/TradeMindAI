@@ -11,10 +11,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.tradingsaas.marketdata.enrichment.domain.exception.EnrichmentUnavailableException;
 import com.tradingsaas.marketdata.enrichment.domain.model.AnalystRecommendation;
 import com.tradingsaas.marketdata.enrichment.domain.model.CompanyProfile;
 import com.tradingsaas.marketdata.enrichment.domain.model.EarningsEvent;
 import com.tradingsaas.marketdata.enrichment.domain.model.NewsItem;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
@@ -36,7 +38,8 @@ class FinnhubAdapterTest {
         configureFor("localhost", wireMockServer.port());
         adapter = new FinnhubAdapter(
                 WebClient.builder().baseUrl(wireMockServer.baseUrl()).build(),
-                "test-api-key");
+                "test-api-key",
+                new SimpleMeterRegistry());
     }
 
     @AfterEach
@@ -95,7 +98,7 @@ class FinnhubAdapterTest {
         stubFor(get(urlPathEqualTo("/stock/profile2"))
                 .willReturn(aResponse().withStatus(429)));
 
-        assertThrows(WebClientResponseException.class, () -> adapter.fetchProfile("AAPL"));
+        assertThrows(EnrichmentUnavailableException.class, () -> adapter.fetchProfile("AAPL"));
     }
 
     @Test
@@ -103,7 +106,7 @@ class FinnhubAdapterTest {
         stubFor(get(urlPathEqualTo("/stock/profile2"))
                 .willReturn(aResponse().withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())));
 
-        assertThrows(WebClientResponseException.class, () -> adapter.fetchProfile("AAPL"));
+        assertThrows(EnrichmentUnavailableException.class, () -> adapter.fetchProfile("AAPL"));
     }
 
     @Test
