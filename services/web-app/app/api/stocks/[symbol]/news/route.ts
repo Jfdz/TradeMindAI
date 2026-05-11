@@ -37,9 +37,9 @@ async function fetchFinnhubNews(ticker: string, from: string, to: string, apiKey
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ ticker: string }> }
+  { params }: { params: Promise<{ symbol: string }> }
 ) {
-  const { ticker } = await params;
+  const { symbol: ticker } = await params;
   const now = new Date();
   const to = now.toISOString().slice(0, 10);
   const fromDate = new Date(now);
