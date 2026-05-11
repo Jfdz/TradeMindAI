@@ -2,13 +2,13 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 type PaginationControlsProps = {
-  pageNumber: number;
-  totalPages: number;
-  isFirst: boolean;
-  isLast: boolean;
+  readonly pageNumber: number;
+  readonly totalPages: number;
+  readonly isFirst: boolean;
+  readonly isLast: boolean;
 };
 
-export function PaginationControls({ pageNumber, totalPages, isFirst, isLast }: PaginationControlsProps) {
+export function PaginationControls({ pageNumber, totalPages, isFirst, isLast }: readonly PaginationControlsProps) {
   if (totalPages <= 1) return null;
 
   const displayPage = pageNumber + 1;

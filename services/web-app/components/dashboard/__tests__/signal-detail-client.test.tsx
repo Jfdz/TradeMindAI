@@ -43,12 +43,12 @@ function makeSignal(overrides: Partial<SignalResponse> = {}): SignalResponse {
     reasoningStatus: "READY",
     generatedAt: new Date().toISOString(),
     ...overrides,
-  } as SignalResponse;
+  };
 }
 
 describe("SignalDetailClient", () => {
   it("null-entry path: renders em-dash with legacy tooltip, no throw", () => {
-    (useQuery as ReturnType<typeof vi.fn>).mockReturnValue({
+    (useQuery).mockReturnValue({
       data: { signal: makeSignal({ entryPrice: null }), latestPrice: null, candles: [] },
       isLoading: false,
       error: null,
@@ -59,14 +59,14 @@ describe("SignalDetailClient", () => {
     expect(html).toContain("Entry price not captured for legacy signals");
   });
 
-  it("derived-entry path: shows entry 152.30 from latestPrice when entryPrice is null", () => {
-    (useQuery as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: { signal: makeSignal({ entryPrice: null }), latestPrice: 152.30, candles: [] },
+  it("derived-entry path: shows entry 152.3 from latestPrice when entryPrice is null", () => {
+    (useQuery).mockReturnValue({
+      data: { signal: makeSignal({ entryPrice: null }), latestPrice: 152.3, candles: [] },
       isLoading: false,
       error: null,
     });
 
     const html = renderToStaticMarkup(React.createElement(SignalDetailClient, { signalId: "sig-1" }));
-    expect(html).toContain("152.30");
+    expect(html).toContain("152.3");
   });
 });

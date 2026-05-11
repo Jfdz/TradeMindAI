@@ -26,7 +26,7 @@ function makeSignal(id: string, symbol: string, type: "BUY" | "SELL" | "HOLD", l
     status: "LIVE",
     age: "1h ago",
     generatedLabel: "May 11",
-  } as FilteredSignal;
+  };
 }
 
 describe("LiveSignalsStrip", () => {

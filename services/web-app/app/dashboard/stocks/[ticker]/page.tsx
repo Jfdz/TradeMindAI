@@ -19,12 +19,12 @@ import {
 } from "@/lib/enrichment-client";
 
 type Props = {
-  params: Promise<{ ticker: string }>;
+  readonly params: Promise<{ readonly ticker: string }>;
 };
 
 export const revalidate = 600;
 
-export default async function StockDetailPage({ params }: Props) {
+export default async function StockDetailPage({ params }: readonly Props) {
   const session = await getServerSession(authOptions);
   if (!session) {
     notFound();

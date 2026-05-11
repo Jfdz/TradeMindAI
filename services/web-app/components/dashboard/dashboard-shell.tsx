@@ -28,7 +28,7 @@ function formatSignalBadge(count: number): string {
   return count > SIGNAL_COUNT_BADGE_LIMIT ? `${SIGNAL_COUNT_BADGE_LIMIT}+` : String(count);
 }
 
-export function DashboardShell({ children }: { children: ReactNode }) {
+export function DashboardShell({ children }: { readonly children: ReactNode }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -69,7 +69,15 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           "fixed inset-0 z-40 bg-black/60 transition-opacity lg:hidden",
           sidebarOpen ? "opacity-100" : "pointer-events-none opacity-0"
         )}
+        role="button"
+        tabIndex={0}
         onClick={() => setSidebarOpen(false)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            setSidebarOpen(false);
+          }
+        }}
+        aria-label="Close sidebar"
       />
 
       <aside

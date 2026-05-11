@@ -4,9 +4,9 @@ import { cn } from "@/lib/utils";
 import type { FilteredSignal } from "@/lib/dashboard/dashboard-api";
 
 type LiveSignalsStripProps = {
-  signals: FilteredSignal[];
-  selectedSymbol: string;
-  onSymbolChange: (symbol: string) => void;
+  readonly signals: readonly FilteredSignal[];
+  readonly selectedSymbol: string;
+  readonly onSymbolChange: (symbol: string) => void;
 };
 
 function signalChipClass(type: string, selected: boolean): string {
@@ -16,7 +16,7 @@ function signalChipClass(type: string, selected: boolean): string {
   return cn(base, selected ? "ring-1 ring-hold-ring bg-hold-gradient text-white shadow-hold-glow" : "border-hold/40 text-hold hover:bg-hold/10");
 }
 
-export function LiveSignalsStrip({ signals, selectedSymbol, onSymbolChange }: LiveSignalsStripProps) {
+export function LiveSignalsStrip({ signals, selectedSymbol, onSymbolChange }: readonly LiveSignalsStripProps) {
   const live = signals.filter((s) => s.live && s.type !== "HOLD");
 
   if (live.length === 0) return null;

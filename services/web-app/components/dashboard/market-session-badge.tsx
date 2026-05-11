@@ -1,6 +1,6 @@
 "use client";
 
-export function MarketSessionBadge({ latestBarDate }: { latestBarDate: string | null }) {
+export function MarketSessionBadge({ latestBarDate }: { readonly latestBarDate: string | null }) {
   if (!latestBarDate) return null;
 
   const barDay = new Date(latestBarDate);
