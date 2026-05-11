@@ -27,7 +27,7 @@ export function SignalChart({ candles, marker }: SignalChartProps) {
           { kind: "sma", period: 3, color: "#facc15", label: "SMA 3" },
           { kind: "ema", period: 5, color: "#60a5fa", label: "EMA 5" },
         ]}
-        showVolume
+        showVolume={false}
       />
       {last5.length > 0 && (
         <div className="overflow-x-auto rounded-2xl border border-border bg-bg-2/60">
