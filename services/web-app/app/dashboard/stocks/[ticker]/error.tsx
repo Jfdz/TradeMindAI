@@ -7,7 +7,7 @@ type Props = {
   readonly reset: () => void;
 };
 
-export default function ErrorComponent({ error, reset }: Props) {
+export default function StockErrorComponent({ error, reset }: Props) {
   return (
     <main className="mx-auto max-w-[1280px] space-y-6 px-6 pb-16 pt-8">
       <div className="rounded-xl border bg-card p-8 text-center space-y-4">

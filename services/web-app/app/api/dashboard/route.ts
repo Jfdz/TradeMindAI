@@ -33,7 +33,7 @@ function buildChartMarker(
   };
   return {
     time: lastCandle.time,
-    position: (signalType === "SELL" ? "aboveBar" : "belowBar") as "aboveBar" | "belowBar",
+    position: signalType === "SELL" ? "aboveBar" : "belowBar",
     color: signalTypeColor(signalType),
     shape: getShape(signalType),
     text: targetSignal.symbol,
@@ -96,7 +96,7 @@ export async function GET() {
     ]);
 
     if (!portfolioResult.ok || !signalResult.ok) {
-      const failed = (!portfolioResult.ok ? portfolioResult : signalResult) as { ok: false; status: number };
+      const failed = (portfolioResult.ok ? signalResult : portfolioResult) as { ok: false; status: number };
       return failed.status === 401
         ? NextResponse.json({ message: "Authentication required" }, { status: 401 })
         : NextResponse.json({ message: `Upstream error ${failed.status}` }, { status: 502 });

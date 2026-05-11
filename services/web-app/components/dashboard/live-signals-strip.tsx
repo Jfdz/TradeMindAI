@@ -4,9 +4,9 @@ import { cn } from "@/lib/utils";
 import type { FilteredSignal } from "@/lib/dashboard/dashboard-api";
 
 type LiveSignalsStripProps = {
-  signals: FilteredSignal[];
-  selectedSignalId: string;
-  onSignalChange: (id: string) => void;
+  readonly signals: FilteredSignal[];
+  readonly selectedSignalId: string;
+  readonly onSignalChange: (id: string) => void;
 };
 
 function signalChipClass(type: string, selected: boolean): string {

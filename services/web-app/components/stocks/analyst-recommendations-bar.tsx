@@ -3,7 +3,7 @@
 import type { AnalystRecommendationResponse } from "@/lib/enrichment-client";
 
 type Props = {
-  recommendations: AnalystRecommendationResponse[];
+  readonly recommendations: AnalystRecommendationResponse[];
 };
 
 type Segment = { value: number; color: string; label: string };

@@ -2,8 +2,8 @@ import type { CompanyProfileResponse } from "@/lib/enrichment-client";
 import { StockLogo } from "@/components/ui/stock-logo";
 
 type Props = {
-  profile: CompanyProfileResponse | null;
-  ticker: string;
+  readonly profile: CompanyProfileResponse | null;
+  readonly ticker: string;
 };
 
 export function CompanyHeader({ profile, ticker }: Props) {

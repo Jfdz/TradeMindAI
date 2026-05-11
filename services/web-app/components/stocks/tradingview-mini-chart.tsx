@@ -3,9 +3,9 @@
 import { useEffect, useRef } from "react";
 
 type Props = {
-  symbol: string;
-  width?: number | string;
-  height?: number;
+  readonly symbol: string;
+  readonly width?: number | string;
+  readonly height?: number;
 };
 
 export function TradingViewMiniChart({ symbol, width = "100%", height = 220 }: Props) {

@@ -12,8 +12,8 @@ declare global {
 }
 
 type Props = {
-  symbol: string;
-  height?: number;
+  readonly symbol: string;
+  readonly height?: number;
 };
 
 function AdvancedChartImpl({ symbol, height = 500 }: Props) {

@@ -187,7 +187,6 @@ export function BacktestResults({ backtestId }: BacktestResultsProps) {
           <div className="flex items-center gap-4 text-xs uppercase tracking-[0.22em] text-text-3">
             <span className="inline-flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-gold" />
-              {" "}
               Strategy
             </span>
             <span className="inline-flex items-center gap-2">
