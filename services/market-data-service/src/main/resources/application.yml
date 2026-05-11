@@ -81,7 +81,7 @@ management:
   endpoint:
     health:
       show-details: never
-      show-components: never
+      show-components: when_authorized
   health:
     db:
       enabled: true
