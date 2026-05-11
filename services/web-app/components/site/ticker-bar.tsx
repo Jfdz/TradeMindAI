@@ -1,60 +1,79 @@
-"use client";
+import { TickerBarMarquee } from "./ticker-bar-marquee";
+import type { TickerQuote } from "@/lib/trademind-content";
 
-import { useQuery } from "@tanstack/react-query";
+const MARKET_DATA_BASE_URL =
+  process.env.MARKET_DATA_BASE_URL ?? "http://localhost:8081";
 
-import { apiClient, type MarketPriceResponse } from "@/lib/api-client";
-import { tickerQuotes, type TickerQuote } from "@/lib/trademind-content";
-import { cn } from "@/lib/utils";
+const TICKERS = ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL", "META", "BTC-USD", "ETH-USD"];
 
-const TOP_SYMBOLS = ["NVDA", "AAPL", "TSLA", "MSFT", "GOOGL", "AMZN", "META", "SPY", "QQQ", "NFLX"];
+const DISPLAY_LABEL: Record<string, string> = {
+  "BTC-USD": "BTC/USD",
+  "ETH-USD": "ETH/USD",
+};
 
-function formatPrice(value: number): string {
-  if (value >= 1000) return value.toLocaleString("en-US", { maximumFractionDigits: 1 });
+type PriceItem = {
+  ticker: string;
+  date: string;
+  ohlcv: { open: number; close: number };
+};
+
+function formatPrice(value: number, ticker: string): string {
+  if (ticker === "BTC-USD" || value >= 1000) {
+    return value.toLocaleString("en-US", { maximumFractionDigits: 1 });
+  }
   return value.toFixed(2);
 }
 
-function toTickerQuote(price: MarketPriceResponse): TickerQuote {
-  const { open, close } = price.ohlcv;
-  const pct = open === 0 ? 0 : ((close - open) / open) * 100;
+function toTickerQuote(item: PriceItem): TickerQuote {
+  const { open, close } = item.ohlcv;
+  const pct = open === 0 ? 0 : (close - open) / open;
   const sign = pct >= 0 ? "+" : "";
   return {
-    pair: price.ticker,
-    price: formatPrice(close),
-    change: `${sign}${pct.toFixed(2)}%`,
+    pair: DISPLAY_LABEL[item.ticker] ?? item.ticker,
+    price: formatPrice(close, item.ticker),
+    change: `${sign}${(pct * 100).toFixed(2)}%`,
     positive: pct >= 0,
+    date: item.date,
   };
 }
 
-export function TickerBar() {
-  const { data } = useQuery({
-    queryKey: ["ticker-bar", TOP_SYMBOLS],
-    queryFn: () => apiClient.getLatestPrices(TOP_SYMBOLS),
-    staleTime: 30_000,
-    refetchInterval: 60_000,
-    placeholderData: (prev) => prev,
-  });
-
-  const quotes =
-    data?.prices && data.prices.length >= 5 ? data.prices.map(toTickerQuote) : tickerQuotes;
-  const track = [...quotes, ...quotes];
-
+function TickerBarUnavailable() {
   return (
     <div className="sticky top-0 z-50 h-9 overflow-hidden border-b border-border bg-bg-0/95 backdrop-blur-[20px]">
-      <div className="group flex h-full items-center overflow-hidden">
-        <div className="flex min-w-max animate-marquee items-center gap-8 whitespace-nowrap px-5 text-[11px] uppercase tracking-[0.18em] text-text-2 group-hover:[animation-play-state:paused]">
-          {track.map((item, index) => (
-            <div className="flex items-center gap-2" key={`${item.pair}-${index}`}>
-              <span className="h-1.5 w-1.5 rounded-full bg-cyan animate-pulse-soft" />
-              <span className="font-mono text-text-1">{item.pair}</span>
-              <span className="font-mono text-text-2">{item.price}</span>
-              <span className={cn("font-mono", item.positive ? "text-green" : "text-red")}>
-                {item.change}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="absolute right-0 h-full w-24 bg-gradient-to-l from-bg-0 to-transparent" />
+      <div className="flex h-full items-center justify-center">
+        <span className="text-[11px] uppercase tracking-[0.18em] text-text-2">
+          • Live data temporarily unavailable
+        </span>
       </div>
     </div>
   );
+}
+
+export async function TickerBar() {
+  try {
+    const params = TICKERS.map((t) => `tickers=${encodeURIComponent(t)}`).join("&");
+    const url = `${MARKET_DATA_BASE_URL}/api/v1/prices/latest?${params}&timeframe=DAILY`;
+    const res = await fetch(url, { next: { revalidate: 60 } });
+
+    if (!res.ok) {
+      console.error(
+        `event=ticker_bar.fetch_failed status=${res.status} tickers=${TICKERS.join(",")}`
+      );
+      return <TickerBarUnavailable />;
+    }
+
+    const data: { prices: PriceItem[] } = await res.json();
+    const quotes = data.prices.map(toTickerQuote);
+
+    if (quotes.length === 0) {
+      return <TickerBarUnavailable />;
+    }
+
+    return <TickerBarMarquee quotes={quotes} />;
+  } catch (err) {
+    console.error(
+      `event=ticker_bar.fetch_failed error=${String(err)} tickers=${TICKERS.join(",")}`
+    );
+    return <TickerBarUnavailable />;
+  }
 }
