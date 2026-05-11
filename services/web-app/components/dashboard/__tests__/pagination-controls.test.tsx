@@ -27,7 +27,8 @@ describe("PaginationControls", () => {
 
   it("shows correct page counter", () => {
     const out = html({ pageNumber: 1, totalPages: 5, isFirst: false, isLast: false });
-    expect(out).toContain("Page 2 of 5");
+    expect(out).toContain("Page 2");
+    expect(out).toContain("5 total");
   });
 
   it("disables Prev on the first page (renders span, not anchor)", () => {

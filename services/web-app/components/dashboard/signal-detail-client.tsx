@@ -7,8 +7,11 @@ import { useMemo } from "react";
 import { SignalChart } from "@/components/dashboard/signal-chart";
 import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
+import { StockLogo } from "@/components/ui/stock-logo";
 import { fetchSignalDetailData } from "@/lib/dashboard/client-data";
+import { deriveSignal } from "@/lib/dashboard/signal-derivation";
 import type { ChartCandle, ChartMarker } from "@/lib/dashboard/signals";
+import { formatPredictedChange } from "@/lib/signal-utils";
 
 type SignalDetailClientProps = {
   signalId: string;
@@ -18,7 +21,7 @@ const EMPTY_CANDLES: ChartCandle[] = [];
 
 function formatPrice(value: number | null | undefined) {
   if (value == null || Number.isNaN(value)) {
-    return "N/A";
+    return "—";
   }
 
   return value.toLocaleString("en-US", {
@@ -26,6 +29,13 @@ function formatPrice(value: number | null | undefined) {
     currency: "USD",
     maximumFractionDigits: 2,
   });
+}
+
+function deriveStatus(generatedAt: string): "NEW" | "LIVE" | "ACTIVE" {
+  const ageMs = Date.now() - new Date(generatedAt).getTime();
+  if (ageMs < 60 * 60 * 1000) return "NEW";
+  if (ageMs < 24 * 60 * 60 * 1000) return "LIVE";
+  return "ACTIVE";
 }
 
 function formatConfidence(value: number) {
@@ -42,25 +52,6 @@ function formatSignalDate(value: string) {
   });
 }
 
-function calculateTakeProfit(signalType: string | undefined, takeProfitPct: number | null | undefined, entry: number | null | undefined): number | null {
-  if (signalType === "BUY") {
-    return takeProfitPct != null && entry != null ? entry * (1 + takeProfitPct / 100) : null;
-  }
-  if (signalType === "SELL") {
-    return takeProfitPct != null && entry != null ? entry * (1 - takeProfitPct / 100) : null;
-  }
-  return entry ?? null;
-}
-
-function calculateStopLoss(signalType: string | undefined, stopLossPct: number | null | undefined, entry: number | null | undefined): number | null {
-  if (signalType === "BUY") {
-    return stopLossPct != null && entry != null ? entry * (1 - stopLossPct / 100) : null;
-  }
-  if (signalType === "SELL") {
-    return stopLossPct != null && entry != null ? entry * (1 + stopLossPct / 100) : null;
-  }
-  return entry ?? null;
-}
 
 export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
   const { data, isLoading, error } = useQuery({
@@ -70,6 +61,18 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
   const signal = data?.signal ?? null;
   const latestPrice = data?.latestPrice ?? null;
   const candles = data?.candles ?? EMPTY_CANDLES;
+
+  const { data: logoData } = useQuery<Record<string, string | null>>({
+    queryKey: ["logos", signal?.symbol ? [signal.symbol] : []],
+    queryFn: async () => {
+      if (!signal) return {};
+      const res = await fetch(`/api/stocks/logos?tickers=${encodeURIComponent(signal.symbol)}`);
+      if (!res.ok) return {};
+      return res.json() as Promise<Record<string, string | null>>;
+    },
+    enabled: !!signal,
+    staleTime: 60 * 60 * 1000,
+  });
 
   const marker: ChartMarker | null = useMemo(() => {
     if (!signal || candles.length === 0) {
@@ -85,9 +88,10 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
     };
   }, [candles, signal]);
 
-  const entry = latestPrice;
-  const takeProfit = calculateTakeProfit(signal?.type, signal?.takeProfitPct, entry);
-  const stopLoss = calculateStopLoss(signal?.type, signal?.stopLossPct, entry);
+  const derived = signal ? deriveSignal(signal, latestPrice) : null;
+  const entry = derived?.entry ?? null;
+  const takeProfit = derived?.takeProfit ?? null;
+  const stopLoss = derived?.stopLoss ?? null;
 
   const reasoning = useMemo(() => {
     if (!signal) {
@@ -150,7 +154,7 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
     );
   }
 
-  const live = Date.now() - new Date(signal.generatedAt).getTime() < 1000 * 60 * 60 * 24;
+  const status = deriveStatus(signal.generatedAt);
 
   return (
     <div className="space-y-8">
@@ -158,9 +162,12 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Signal detail</div>
-            <h2 className="mt-3 font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
-              {signal.symbol}
-            </h2>
+            <div className="mt-3 flex items-center gap-3">
+              <StockLogo ticker={signal.symbol} logoUrl={logoData?.[signal.symbol]} size={40} />
+              <h2 className="font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
+                {signal.symbol}
+              </h2>
+            </div>
             <p className="mt-2 text-sm uppercase tracking-[0.22em] text-text-3">
               {signal.type} · {signal.timeframe}
             </p>
@@ -185,7 +192,7 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
               </h3>
             </div>
             <span className="rounded-full border border-cyan/25 bg-cyan-dim px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-cyan">
-              {live ? "LIVE" : "PENDING"}
+              {status}
             </span>
           </div>
 
@@ -214,7 +221,11 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-border bg-bg-2 p-4">
                 <div className="text-xs uppercase tracking-[0.22em] text-text-3">Entry</div>
-                <div className="mt-2 font-mono text-lg text-white">{formatPrice(entry)}</div>
+                <div className="mt-2 font-mono text-lg text-white">
+                  {signal?.entryPrice == null && entry == null
+                    ? <span title="Entry price not captured for legacy signals" className="cursor-help text-text-3">—</span>
+                    : formatPrice(entry)}
+                </div>
               </div>
               <div className="rounded-2xl border border-border bg-bg-2 p-4">
                 <div className="text-xs uppercase tracking-[0.22em] text-text-3">Target</div>
@@ -226,13 +237,13 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
               </div>
               <div className="rounded-2xl border border-border bg-bg-2 p-4">
                 <div className="text-xs uppercase tracking-[0.22em] text-text-3">State</div>
-                <div className="mt-2 font-mono text-lg text-white">{live ? "LIVE" : "PENDING"}</div>
+                <div className="mt-2 font-mono text-lg text-white">{status}</div>
               </div>
             </div>
           </div>
 
-          <div className="mt-6 rounded-[20px] border border-cyan/25 bg-cyan-dim p-5">
-            <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Reasoning</div>
+          <div className="mt-6 rounded-[20px] border border-cyan/30 bg-cyan/[0.04] shadow-neon-soft p-5">
+            <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Signal Rationale</div>
             {!signal.reasoningStatus || signal.reasoningStatus === "PENDING" ? (
               <div className="mt-3 space-y-2">
                 <div className="h-3 w-full animate-pulse rounded-full bg-bg-2" />
@@ -244,9 +255,39 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
             )}
           </div>
 
-          <div className="mt-6 rounded-2xl border border-border bg-bg-2 p-4 text-sm leading-7 text-text-2">
-            Predicted change: {(signal.predictedChangePct ?? 0).toFixed(2)}%
-          </div>
+          {(() => {
+            const { label, colorClass } = formatPredictedChange(signal.predictedChangePct, signal.type);
+            const pct = signal.predictedChangePct ?? 0;
+            const barWidth = Math.min(Math.abs(pct) / 10, 1) * 100;
+            let barColor: string;
+            switch (signal.type) {
+              case "BUY": barColor = "bg-emerald-400"; break;
+              case "SELL": barColor = "bg-rose-400"; break;
+              default: barColor = "bg-amber-400";
+            }
+            return (
+              <div className="mt-6 rounded-2xl border border-border bg-bg-2 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className={`font-mono text-2xl font-bold ${colorClass}`}>{label}</div>
+                    <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">Expected move (model output)</div>
+                  </div>
+                  <div className="flex-1 max-w-[140px]">
+                    <div
+                      className="mt-1 h-2 rounded-full bg-bg-3 overflow-hidden"
+                      title={entry == null ? undefined : `From ${formatPrice(entry)} to ~${formatPrice(entry * (1 + pct / 100))}`}
+                    >
+                      <div
+                        className={`h-full rounded-full ${barColor}`}
+                        style={{ width: `${barWidth}%` }}
+                      />
+                    </div>
+                    <div className="mt-1 text-[10px] text-text-3">0% → {Math.abs(pct).toFixed(1)}%</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </article>
       </section>
     </div>

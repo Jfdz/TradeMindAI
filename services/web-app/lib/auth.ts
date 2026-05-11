@@ -43,7 +43,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
 
     // Backend may rotate the refresh token — capture it if present
     const setCookie = response.headers.get("set-cookie") ?? "";
-    const refreshTokenMatch = setCookie.match(/refresh_token=([^;]+)/);
+    const refreshTokenMatch = /refresh_token=([^;]+)/.exec(setCookie);
     const newRefreshToken = refreshTokenMatch?.[1] ?? (token.refreshToken as string);
 
     return {
@@ -104,7 +104,7 @@ export const authOptions: NextAuthOptions = {
 
           // Extract refresh_token from Set-Cookie — stored in NextAuth JWT for server-side refresh
           const setCookie = response.headers.get("set-cookie") ?? "";
-          const refreshTokenMatch = setCookie.match(/refresh_token=([^;]+)/);
+          const refreshTokenMatch = /refresh_token=([^;]+)/.exec(setCookie);
           const refreshToken = refreshTokenMatch?.[1] ?? undefined;
 
           return {

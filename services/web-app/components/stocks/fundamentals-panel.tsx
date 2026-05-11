@@ -1,7 +1,7 @@
 import type { CompanyProfileResponse } from "@/lib/enrichment-client";
 
 type Props = {
-  profile: CompanyProfileResponse | null;
+  readonly profile: CompanyProfileResponse | null;
 };
 
 function formatMarketCap(cap: number): string {

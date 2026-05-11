@@ -1,3 +1,4 @@
+import type { SeriesMarker, Time } from "lightweight-charts";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
@@ -21,7 +22,7 @@ const API_BASE_URL = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BAS
 function buildChartMarker(
   lastCandle: DashboardCandle,
   targetSignal: ReturnType<typeof deriveSignal> | null,
-) {
+): SeriesMarker<Time> | null {
   if (!lastCandle || !targetSignal) {
     return null;
   }
@@ -32,8 +33,8 @@ function buildChartMarker(
     return "circle";
   };
   return {
-    time: lastCandle.time,
-    position: (signalType === "SELL" ? "aboveBar" : "belowBar") as "aboveBar" | "belowBar",
+    time: lastCandle.time as Time,
+    position: signalType === "SELL" ? "aboveBar" : "belowBar",
     color: signalTypeColor(signalType),
     shape: getShape(signalType),
     text: targetSignal.symbol,
@@ -91,12 +92,12 @@ export async function GET() {
   try {
     const [portfolioResult, signalResult, symbolResponse] = await Promise.all([
       backendJsonSafe<PortfolioOverviewResponse>("/api/v1/portfolio", token),
-      backendJsonSafe<PagedResponse<SignalResponse>>("/api/v1/signals", token),
+      backendJsonSafe<PagedResponse<SignalResponse>>("/api/v1/signals?size=200&sort=generatedAt,desc", token),
       backendJson<PagedResponse<MarketSymbolResponse>>("/api/v1/symbols", token, true),
     ]);
 
     if (!portfolioResult.ok || !signalResult.ok) {
-      const failed = (!portfolioResult.ok ? portfolioResult : signalResult) as { ok: false; status: number };
+      const failed = (portfolioResult.ok ? signalResult : portfolioResult) as { ok: false; status: number };
       return failed.status === 401
         ? NextResponse.json({ message: "Authentication required" }, { status: 401 })
         : NextResponse.json({ message: `Upstream error ${failed.status}` }, { status: 502 });

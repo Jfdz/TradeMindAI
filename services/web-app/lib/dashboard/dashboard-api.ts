@@ -3,11 +3,13 @@ import type { BusinessDay, SeriesMarker, Time } from "lightweight-charts";
 import type {
   MarketPriceResponse,
   NotificationPreferencesResponse,
+  PagedResponse,
   PortfolioHoldingResponse,
   PortfolioOverviewResponse,
   SignalResponse,
   UserProfileResponse,
 } from "@/lib/api-client";
+import { convertPricesToCandles } from "@/lib/dashboard/signal-derivation";
 
 export type FilteredSignal = SignalResponse & {
   latestPrice: number | null;
@@ -15,7 +17,7 @@ export type FilteredSignal = SignalResponse & {
   takeProfit: number | null;
   stopLoss: number | null;
   live: boolean;
-  status: "LIVE" | "PENDING";
+  status: "NEW" | "LIVE" | "ACTIVE";
   age: string;
   generatedLabel: string;
   reasoning: string;
@@ -60,6 +62,33 @@ export type PortfolioPageData = {
   portfolio: PortfolioOverviewResponse;
   holdings: EnrichedHolding[];
 };
+
+const API_BASE_URL = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
+
+export async function fetchCandles(ticker: string, token?: string): Promise<DashboardCandle[]> {
+  const from = new Date();
+  from.setUTCDate(from.getUTCDate() - 8);
+  const params = new URLSearchParams({
+    timeframe: "DAILY",
+    from: from.toISOString().slice(0, 10),
+    to: new Date().toISOString().slice(0, 10),
+    size: "24",
+  });
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/prices/${encodeURIComponent(ticker)}/history?${params.toString()}`, {
+      headers: {
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as PagedResponse<MarketPriceResponse>;
+    return convertPricesToCandles(data.content ?? []);
+  } catch {
+    return [];
+  }
+}
 
 export function buildHoldingTrend(prices: MarketPriceResponse[]) {
   if (prices.length === 0) {

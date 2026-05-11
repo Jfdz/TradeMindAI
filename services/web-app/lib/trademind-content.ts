@@ -45,7 +45,7 @@ export const publicNavLinks: { href: string; label: string }[] = [
   { href: "/", label: "Home" },
   { href: "/pricing", label: "Pricing" },
   { href: "/dashboard/signals", label: "Signals" },
-  { href: "/dashboard", label: "About" },
+  { href: "/about", label: "About" },
 ];
 
 export const tickerQuotes: TickerQuote[] = [
@@ -160,9 +160,8 @@ export const footerColumns: FooterColumn[] = [
   {
     title: "Resources",
     links: [
-      { label: "Documentation", href: "/dashboard/settings" },
-      { label: "Risk disclosure", href: "/" },
-      { label: "Status", href: "/api/health" },
+      { label: "Settings", href: "/dashboard/settings" },
+      { label: "Risk disclosure", href: "/about#risk" },
     ],
   },
 ];

@@ -7,7 +7,9 @@ import { Suspense, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { PaginationControls } from "@/components/dashboard/pagination-controls";
+import { StockLogo } from "@/components/ui/stock-logo";
 import { fetchSignalsPageData } from "@/lib/dashboard/client-data";
+import { useStockLogos } from "@/lib/dashboard/use-stock-logos";
 import { formatConfidence } from "@/lib/signal-utils";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +19,7 @@ const filterOptions: FilterValue[] = ["ALL", "BUY", "SELL", "HOLD"];
 
 function formatPrice(value: number | null) {
   if (value == null || Number.isNaN(value)) {
-    return "N/A";
+    return <span className="text-text-3" title="Awaiting market data">—</span>;
   }
 
   return value.toLocaleString("en-US", {
@@ -27,26 +29,28 @@ function formatPrice(value: number | null) {
   });
 }
 
-function pickSignalLabel(isLoading: boolean, signalsLength: number) {
+function pickSignalLabel(isLoading: boolean, total: number | undefined) {
   if (isLoading) return "Loading signals…";
-  if (signalsLength > 0) return `${signalsLength} live signal${signalsLength > 1 ? "s" : ""}`;
-  return "Signal feed";
+  if (!total) return "Signal feed";
+  return total === 1 ? "1 live signal" : `${total} live signals`;
 }
 
 function pickSignalBadgeClass(signalType: string) {
-  if (signalType === "BUY") return "border-green/30 bg-[rgba(0,214,143,0.12)] text-green";
-  if (signalType === "SELL") return "border-red/30 bg-[rgba(255,77,106,0.12)] text-red";
-  return "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold";
+  if (signalType === "BUY") return "ring-1 ring-buy-ring bg-buy/10 text-emerald-200 border-buy/40 shadow-buy-glow";
+  if (signalType === "SELL") return "ring-1 ring-sell-ring bg-sell/10 text-rose-200 border-sell/40 shadow-sell-glow";
+  return "ring-1 ring-hold-ring bg-hold/10 text-amber-200 border-hold/40 shadow-hold-glow";
 }
 
-function pickStatusBadgeClass(status: string) {
-  if (status === "LIVE") return "border-cyan/30 bg-cyan-dim text-cyan";
+function pickStatusBadgeClass(status: "NEW" | "LIVE" | "ACTIVE") {
+  if (status === "NEW")
+    return "border-cyan-bright/50 bg-cyan-bright/[0.10] text-cyan-bright shadow-neon-soft animate-pulse-soft";
+  if (status === "LIVE") return "border-green/40 bg-green/[0.10] text-green";
   return "border-border bg-bg-2 text-text-2";
 }
 
 function SignalsContent() {
   const searchParams = useSearchParams();
-  const page = Math.max(0, parseInt(searchParams.get("page") ?? "0", 10));
+  const page = Math.max(0, Number.parseInt(searchParams.get("page") ?? "0", 10));
 
   const [activeFilter, setActiveFilter] = useState<FilterValue>("ALL");
   const {
@@ -60,6 +64,8 @@ function SignalsContent() {
 
   const signals = useMemo(() => data?.items ?? [], [data?.items]);
   const pageInfo = data?.pageInfo;
+
+  const signalLogos = useStockLogos(useMemo(() => signals.map((s) => s.symbol), [signals]));
 
   const filteredSignals = useMemo(() => {
     if (activeFilter === "ALL") {
@@ -78,7 +84,7 @@ function SignalsContent() {
               {" Live signals"}
             </div>
             <h2 className="mt-3 font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
-              {pickSignalLabel(isLoading, signals.length)}
+              {pickSignalLabel(isLoading, data?.pageInfo?.totalElements)}
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-text-2">
               Review the latest signal feed, narrow the list with filters, and open a full signal detail page for more
@@ -143,12 +149,23 @@ function SignalsContent() {
                         className={cn("transition hover:bg-white/[0.025]", index % 2 === 0 ? "bg-white/[0.012]" : "")}
                       >
                         <td className="border-t border-border px-4 py-4">
-                          <Link href={`/dashboard/stocks/${signal.symbol}`} className="group">
-                            <div className="font-display text-base font-semibold tracking-[-0.03em] text-white group-hover:text-cyan transition-colors">
-                              {signal.symbol}
-                            </div>
-                            <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">{signal.age}</div>
-                          </Link>
+                          <div className="flex items-start justify-between gap-3">
+                            <Link href={`/dashboard/stocks/${signal.symbol}`} className="group flex items-center gap-2">
+                              <StockLogo ticker={signal.symbol} logoUrl={signalLogos?.[signal.symbol]} size={24} />
+                              <div>
+                                <div className="font-display text-base font-semibold tracking-[-0.03em] text-white group-hover:text-cyan transition-colors">
+                                  {signal.symbol}
+                                </div>
+                                <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">{signal.age}</div>
+                              </div>
+                            </Link>
+                            <Link
+                              href={`/dashboard/signals/${signal.id}`}
+                              className="shrink-0 rounded-full border border-cyan/30 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-cyan transition hover:border-cyan/60 hover:bg-cyan/[0.08]"
+                            >
+                              Detail →
+                            </Link>
+                          </div>
                         </td>
                         <td className="border-t border-border px-4 py-4">
                           <span className={cn("rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]", pickSignalBadgeClass(signal.type))}>
@@ -161,14 +178,13 @@ function SignalsContent() {
                         <td className="border-t border-border px-4 py-4 font-mono text-red">{formatPrice(signal.stopLoss)}</td>
                         <td className="border-t border-border px-4 py-4">
                           <div className="w-44">
-                            <div className="flex items-center justify-between text-xs text-text-2">
-                              <span>{formatConfidence(signal.confidence)}</span>
-                              <span>{signal.live ? "LIVE" : "PENDING"}</span>
+                            <div className="text-xs text-text-2">
+                              {formatConfidence(signal.confidence)}
                             </div>
                             <div className="mt-2 h-2 overflow-hidden rounded-full bg-bg-3">
                               <div
-                                className="h-full rounded-full bg-gradient-to-r from-cyan to-cyan/60"
-                                style={{ width: `${signal.confidence * 100}%` }}
+                                className="h-full rounded-full bg-gradient-to-r from-cyan via-cyan-bright to-green"
+                                style={{ width: `${signal.confidence * 100}%`, boxShadow: "0 0 8px rgba(0,200,212,0.35)" }}
                               />
                             </div>
                           </div>

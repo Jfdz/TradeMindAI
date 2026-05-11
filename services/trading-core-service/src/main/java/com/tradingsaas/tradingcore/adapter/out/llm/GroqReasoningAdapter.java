@@ -16,9 +16,6 @@ import java.util.Optional;
 public class GroqReasoningAdapter {
 
     private static final Logger log = LoggerFactory.getLogger(GroqReasoningAdapter.class);
-    private static final String PROMPT =
-            "Write one sentence (max 280 chars) explaining why %s shows a %s signal at %.0f%% confidence. "
-            + "Recent news: %s. Be specific about price action or catalyst. No disclaimers.";
 
     private final WebClient webClient;
     private final String apiKey;
@@ -27,6 +24,7 @@ public class GroqReasoningAdapter {
     private final int maxOutputTokens;
     private final double temperature;
     private final LlmOutputValidator validator = new LlmOutputValidator();
+    private final ReasoningPromptBuilder promptBuilder;
 
     @Autowired
     public GroqReasoningAdapter(
@@ -35,33 +33,34 @@ public class GroqReasoningAdapter {
             @Value("${trading-core.llm.groq.model:llama-3.1-8b-instant}") String model,
             @Value("${trading-core.llm.groq.timeout-seconds:10}") int timeoutSeconds,
             @Value("${trading-core.llm.groq.max-output-tokens:100}") int maxOutputTokens,
-            @Value("${trading-core.llm.groq.temperature:0.7}") double temperature) {
+            @Value("${trading-core.llm.groq.temperature:0.7}") double temperature,
+            ReasoningPromptBuilder promptBuilder) {
         this.webClient = WebClient.builder().baseUrl(baseUrl).build();
         this.apiKey = apiKey;
         this.model = model;
         this.timeoutSeconds = timeoutSeconds;
         this.maxOutputTokens = maxOutputTokens;
         this.temperature = temperature;
+        this.promptBuilder = promptBuilder;
     }
 
     GroqReasoningAdapter(WebClient webClient, String apiKey, String model,
-                         int timeoutSeconds, int maxOutputTokens, double temperature) {
+                         int timeoutSeconds, int maxOutputTokens, double temperature,
+                         ReasoningPromptBuilder promptBuilder) {
         this.webClient = webClient;
         this.apiKey = apiKey;
         this.model = model;
         this.timeoutSeconds = timeoutSeconds;
         this.maxOutputTokens = maxOutputTokens;
         this.temperature = temperature;
+        this.promptBuilder = promptBuilder;
     }
 
     public boolean isConfigured() { return apiKey != null && !apiKey.isBlank(); }
 
     public Optional<String> generate(ReasoningContext ctx) {
         if (!isConfigured()) { log.warn("Groq API key not configured"); return Optional.empty(); }
-        String prompt = String.format(PROMPT,
-                ctx.ticker(), ctx.signalType(),
-                ctx.confidence().doubleValue() * 100,
-                ctx.newsContext() != null ? ctx.newsContext() : "none");
+        String prompt = promptBuilder.build(ctx);
         try {
             GroqResponse response = webClient.post()
                     .uri("/openai/v1/chat/completions")

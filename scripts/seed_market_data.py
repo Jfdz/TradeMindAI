@@ -280,7 +280,7 @@ def seed_trading_core(cur, user_id):
 
     cur.execute("""
         INSERT INTO trading_core.portfolios
-            (id, user_id, initial_capital, created_at, updated_at)
+            (id, user_id, total_capital, created_at, updated_at)
         VALUES (gen_random_uuid(), %s, 100000.00, NOW(), NOW())
         ON CONFLICT (user_id) DO NOTHING
     """, (user_id,))
