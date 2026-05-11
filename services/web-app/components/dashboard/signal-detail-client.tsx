@@ -11,6 +11,7 @@ import { StockLogo } from "@/components/ui/stock-logo";
 import { fetchSignalDetailData } from "@/lib/dashboard/client-data";
 import { deriveSignal } from "@/lib/dashboard/signal-derivation";
 import type { ChartCandle, ChartMarker } from "@/lib/dashboard/signals";
+import { formatPredictedChange } from "@/lib/signal-utils";
 
 type SignalDetailClientProps = {
   signalId: string;
@@ -254,9 +255,33 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
             )}
           </div>
 
-          <div className="mt-6 rounded-2xl border border-border bg-bg-2 p-4 text-sm leading-7 text-text-2">
-            Predicted change: {(signal.predictedChangePct ?? 0).toFixed(2)}%
-          </div>
+          {(() => {
+            const { label, colorClass } = formatPredictedChange(signal.predictedChangePct, signal.type);
+            const pct = signal.predictedChangePct ?? 0;
+            const barWidth = Math.min(Math.abs(pct) / 10, 1) * 100;
+            return (
+              <div className="mt-6 rounded-2xl border border-border bg-bg-2 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className={`font-mono text-2xl font-bold ${colorClass}`}>{label}</div>
+                    <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">Expected move (model output)</div>
+                  </div>
+                  <div className="flex-1 max-w-[140px]">
+                    <div
+                      className="mt-1 h-2 rounded-full bg-bg-3 overflow-hidden"
+                      title={entry != null ? `From ${formatPrice(entry)} to ~${formatPrice(entry * (1 + pct / 100))}` : undefined}
+                    >
+                      <div
+                        className={`h-full rounded-full ${signal.type === "BUY" ? "bg-emerald-400" : signal.type === "SELL" ? "bg-rose-400" : "bg-amber-400"}`}
+                        style={{ width: `${barWidth}%` }}
+                      />
+                    </div>
+                    <div className="mt-1 text-[10px] text-text-3">0% → {Math.abs(pct).toFixed(1)}%</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </article>
       </section>
     </div>
