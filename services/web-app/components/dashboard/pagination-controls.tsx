@@ -8,7 +8,7 @@ type PaginationControlsProps = {
   readonly isLast: boolean;
 };
 
-export function PaginationControls({ pageNumber, totalPages, isFirst, isLast }: readonly PaginationControlsProps) {
+export function PaginationControls({ pageNumber, totalPages, isFirst, isLast }: PaginationControlsProps) {
   if (totalPages <= 1) return null;
 
   const displayPage = pageNumber + 1;
