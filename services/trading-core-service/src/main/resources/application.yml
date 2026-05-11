@@ -115,7 +115,7 @@ trading-core:
       temperature: 0.7
   jwt:
     secret: ${JWT_SECRET:changeme-use-a-256-bit-secret-in-production}
-    access-token-expiry: ${JWT_ACCESS_TOKEN_EXPIRY:900}
+    access-token-expiry: ${JWT_ACCESS_TOKEN_EXPIRY:3600}
     refresh-token-expiry: ${JWT_REFRESH_TOKEN_EXPIRY:604800}
   redis:
     token-blacklist-prefix: "trading-core:blacklist:"
