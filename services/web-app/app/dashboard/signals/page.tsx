@@ -7,6 +7,7 @@ import { Suspense, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { PaginationControls } from "@/components/dashboard/pagination-controls";
+import { StockLogo } from "@/components/ui/stock-logo";
 import { fetchSignalsPageData } from "@/lib/dashboard/client-data";
 import { formatConfidence } from "@/lib/signal-utils";
 import { cn } from "@/lib/utils";
@@ -146,11 +147,14 @@ function SignalsContent() {
                       >
                         <td className="border-t border-border px-4 py-4">
                           <div className="flex items-start justify-between gap-3">
-                            <Link href={`/dashboard/stocks/${signal.symbol}`} className="group">
-                              <div className="font-display text-base font-semibold tracking-[-0.03em] text-white group-hover:text-cyan transition-colors">
-                                {signal.symbol}
+                            <Link href={`/dashboard/stocks/${signal.symbol}`} className="group flex items-center gap-2">
+                              <StockLogo ticker={signal.symbol} size={24} />
+                              <div>
+                                <div className="font-display text-base font-semibold tracking-[-0.03em] text-white group-hover:text-cyan transition-colors">
+                                  {signal.symbol}
+                                </div>
+                                <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">{signal.age}</div>
                               </div>
-                              <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">{signal.age}</div>
                             </Link>
                             <Link
                               href={`/dashboard/signals/${signal.id}`}

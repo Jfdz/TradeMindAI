@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import { SignalChart } from "@/components/dashboard/signal-chart";
 import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
+import { StockLogo } from "@/components/ui/stock-logo";
 import { fetchSignalDetailData } from "@/lib/dashboard/client-data";
 import { deriveSignal } from "@/lib/dashboard/signal-derivation";
 import type { ChartCandle, ChartMarker } from "@/lib/dashboard/signals";
@@ -148,9 +149,12 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Signal detail</div>
-            <h2 className="mt-3 font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
-              {signal.symbol}
-            </h2>
+            <div className="mt-3 flex items-center gap-3">
+              <StockLogo ticker={signal.symbol} size={40} />
+              <h2 className="font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
+                {signal.symbol}
+              </h2>
+            </div>
             <p className="mt-2 text-sm uppercase tracking-[0.22em] text-text-3">
               {signal.type} · {signal.timeframe}
             </p>

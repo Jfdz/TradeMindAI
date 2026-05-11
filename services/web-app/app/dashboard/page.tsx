@@ -9,6 +9,7 @@ import { CandlestickChart } from "@/components/charts/CandlestickChart";
 import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
 import { LiveLed } from "@/components/ui/live-led";
+import { StockLogo } from "@/components/ui/stock-logo";
 import { type EnrichedHolding, type FilteredSignal } from "@/lib/dashboard/dashboard-api";
 import { fetchDashboardPageData } from "@/lib/dashboard/client-data";
 import { signedTone, TONE_NEUTRAL } from "@/lib/dashboard/format";
@@ -333,10 +334,13 @@ export default function DashboardHomePage() {
                 className="block rounded-[20px] border border-border bg-bg-2 p-4 transition hover:border-border-strong hover:bg-bg-3"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="font-display text-lg font-semibold tracking-[-0.03em] text-white">{signal.symbol}</div>
-                    <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">
-                      {signal.timeframe} · {signal.age}
+                  <div className="flex items-center gap-3">
+                    <StockLogo ticker={signal.symbol} size={28} />
+                    <div>
+                      <div className="font-display text-lg font-semibold tracking-[-0.03em] text-white">{signal.symbol}</div>
+                      <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">
+                        {signal.timeframe} · {signal.age}
+                      </div>
                     </div>
                   </div>
                   <div
