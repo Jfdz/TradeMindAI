@@ -66,9 +66,9 @@ function getUnrealizedPnlDetail(marketDataUnavailable: boolean, partialMarketDat
 }
 
 function getSignalTypeStyle(type: string): string {
-  if (type === "BUY") return "ring-1 ring-buy-ring bg-buy-gradient text-white shadow-buy-glow";
-  if (type === "SELL") return "ring-1 ring-sell-ring bg-sell-gradient text-white shadow-sell-glow";
-  return "ring-1 ring-hold-ring bg-hold-gradient text-white shadow-hold-glow";
+  if (type === "BUY") return "ring-1 ring-buy-ring bg-buy/10 text-emerald-200 border-buy/40 shadow-buy-glow";
+  if (type === "SELL") return "ring-1 ring-sell-ring bg-sell/10 text-rose-200 border-sell/40 shadow-sell-glow";
+  return "ring-1 ring-hold-ring bg-hold/10 text-amber-200 border-hold/40 shadow-hold-glow";
 }
 
 function Sparkline({ values, color }: { readonly values: number[]; readonly color: string }) {
