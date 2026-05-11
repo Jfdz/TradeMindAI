@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
 import { apiClient } from "@/lib/api-client";
 import { fetchSettingsPageData } from "@/lib/dashboard/client-data";
@@ -84,8 +85,10 @@ export default function SettingsPage() {
       setCurrentPlan(updated.plan);
       queryClient.invalidateQueries({ queryKey: ["settings"] });
       setMessage("Profile changes saved to the backend.");
-    } catch {
+    } catch (err) {
       setMessage("Unable to save profile changes right now.");
+      console.error("settings/profile save failed", err);
+      toast.error("Unable to save profile. Check your connection and try again.");
     } finally {
       setIsSaving(false);
     }
@@ -99,8 +102,10 @@ export default function SettingsPage() {
       await apiClient.updateNotificationPreferences(notifications);
       queryClient.invalidateQueries({ queryKey: ["settings"] });
       setMessage("Notification preferences saved to the backend.");
-    } catch {
+    } catch (err) {
       setMessage("Unable to save notification preferences right now.");
+      console.error("settings/notifications save failed", err);
+      toast.error("Unable to save preferences. Check your connection and try again.");
     } finally {
       setIsSaving(false);
     }
@@ -199,22 +204,41 @@ export default function SettingsPage() {
           </article>
 
           <article className="rounded-[24px] border border-border bg-bg-1/80 p-6 shadow-glow">
-            <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Account</div>
-            <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">Session summary</h3>
-
-            <div className="mt-6 space-y-3 rounded-[20px] border border-cyan/25 bg-cyan-dim p-5">
-              <div className="text-xs uppercase tracking-[0.22em] text-cyan">Current user</div>
-              <div className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">{name}</div>
-              <div className="text-sm text-text-1">{email}</div>
-              <div className="mt-4 text-xs uppercase tracking-[0.22em] text-text-3">Timezone: {timezone}</div>
-            </div>
+            <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Security</div>
+            <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">
+              Security &amp; access
+            </h3>
 
             <div className="mt-6 space-y-3">
-              <div className="rounded-2xl border border-border bg-bg-2 p-4 text-sm text-text-2">
-                Trading limits and subscription gates are enforced by the backend services.
+              {(session?.user as unknown as { lastLogin?: string })?.lastLogin ? (
+                <div className="rounded-2xl border border-border bg-bg-2 p-4">
+                  <div className="text-xs uppercase tracking-[0.22em] text-text-3">Last login</div>
+                  <div className="mt-2 text-sm text-text-1">
+                    {new Date(
+                      (session!.user as unknown as { lastLogin: string }).lastLogin
+                    ).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="rounded-2xl border border-border bg-bg-2 p-4">
+                <div className="text-xs uppercase tracking-[0.22em] text-text-3">Active sessions</div>
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <span className="text-sm text-text-1">1 session (this device)</span>
+                  <span className="rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-text-3">
+                    Coming soon
+                  </span>
+                </div>
               </div>
-              <div className="rounded-2xl border border-border bg-bg-2 p-4 text-sm text-text-2">
-                Profile settings now sync through the account API.
+
+              <div className="rounded-2xl border border-border bg-bg-2 p-4">
+                <div className="text-xs uppercase tracking-[0.22em] text-text-3">Password</div>
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <span className="text-sm text-text-2">Change your account password</span>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/dashboard/settings/password">Change</Link>
+                  </Button>
+                </div>
               </div>
             </div>
           </article>
