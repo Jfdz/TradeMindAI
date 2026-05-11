@@ -61,6 +61,18 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
   const latestPrice = data?.latestPrice ?? null;
   const candles = data?.candles ?? EMPTY_CANDLES;
 
+  const { data: logoData } = useQuery<Record<string, string | null>>({
+    queryKey: ["logos", signal?.symbol ? [signal.symbol] : []],
+    queryFn: async () => {
+      if (!signal) return {};
+      const res = await fetch(`/api/stocks/logos?tickers=${encodeURIComponent(signal.symbol)}`);
+      if (!res.ok) return {};
+      return res.json() as Promise<Record<string, string | null>>;
+    },
+    enabled: !!signal,
+    staleTime: 60 * 60 * 1000,
+  });
+
   const marker: ChartMarker | null = useMemo(() => {
     if (!signal || candles.length === 0) {
       return null;
@@ -150,7 +162,7 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
           <div>
             <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Signal detail</div>
             <div className="mt-3 flex items-center gap-3">
-              <StockLogo ticker={signal.symbol} size={40} />
+              <StockLogo ticker={signal.symbol} logoUrl={logoData?.[signal.symbol]} size={40} />
               <h2 className="font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
                 {signal.symbol}
               </h2>

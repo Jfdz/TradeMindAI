@@ -114,6 +114,22 @@ export default function DashboardHomePage() {
   const holdings = data?.holdings ?? EMPTY_HOLDINGS;
   const chartCandles = data?.chartCandles ?? EMPTY_CANDLES;
 
+  const logoTickers = useMemo(
+    () => [...new Set(signals.map((s: FilteredSignal) => s.symbol))],
+    [signals]
+  );
+  const { data: signalLogos } = useQuery<Record<string, string | null>>({
+    queryKey: ["logos", logoTickers],
+    queryFn: async () => {
+      if (logoTickers.length === 0) return {};
+      const res = await fetch(`/api/stocks/logos?tickers=${encodeURIComponent(logoTickers.join(","))}`);
+      if (!res.ok) return {};
+      return res.json() as Promise<Record<string, string | null>>;
+    },
+    enabled: logoTickers.length > 0,
+    staleTime: 60 * 60 * 1000,
+  });
+
   const displayName = useMemo(
     () => session?.user?.name?.split(" ")[0] ?? session?.user?.email?.split("@")[0] ?? "there",
     [session?.user?.email, session?.user?.name]
@@ -373,7 +389,7 @@ export default function DashboardHomePage() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <StockLogo ticker={signal.symbol} size={28} />
+                    <StockLogo ticker={signal.symbol} logoUrl={signalLogos?.[signal.symbol]} size={28} />
                     <div>
                       <div className="font-display text-lg font-semibold tracking-[-0.03em] text-white">{signal.symbol}</div>
                       <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">

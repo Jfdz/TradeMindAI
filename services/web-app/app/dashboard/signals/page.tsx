@@ -64,6 +64,22 @@ function SignalsContent() {
   const signals = useMemo(() => data?.items ?? [], [data?.items]);
   const pageInfo = data?.pageInfo;
 
+  const logoTickers = useMemo(
+    () => [...new Set(signals.map((s) => s.symbol))],
+    [signals]
+  );
+  const { data: signalLogos } = useQuery<Record<string, string | null>>({
+    queryKey: ["logos", logoTickers],
+    queryFn: async () => {
+      if (logoTickers.length === 0) return {};
+      const res = await fetch(`/api/stocks/logos?tickers=${encodeURIComponent(logoTickers.join(","))}`);
+      if (!res.ok) return {};
+      return res.json() as Promise<Record<string, string | null>>;
+    },
+    enabled: logoTickers.length > 0,
+    staleTime: 60 * 60 * 1000,
+  });
+
   const filteredSignals = useMemo(() => {
     if (activeFilter === "ALL") {
       return signals;
@@ -148,7 +164,7 @@ function SignalsContent() {
                         <td className="border-t border-border px-4 py-4">
                           <div className="flex items-start justify-between gap-3">
                             <Link href={`/dashboard/stocks/${signal.symbol}`} className="group flex items-center gap-2">
-                              <StockLogo ticker={signal.symbol} size={24} />
+                              <StockLogo ticker={signal.symbol} logoUrl={signalLogos?.[signal.symbol]} size={24} />
                               <div>
                                 <div className="font-display text-base font-semibold tracking-[-0.03em] text-white group-hover:text-cyan transition-colors">
                                   {signal.symbol}
