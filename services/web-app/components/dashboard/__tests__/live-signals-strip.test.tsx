@@ -40,8 +40,8 @@ describe("LiveSignalsStrip", () => {
     const html = renderToStaticMarkup(
       React.createElement(LiveSignalsStrip, {
         signals,
-        selectedSymbol: "AAPL",
-        onSymbolChange: vi.fn(),
+        selectedSignalId: "1",
+        onSignalChange: vi.fn(),
       })
     );
     expect(html).toContain("AAPL");
@@ -55,8 +55,8 @@ describe("LiveSignalsStrip", () => {
     const html = renderToStaticMarkup(
       React.createElement(LiveSignalsStrip, {
         signals,
-        selectedSymbol: "AAPL",
-        onSymbolChange: vi.fn(),
+        selectedSignalId: "1",
+        onSignalChange: vi.fn(),
       })
     );
     expect(html).toBe("");

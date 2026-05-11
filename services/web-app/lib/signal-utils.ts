@@ -23,6 +23,16 @@ export function signalTypeColor(type: SignalResponse["type"]): string {
   return "#e8b84b";
 }
 
+export function formatPredictedChange(
+  pct: number | null | undefined,
+  type: string
+): { label: string; colorClass: string } {
+  const val = pct ?? 0;
+  if (type === "BUY") return { label: `▲ +${Math.abs(val).toFixed(2)}%`, colorClass: "text-emerald-400" };
+  if (type === "SELL") return { label: `▼ −${Math.abs(val).toFixed(2)}%`, colorClass: "text-rose-400" };
+  return { label: `→ ${val.toFixed(2)}%`, colorClass: "text-amber-400" };
+}
+
 export function buildSignalReasoning(signal: SignalResponse, latestPrice: number | null): string {
   if (
     (signal.reasoningStatus === "READY" || signal.reasoningStatus === "FALLBACK") &&
