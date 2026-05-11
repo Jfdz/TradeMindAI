@@ -3,16 +3,62 @@
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { toast } from "sonner";
+import { useSession, signOut } from "next-auth/react";
 
-import { apiClient } from "@/lib/api-client";
+import { apiClient, ApiError, type SessionResponse } from "@/lib/api-client";
 import { fetchSettingsPageData } from "@/lib/dashboard/client-data";
 import { Button } from "@/components/ui/button";
 import { pricingPlans } from "@/lib/trademind-content";
 import { cn } from "@/lib/utils";
 
 type SettingsTab = "profile" | "plan" | "notifications";
+
+function detectBrowser(ua: string): string {
+  if (/Chrome/.test(ua)) return "Chrome";
+  if (/Firefox/.test(ua)) return "Firefox";
+  if (/Safari/.test(ua)) return "Safari";
+  return "Browser";
+}
+
+function detectOS(ua: string): string {
+  if (/iPhone|iPad/.test(ua)) return "iOS";
+  if (/Android/.test(ua)) return "Android";
+  if (/Mac OS X/.test(ua)) return "macOS";
+  if (/Windows/.test(ua)) return "Windows";
+  return "Unknown OS";
+}
+
+function parseDeviceLabel(ua: string | null): string {
+  if (!ua) return "Unknown device";
+  return `${detectBrowser(ua)} on ${detectOS(ua)}`;
+}
+
+function timeAgo(isoString: string): string {
+  const diff = Date.now() - new Date(isoString).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+function parseName(raw: string): { firstName: string; lastName: string } {
+  const [first, ...rest] = raw.trim().split(/\s+/);
+  return {
+    firstName: first || "TradeMind",
+    lastName: rest.length > 0 ? rest.join(" ") : "Operator",
+  };
+}
+
+function saveErrorMessage(status: number, fallback: string): string {
+  if (status === 0) return "Network blocked the request — likely CORS or offline.";
+  if (status === 401) return "Session expired — please sign in again.";
+  if (status === 403) return "Request blocked by the API gateway.";
+  if (status >= 500) return "Backend error — try again in a minute.";
+  return fallback;
+}
 
 const notificationRows = [
   { key: "signalDigest", label: "Signal digest", description: "Receive a daily summary of signals and portfolio changes." },
@@ -47,6 +93,12 @@ export default function SettingsPage() {
     queryFn: fetchSettingsPageData,
   });
 
+  const { data: sessions } = useQuery({
+    queryKey: ["sessions"],
+    queryFn: () => apiClient.listMySessions(),
+    refetchInterval: 60_000,
+  });
+
   useEffect(() => {
     if (data) {
       setName(`${data.profile.firstName} ${data.profile.lastName}`.trim());
@@ -69,16 +121,9 @@ export default function SettingsPage() {
   async function handleSaveProfile() {
     setIsSaving(true);
     setMessage("Saving profile changes...");
-
     try {
-      const [firstName, ...rest] = name.trim().split(/\s+/);
-      const lastName = rest.length > 0 ? rest.join(" ") : "Operator";
-      const updated = await apiClient.updateCurrentUser({
-        firstName: firstName || "TradeMind",
-        lastName,
-        timezone,
-      });
-
+      const { firstName, lastName } = parseName(name);
+      const updated = await apiClient.updateCurrentUser({ firstName, lastName, timezone });
       setName(`${updated.firstName} ${updated.lastName}`.trim());
       setEmail(updated.email);
       setTimezone(updated.timezone);
@@ -86,9 +131,10 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
       setMessage("Profile changes saved to the backend.");
     } catch (err) {
-      setMessage("Unable to save profile changes right now.");
+      const status = err instanceof ApiError ? err.status : 0;
       console.error("settings/profile save failed", err);
-      toast.error("Unable to save profile. Check your connection and try again.");
+      setMessage(saveErrorMessage(status, "Unable to save profile changes right now."));
+      if (status === 401) await signOut({ callbackUrl: "/auth/login" });
     } finally {
       setIsSaving(false);
     }
@@ -103,9 +149,10 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
       setMessage("Notification preferences saved to the backend.");
     } catch (err) {
-      setMessage("Unable to save notification preferences right now.");
+      const status = err instanceof ApiError ? err.status : 0;
       console.error("settings/notifications save failed", err);
-      toast.error("Unable to save preferences. Check your connection and try again.");
+      setMessage(saveErrorMessage(status, "Unable to save notification preferences right now."));
+      if (status === 401) await signOut({ callbackUrl: "/auth/login" });
     } finally {
       setIsSaving(false);
     }
@@ -205,41 +252,30 @@ export default function SettingsPage() {
 
           <article className="rounded-[24px] border border-border bg-bg-1/80 p-6 shadow-glow">
             <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Security</div>
-            <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">
-              Security &amp; access
-            </h3>
+            <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">Active sessions</h3>
 
             <div className="mt-6 space-y-3">
-              {(session?.user as unknown as { lastLogin?: string })?.lastLogin ? (
-                <div className="rounded-2xl border border-border bg-bg-2 p-4">
-                  <div className="text-xs uppercase tracking-[0.22em] text-text-3">Last login</div>
-                  <div className="mt-2 text-sm text-text-1">
-                    {new Date(
-                      (session!.user as unknown as { lastLogin: string }).lastLogin
-                    ).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+              {sessions && sessions.length > 0 ? (
+                sessions.map((s: SessionResponse, idx: number) => (
+                  <div key={s.id} className="rounded-2xl border border-border bg-bg-2 p-4">
+                    {idx === 0 && (
+                      <span className="mb-2 inline-block rounded-full border border-cyan/30 bg-cyan-dim px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-cyan">
+                        Current session
+                      </span>
+                    )}
+                    <div className="text-sm font-semibold text-white">
+                      {s.ipAddress ?? "Unknown IP"}
+                    </div>
+                    <div className="mt-1 text-xs text-text-2">
+                      {parseDeviceLabel(s.userAgent)} · {timeAgo(s.loggedInAt)}
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-border bg-bg-2 p-4 text-sm text-text-2">
+                  {sessions ? "This is your first login on the new session log." : "Loading sessions..."}
                 </div>
-              ) : null}
-
-              <div className="rounded-2xl border border-border bg-bg-2 p-4">
-                <div className="text-xs uppercase tracking-[0.22em] text-text-3">Active sessions</div>
-                <div className="mt-2 flex items-center justify-between gap-3">
-                  <span className="text-sm text-text-1">1 session (this device)</span>
-                  <span className="rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-text-3">
-                    Coming soon
-                  </span>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-bg-2 p-4">
-                <div className="text-xs uppercase tracking-[0.22em] text-text-3">Password</div>
-                <div className="mt-2 flex items-center justify-between gap-3">
-                  <span className="text-sm text-text-2">Change your account password</span>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href="/dashboard/settings/password">Change</Link>
-                  </Button>
-                </div>
-              </div>
+              )}
             </div>
           </article>
         </section>

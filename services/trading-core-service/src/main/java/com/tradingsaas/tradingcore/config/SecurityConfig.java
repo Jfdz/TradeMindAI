@@ -7,6 +7,7 @@ import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -78,6 +79,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/subscriptions/plans").permitAll()
                 .requestMatchers("/api/v1/backtests/symbols/*/available").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/prices/latest", "/api/v1/prices/*/latest").permitAll()
                 // Admin-only endpoints
                 .requestMatchers("/api/v1/ingestion/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/models/**").hasRole("ADMIN")

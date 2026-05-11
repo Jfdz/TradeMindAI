@@ -1,5 +1,7 @@
 "use client";
 
+export { TickerBar } from "@/components/site/ticker-bar";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
