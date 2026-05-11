@@ -14,12 +14,14 @@ import { StockLogo } from "@/components/ui/stock-logo";
 import type { DashboardCandle } from "@/lib/dashboard/dashboard-api";
 import { type EnrichedHolding, type FilteredSignal } from "@/lib/dashboard/dashboard-api";
 import { fetchDashboardPageData } from "@/lib/dashboard/client-data";
+import { buildSignalMarker } from "@/lib/dashboard/signal-derivation";
 import { signedTone, TONE_NEUTRAL } from "@/lib/dashboard/format";
 import { formatConfidence } from "@/lib/signal-utils";
 import { cn } from "@/lib/utils";
 
 const EMPTY_SIGNALS: FilteredSignal[] = [];
 const EMPTY_HOLDINGS: EnrichedHolding[] = [];
+const EMPTY_CANDLES: DashboardCandle[] = [];
 const DASHBOARD_QUERY_KEY = ["dashboard"] as const;
 const SIGNALS_QUERY_KEY = ["signals"] as const;
 
@@ -110,11 +112,7 @@ export default function DashboardHomePage() {
   const portfolio = data?.portfolio ?? null;
   const signals = data?.signals ?? EMPTY_SIGNALS;
   const holdings = data?.holdings ?? EMPTY_HOLDINGS;
-  const chartCandles = data?.chartCandles ?? [];
-  const chartMarker = data?.chartMarker ?? null;
-  const chartMarkers = useMemo(() => {
-    return chartMarker ? [chartMarker] : undefined;
-  }, [chartMarker]);
+  const chartCandles = data?.chartCandles ?? EMPTY_CANDLES;
 
   const displayName = useMemo(
     () => session?.user?.name?.split(" ")[0] ?? session?.user?.email?.split("@")[0] ?? "there",
@@ -157,8 +155,12 @@ export default function DashboardHomePage() {
   }, [holdings.length, portfolio, signals]);
 
   const topSignal = signals[0] ?? null;
-  const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
-  const activeSymbol = selectedSymbol ?? topSignal?.symbol ?? null;
+  const [selectedSignalId, setSelectedSignalId] = useState<string | null>(null);
+  const selectedSignal = useMemo(
+    () => signals.find((s) => s.id === selectedSignalId) ?? topSignal,
+    [signals, selectedSignalId, topSignal]
+  );
+  const activeSymbol = selectedSignal?.symbol ?? null;
 
   const { data: dynamicCandles } = useQuery<DashboardCandle[]>({
     queryKey: ["candles", activeSymbol],
@@ -168,12 +170,17 @@ export default function DashboardHomePage() {
       if (!res.ok) return [];
       return res.json() as Promise<DashboardCandle[]>;
     },
-    enabled: !!activeSymbol && activeSymbol !== topSignal?.symbol,
+    enabled: !!activeSymbol && selectedSignal?.id !== topSignal?.id,
     staleTime: 60_000,
   });
-  const activeCandles = selectedSymbol && selectedSymbol !== topSignal?.symbol
-    ? (dynamicCandles ?? [])
-    : chartCandles;
+  const activeCandles = useMemo(
+    () => (selectedSignal?.id !== topSignal?.id ? (dynamicCandles ?? []) : chartCandles),
+    [selectedSignal?.id, topSignal?.id, dynamicCandles, chartCandles]
+  );
+  const activeMarker = useMemo(
+    () => buildSignalMarker(selectedSignal, activeCandles),
+    [selectedSignal, activeCandles]
+  );
 
   const [generateResult, setGenerateResult] = useState<string | null>(null);
   const generateSignals = useMutation({
@@ -319,7 +326,9 @@ export default function DashboardHomePage() {
             <div>
               <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Live chart</div>
               <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">
-                {activeSymbol ?? (topSignal ? `${topSignal.symbol} ${topSignal.timeframe}` : "Portfolio market view")}
+                {selectedSignal
+                  ? `${selectedSignal.symbol} ${selectedSignal.type} ${selectedSignal.timeframe}`
+                  : "Portfolio market view"}
               </h3>
             </div>
             <Button asChild variant="outlineCyan" size="sm">
@@ -334,15 +343,15 @@ export default function DashboardHomePage() {
             <div className="mt-4">
               <LiveSignalsStrip
                 signals={signals}
-                selectedSymbol={activeSymbol ?? ""}
-                onSymbolChange={setSelectedSymbol}
+                selectedSignalId={selectedSignalId ?? ""}
+                onSignalChange={setSelectedSignalId}
               />
             </div>
           )}
 
           <div className="mt-4 rounded-[22px] border border-border bg-bg-0/70 p-3">
             {activeCandles.length > 0 ? (
-              <CandlestickChart candles={activeCandles} markers={chartMarkers} showVolume={false} height={320} />
+              <CandlestickChart candles={activeCandles} markers={activeMarker ? [activeMarker] : undefined} showVolume={false} height={320} />
             ) : (
               <div className="flex h-[320px] items-center justify-center rounded-[18px] border border-dashed border-border text-sm text-text-2">
                 No chart data available yet.

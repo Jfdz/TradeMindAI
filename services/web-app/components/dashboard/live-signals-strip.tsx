@@ -5,8 +5,8 @@ import type { FilteredSignal } from "@/lib/dashboard/dashboard-api";
 
 type LiveSignalsStripProps = {
   signals: FilteredSignal[];
-  selectedSymbol: string;
-  onSymbolChange: (symbol: string) => void;
+  selectedSignalId: string;
+  onSignalChange: (id: string) => void;
 };
 
 function signalChipClass(type: string, selected: boolean): string {
@@ -16,7 +16,7 @@ function signalChipClass(type: string, selected: boolean): string {
   return cn(base, selected ? "ring-1 ring-hold-ring bg-hold-gradient text-white shadow-hold-glow" : "border-hold/40 text-hold hover:bg-hold/10");
 }
 
-export function LiveSignalsStrip({ signals, selectedSymbol, onSymbolChange }: LiveSignalsStripProps) {
+export function LiveSignalsStrip({ signals, selectedSignalId, onSignalChange }: LiveSignalsStripProps) {
   const live = signals.filter((s) => s.live && s.type !== "HOLD");
 
   if (live.length === 0) return null;
@@ -27,8 +27,8 @@ export function LiveSignalsStrip({ signals, selectedSymbol, onSymbolChange }: Li
         <button
           key={signal.id}
           type="button"
-          onClick={() => onSymbolChange(signal.symbol)}
-          className={signalChipClass(signal.type, signal.symbol === selectedSymbol)}
+          onClick={() => onSignalChange(signal.id)}
+          className={signalChipClass(signal.type, signal.id === selectedSignalId)}
         >
           <span>{signal.symbol}</span>
           <span className="opacity-70">{signal.type}</span>

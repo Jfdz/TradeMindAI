@@ -1,5 +1,6 @@
+import type { SeriesMarker, Time } from "lightweight-charts";
 import type { MarketPriceResponse, SignalResponse } from "@/lib/api-client";
-import { buildSignalReasoning } from "@/lib/signal-utils";
+import { buildSignalReasoning, signalTypeColor } from "@/lib/signal-utils";
 import type { DashboardCandle, FilteredSignal } from "@/lib/dashboard/dashboard-api";
 
 export function formatAge(value: string) {
@@ -100,6 +101,21 @@ export function deriveSignal(signal: SignalResponse, latestPrice: number | null)
       minute: "2-digit",
     }),
     reasoning: buildSignalReasoning(signal, latestPrice),
+  };
+}
+
+export function buildSignalMarker(
+  signal: FilteredSignal | null,
+  candles: DashboardCandle[]
+): SeriesMarker<Time> | null {
+  if (!signal || candles.length === 0 || signal.type === "HOLD") return null;
+  const last = candles[candles.length - 1];
+  return {
+    time: last.time as Time,
+    position: signal.type === "SELL" ? "aboveBar" : "belowBar",
+    color: signalTypeColor(signal.type),
+    shape: signal.type === "SELL" ? "arrowDown" : "arrowUp",
+    text: signal.symbol,
   };
 }
 
