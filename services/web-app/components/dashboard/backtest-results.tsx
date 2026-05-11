@@ -14,10 +14,10 @@ import { demoBenchmarkCurve, demoDrawdownCurve, demoEquityCurve, formatMoney, fo
 import { cn } from "@/lib/utils";
 
 type BacktestResultsProps = {
-  backtestId: string;
+  readonly backtestId: string;
 };
 
-function FailedState({ message }: { message: string }) {
+function FailedState({ message }: { readonly message: string }) {
   return (
     <article className="rounded-[24px] border border-border bg-bg-1/80 p-6 shadow-glow">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
@@ -114,7 +114,7 @@ export function BacktestResults({ backtestId }: BacktestResultsProps) {
     { label: "Max drawdown", value: formatPercent(result.maxDrawdown * 100), tone: "text-red" },
     { label: "Win rate", value: formatPercent((result.winRate ?? 0) * 100), tone: "text-white" },
     { label: "Total trades", value: `${result.trades.length}`, tone: "text-white" },
-    { label: "Profit factor", value: isFinite(result.profitFactor) ? result.profitFactor.toFixed(2) : "Unlimited", tone: "text-gold" },
+    { label: "Profit factor", value: Number.isFinite(result.profitFactor) ? result.profitFactor.toFixed(2) : "Unlimited", tone: "text-gold" },
   ];
 
   return (
@@ -187,6 +187,7 @@ export function BacktestResults({ backtestId }: BacktestResultsProps) {
           <div className="flex items-center gap-4 text-xs uppercase tracking-[0.22em] text-text-3">
             <span className="inline-flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-gold" />
+              {" "}
               Strategy
             </span>
             <span className="inline-flex items-center gap-2">

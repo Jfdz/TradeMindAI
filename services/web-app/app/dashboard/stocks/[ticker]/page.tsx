@@ -19,7 +19,7 @@ import {
 } from "@/lib/enrichment-client";
 
 type Props = {
-  params: Promise<{ ticker: string }>;
+  readonly params: Promise<{ readonly ticker: string }>;
 };
 
 export const revalidate = 600;

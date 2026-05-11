@@ -49,7 +49,7 @@ function pickStatusBadgeClass(status: "NEW" | "LIVE" | "ACTIVE") {
 
 function SignalsContent() {
   const searchParams = useSearchParams();
-  const page = Math.max(0, parseInt(searchParams.get("page") ?? "0", 10));
+  const page = Math.max(0, Number.parseInt(searchParams.get("page") ?? "0", 10));
 
   const [activeFilter, setActiveFilter] = useState<FilterValue>("ALL");
   const {
