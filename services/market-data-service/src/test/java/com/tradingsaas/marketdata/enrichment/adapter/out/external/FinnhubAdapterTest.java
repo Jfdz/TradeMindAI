@@ -24,7 +24,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 class FinnhubAdapterTest {
 
@@ -198,6 +197,6 @@ class FinnhubAdapterTest {
         stubFor(get(urlPathEqualTo("/news"))
                 .willReturn(aResponse().withStatus(HttpStatus.SERVICE_UNAVAILABLE.value())));
 
-        assertThrows(WebClientResponseException.class, () -> adapter.fetchMarketNews("general", 10));
+        assertThrows(EnrichmentUnavailableException.class, () -> adapter.fetchMarketNews("general", 10));
     }
 }
