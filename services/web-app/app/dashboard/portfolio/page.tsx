@@ -224,6 +224,11 @@ function ClosePositionPanel({
         onAlreadyClosed();
         return;
       }
+      if (error instanceof ApiError && error.isRateLimit) {
+        const seconds = error.rateLimit ? Math.max(0, Math.ceil((error.rateLimit.resetEpoch * 1000 - Date.now()) / 1000)) : 60;
+        toast.warning(`Rate limit reached — try again in ${seconds}s or upgrade your plan.`);
+        return;
+      }
       setErr(error instanceof Error ? error.message : "Failed to close position");
     } finally {
       setSubmitting(false);

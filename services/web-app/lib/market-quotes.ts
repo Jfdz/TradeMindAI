@@ -1,4 +1,4 @@
-import { tickerQuotes, type TickerQuote } from "@/lib/trademind-content";
+import type { TickerQuote } from "@/lib/trademind-content";
 
 const FINNHUB_BASE = "https://finnhub.io/api/v1";
 
@@ -100,11 +100,10 @@ async function fetchQuote(symbol: { pair: string; finnhub: string }, token: stri
 
 export async function fetchMarketQuotes(): Promise<TickerQuote[]> {
   const token = process.env.FINNHUB_API_KEY;
-  if (!token) return tickerQuotes;
+  if (!token) return [];
 
   const settled = await Promise.allSettled(SYMBOLS.map((s) => fetchQuote(s, token)));
-  const results = settled
+  return settled
     .filter((r): r is PromiseFulfilledResult<TickerQuote> => r.status === "fulfilled")
     .map((r) => r.value);
-  return results.length >= 5 ? results : tickerQuotes;
 }
