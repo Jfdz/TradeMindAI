@@ -166,7 +166,10 @@ record PortfolioOverviewResponse(
             Double allocationPct,
             String status,
             Instant openedAt,
-            Instant closedAt) {
+            Instant closedAt,
+            String name,
+            String sector,
+            List<BigDecimal> trend7d) {
 
         static PortfolioHoldingResponse from(PortfolioHoldingOverview overview) {
             return new PortfolioHoldingResponse(
@@ -180,7 +183,10 @@ record PortfolioOverviewResponse(
                     overview.allocationPct(),
                     overview.status(),
                     overview.openedAt(),
-                    overview.closedAt()
+                    overview.closedAt(),
+                    overview.name(),
+                    overview.sector(),
+                    overview.trend7d()
             );
         }
     }

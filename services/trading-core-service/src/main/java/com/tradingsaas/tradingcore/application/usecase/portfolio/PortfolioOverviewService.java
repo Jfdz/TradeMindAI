@@ -1,5 +1,6 @@
 package com.tradingsaas.tradingcore.application.usecase.portfolio;
 
+import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter;
 import com.tradingsaas.tradingcore.adapter.out.persistence.PortfolioJpaRepository;
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.PortfolioJpaEntity;
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.PortfolioPositionJpaEntity;
@@ -7,12 +8,15 @@ import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort;
 import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort.LatestPricesResult;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -26,11 +30,14 @@ public class PortfolioOverviewService {
 
     private final PortfolioJpaRepository portfolioJpaRepository;
     private final HistoricalMarketDataPort historicalMarketDataPort;
+    private final MarketDataServiceAdapter marketDataAdapter;
 
     public PortfolioOverviewService(PortfolioJpaRepository portfolioJpaRepository,
-                                    HistoricalMarketDataPort historicalMarketDataPort) {
+                                    HistoricalMarketDataPort historicalMarketDataPort,
+                                    MarketDataServiceAdapter marketDataAdapter) {
         this.portfolioJpaRepository = portfolioJpaRepository;
         this.historicalMarketDataPort = historicalMarketDataPort;
+        this.marketDataAdapter = marketDataAdapter;
     }
 
     @Transactional
@@ -120,7 +127,10 @@ public class PortfolioOverviewService {
                     null,
                     position.getStatus(),
                     position.getOpenedAt(),
-                    position.getClosedAt()
+                    position.getClosedAt(),
+                    null,
+                    null,
+                    List.of()
             ));
         }
 
@@ -143,7 +153,10 @@ public class PortfolioOverviewService {
                             pct,
                             holding.status(),
                             holding.openedAt(),
-                            holding.closedAt()
+                            holding.closedAt(),
+                            null,
+                            null,
+                            List.of()
                     );
                 })
                 .toList();
@@ -180,6 +193,51 @@ public class PortfolioOverviewService {
             portfolioJpaRepository.save(portfolio);
         }
 
+        // Fail-safe enrichment: name, sector, trend7d from market-data service (internal calls, not rate-limited)
+        Map<String, String> nameByTicker = Map.of();
+        Map<String, String> sectorByTicker = Map.of();
+        Map<String, List<BigDecimal>> trendByTicker = Map.of();
+        try {
+            var symbolPage = marketDataAdapter.fetchSymbols(0, Math.max(tickers.size() * 2, 50));
+            if (symbolPage != null && symbolPage.content() != null) {
+                Map<String, MarketDataServiceAdapter.MarketSymbolResponse> metaMap = symbolPage.content().stream()
+                        .filter(s -> tickers.contains(s.ticker()))
+                        .collect(Collectors.toMap(MarketDataServiceAdapter.MarketSymbolResponse::ticker, s -> s, (a, b) -> a));
+                nameByTicker = metaMap.entrySet().stream()
+                        .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().name()));
+                sectorByTicker = metaMap.entrySet().stream()
+                        .filter(e -> e.getValue().sector() != null)
+                        .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().sector()));
+            }
+            LocalDate toDate = LocalDate.now();
+            LocalDate fromDate = toDate.minusDays(7);
+            var historyBatch = marketDataAdapter.fetchHistoricalPricesBatch(tickers, "DAILY", fromDate, toDate, 8);
+            trendByTicker = historyBatch.entrySet().stream()
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            e -> e.getValue().stream()
+                                    .sorted(Comparator.comparing(MarketDataServiceAdapter.MarketPriceResponse::date))
+                                    .map(p -> p.adjustedClose() != null ? p.adjustedClose() : BigDecimal.valueOf(p.ohlcv().close()))
+                                    .toList()
+                    ));
+        } catch (Exception e) {
+            log.warn("event=portfolio.enrichment_partial userId={} reason={}", portfolio.getUser().getId(), e.getMessage());
+        }
+
+        final Map<String, String> finalNames = nameByTicker;
+        final Map<String, String> finalSectors = sectorByTicker;
+        final Map<String, List<BigDecimal>> finalTrends = trendByTicker;
+        List<PortfolioHoldingOverview> enrichedHoldings = normalizedHoldings.stream()
+                .map(h -> new PortfolioHoldingOverview(
+                        h.id(), h.symbol(), h.quantity(), h.averageCost(), h.lastPrice(),
+                        h.marketValue(), h.unrealizedPnl(), h.allocationPct(), h.status(),
+                        h.openedAt(), h.closedAt(),
+                        finalNames.getOrDefault(h.symbol(), h.symbol()),
+                        finalSectors.get(h.symbol()),
+                        finalTrends.getOrDefault(h.symbol(), List.of())
+                ))
+                .toList();
+
         return new PortfolioOverview(
                 portfolio.getUser().getId(),
                 capital,
@@ -189,7 +247,7 @@ public class PortfolioOverviewService {
                 equity,
                 winRate,
                 dataSource,
-                normalizedHoldings,
+                enrichedHoldings,
                 closedPositions
         );
     }
