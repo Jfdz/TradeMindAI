@@ -35,11 +35,11 @@ type OverlayDefinition = {
 };
 
 type CandlestickChartProps = {
-  candles: CandlePoint[];
-  markers?: SeriesMarker<Time>[];
-  overlays?: OverlayDefinition[];
-  height?: number;
-  showVolume?: boolean;
+  readonly candles: CandlePoint[];
+  readonly markers?: SeriesMarker<Time>[];
+  readonly overlays?: OverlayDefinition[];
+  readonly height?: number;
+  readonly showVolume?: boolean;
 };
 
 const EMPTY_OVERLAYS: OverlayDefinition[] = [];

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 type Props = {
-  peers: string[];
+  readonly peers: string[];
 };
 
 export function PeersList({ peers }: Props) {

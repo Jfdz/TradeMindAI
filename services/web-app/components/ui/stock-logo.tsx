@@ -1,11 +1,11 @@
 import Image from "next/image";
 
 type StockLogoProps = {
-  ticker: string;
-  symbol?: string;
-  logoUrl?: string | null;
-  size?: number;
-  className?: string;
+  readonly ticker: string;
+  readonly symbol?: string;
+  readonly logoUrl?: string | null;
+  readonly size?: number;
+  readonly className?: string;
 };
 
 export function StockLogo({ ticker, symbol, logoUrl, size = 32, className }: StockLogoProps) {

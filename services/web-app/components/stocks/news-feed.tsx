@@ -5,7 +5,7 @@ import Image from "next/image";
 import type { NewsItemResponse } from "@/lib/enrichment-client";
 
 type Props = {
-  ticker: string;
+  readonly ticker: string;
 };
 
 export async function fetchNewsPage(
@@ -41,7 +41,7 @@ export function NewsFeed({ ticker }: Props) {
       <div className="space-y-3">
         {Array.from({ length: 3 }).map((_, i) => (
           <div
-            key={i}
+            key={`news-skeleton-${i}`}
             className="h-24 animate-pulse rounded-xl bg-card"
           />
         ))}
@@ -91,7 +91,7 @@ export function NewsFeed({ ticker }: Props) {
       ))}
       {hasNextPage && (
         <button
-          onClick={() => void fetchNextPage()}
+          onClick={() => fetchNextPage()}
           disabled={isFetchingNextPage}
           className="w-full rounded-xl border bg-card py-2 text-sm text-muted-foreground hover:bg-accent/50 transition-colors disabled:opacity-50"
         >
