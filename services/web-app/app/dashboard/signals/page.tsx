@@ -7,6 +7,7 @@ import { Suspense, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { PaginationControls } from "@/components/dashboard/pagination-controls";
+import { StockLogo } from "@/components/ui/stock-logo";
 import { fetchSignalsPageData } from "@/lib/dashboard/client-data";
 import { formatConfidence } from "@/lib/signal-utils";
 import { cn } from "@/lib/utils";
@@ -34,9 +35,9 @@ function pickSignalLabel(isLoading: boolean, total: number | undefined) {
 }
 
 function pickSignalBadgeClass(signalType: string) {
-  if (signalType === "BUY") return "border-green/30 bg-[rgba(0,214,143,0.12)] text-green";
-  if (signalType === "SELL") return "border-red/30 bg-[rgba(255,77,106,0.12)] text-red";
-  return "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold";
+  if (signalType === "BUY") return "ring-1 ring-buy-ring bg-buy-gradient text-white shadow-buy-glow";
+  if (signalType === "SELL") return "ring-1 ring-sell-ring bg-sell-gradient text-white shadow-sell-glow";
+  return "ring-1 ring-hold-ring bg-hold-gradient text-white shadow-hold-glow";
 }
 
 function pickStatusBadgeClass(status: "NEW" | "LIVE" | "ACTIVE") {
@@ -145,12 +146,23 @@ function SignalsContent() {
                         className={cn("transition hover:bg-white/[0.025]", index % 2 === 0 ? "bg-white/[0.012]" : "")}
                       >
                         <td className="border-t border-border px-4 py-4">
-                          <Link href={`/dashboard/stocks/${signal.symbol}`} className="group">
-                            <div className="font-display text-base font-semibold tracking-[-0.03em] text-white group-hover:text-cyan transition-colors">
-                              {signal.symbol}
-                            </div>
-                            <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">{signal.age}</div>
-                          </Link>
+                          <div className="flex items-start justify-between gap-3">
+                            <Link href={`/dashboard/stocks/${signal.symbol}`} className="group flex items-center gap-2">
+                              <StockLogo ticker={signal.symbol} size={24} />
+                              <div>
+                                <div className="font-display text-base font-semibold tracking-[-0.03em] text-white group-hover:text-cyan transition-colors">
+                                  {signal.symbol}
+                                </div>
+                                <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">{signal.age}</div>
+                              </div>
+                            </Link>
+                            <Link
+                              href={`/dashboard/signals/${signal.id}`}
+                              className="shrink-0 rounded-full border border-cyan/30 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-cyan transition hover:border-cyan/60 hover:bg-cyan/[0.08]"
+                            >
+                              Detail →
+                            </Link>
+                          </div>
                         </td>
                         <td className="border-t border-border px-4 py-4">
                           <span className={cn("rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]", pickSignalBadgeClass(signal.type))}>
