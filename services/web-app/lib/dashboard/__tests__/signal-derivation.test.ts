@@ -28,7 +28,7 @@ function makeSignal(type: "BUY" | "SELL" | "HOLD", symbol = "AAPL"): FilteredSig
     status: "LIVE",
     age: "1h ago",
     generatedLabel: "May 11",
-  } as FilteredSignal;
+  };
 }
 
 const candles = [makeCandle(2026, 5, 9), makeCandle(2026, 5, 10), makeCandle(2026, 5, 11)];

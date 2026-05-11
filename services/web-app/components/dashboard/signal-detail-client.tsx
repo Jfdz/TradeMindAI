@@ -259,7 +259,12 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
             const { label, colorClass } = formatPredictedChange(signal.predictedChangePct, signal.type);
             const pct = signal.predictedChangePct ?? 0;
             const barWidth = Math.min(Math.abs(pct) / 10, 1) * 100;
-            const barColor = signal.type === "BUY" ? "bg-emerald-400" : signal.type === "SELL" ? "bg-rose-400" : "bg-amber-400";
+            let barColor: string;
+            switch (signal.type) {
+              case "BUY": barColor = "bg-emerald-400"; break;
+              case "SELL": barColor = "bg-rose-400"; break;
+              default: barColor = "bg-amber-400";
+            }
             return (
               <div className="mt-6 rounded-2xl border border-border bg-bg-2 p-4">
                 <div className="flex items-start justify-between gap-4">
