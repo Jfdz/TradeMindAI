@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { PaginationControls } from "@/components/dashboard/pagination-controls";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { fetchSignalsPageData } from "@/lib/dashboard/client-data";
+import { useStockLogos } from "@/lib/dashboard/use-stock-logos";
 import { formatConfidence } from "@/lib/signal-utils";
 import { cn } from "@/lib/utils";
 
@@ -64,21 +65,7 @@ function SignalsContent() {
   const signals = useMemo(() => data?.items ?? [], [data?.items]);
   const pageInfo = data?.pageInfo;
 
-  const logoTickers = useMemo(
-    () => [...new Set(signals.map((s) => s.symbol))],
-    [signals]
-  );
-  const { data: signalLogos } = useQuery<Record<string, string | null>>({
-    queryKey: ["logos", logoTickers],
-    queryFn: async () => {
-      if (logoTickers.length === 0) return {};
-      const res = await fetch(`/api/stocks/logos?tickers=${encodeURIComponent(logoTickers.join(","))}`);
-      if (!res.ok) return {};
-      return res.json() as Promise<Record<string, string | null>>;
-    },
-    enabled: logoTickers.length > 0,
-    staleTime: 60 * 60 * 1000,
-  });
+  const signalLogos = useStockLogos(useMemo(() => signals.map((s) => s.symbol), [signals]));
 
   const filteredSignals = useMemo(() => {
     if (activeFilter === "ALL") {

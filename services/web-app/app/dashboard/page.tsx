@@ -13,6 +13,7 @@ import { LiveLed } from "@/components/ui/live-led";
 import { StockLogo } from "@/components/ui/stock-logo";
 import type { DashboardCandle, EnrichedHolding, FilteredSignal } from "@/lib/dashboard/dashboard-api";
 import { fetchDashboardPageData } from "@/lib/dashboard/client-data";
+import { useStockLogos } from "@/lib/dashboard/use-stock-logos";
 import { buildSignalMarker } from "@/lib/dashboard/signal-derivation";
 import { signedTone, TONE_NEUTRAL } from "@/lib/dashboard/format";
 import { formatConfidence } from "@/lib/signal-utils";
@@ -113,21 +114,7 @@ export default function DashboardHomePage() {
   const holdings = data?.holdings ?? EMPTY_HOLDINGS;
   const chartCandles = data?.chartCandles ?? EMPTY_CANDLES;
 
-  const logoTickers = useMemo(
-    () => [...new Set(signals.map((s: FilteredSignal) => s.symbol))],
-    [signals]
-  );
-  const { data: signalLogos } = useQuery<Record<string, string | null>>({
-    queryKey: ["logos", logoTickers],
-    queryFn: async () => {
-      if (logoTickers.length === 0) return {};
-      const res = await fetch(`/api/stocks/logos?tickers=${encodeURIComponent(logoTickers.join(","))}`);
-      if (!res.ok) return {};
-      return res.json() as Promise<Record<string, string | null>>;
-    },
-    enabled: logoTickers.length > 0,
-    staleTime: 60 * 60 * 1000,
-  });
+  const signalLogos = useStockLogos(useMemo(() => signals.map((s: FilteredSignal) => s.symbol), [signals]));
 
   const displayName = useMemo(
     () => session?.user?.name?.split(" ")[0] ?? session?.user?.email?.split("@")[0] ?? "there",
