@@ -76,6 +76,20 @@ spec:
                 name: trading-core-service
                 port:
                   number: 8082
+          - path: /api/v1/users
+            pathType: Prefix
+            backend:
+              service:
+                name: trading-core-service
+                port:
+                  number: 8082
+          - path: /api/v1/stocks
+            pathType: Prefix
+            backend:
+              service:
+                name: trading-core-service
+                port:
+                  number: 8082
 ---
 # Separate ingress for /actuator paths — no rewrite so Spring Boot receives the full path
 apiVersion: networking.k8s.io/v1
