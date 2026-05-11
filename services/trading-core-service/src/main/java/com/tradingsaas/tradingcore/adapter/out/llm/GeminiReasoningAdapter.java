@@ -15,9 +15,6 @@ import java.util.Optional;
 public class GeminiReasoningAdapter {
 
     private static final Logger log = LoggerFactory.getLogger(GeminiReasoningAdapter.class);
-    private static final String PROMPT =
-            "Write one sentence (max 280 chars) explaining why %s shows a %s signal at %.0f%% confidence. "
-            + "Recent news: %s. Be specific about price action or catalyst. No disclaimers.";
 
     private final WebClient webClient;
     private final String apiKey;
@@ -25,37 +22,39 @@ public class GeminiReasoningAdapter {
     private final int maxOutputTokens;
     private final double temperature;
     private final LlmOutputValidator validator = new LlmOutputValidator();
+    private final ReasoningPromptBuilder promptBuilder;
 
     public GeminiReasoningAdapter(
             @Value("${trading-core.llm.gemini.base-url:https://generativelanguage.googleapis.com}") String baseUrl,
             @Value("${trading-core.llm.gemini.api-key:}") String apiKey,
             @Value("${trading-core.llm.gemini.timeout-seconds:10}") int timeoutSeconds,
             @Value("${trading-core.llm.gemini.max-output-tokens:100}") int maxOutputTokens,
-            @Value("${trading-core.llm.gemini.temperature:0.7}") double temperature) {
+            @Value("${trading-core.llm.gemini.temperature:0.7}") double temperature,
+            ReasoningPromptBuilder promptBuilder) {
         this.webClient = WebClient.builder().baseUrl(baseUrl).build();
         this.apiKey = apiKey;
         this.timeoutSeconds = timeoutSeconds;
         this.maxOutputTokens = maxOutputTokens;
         this.temperature = temperature;
+        this.promptBuilder = promptBuilder;
     }
 
     GeminiReasoningAdapter(WebClient webClient, String apiKey,
-                           int timeoutSeconds, int maxOutputTokens, double temperature) {
+                           int timeoutSeconds, int maxOutputTokens, double temperature,
+                           ReasoningPromptBuilder promptBuilder) {
         this.webClient = webClient;
         this.apiKey = apiKey;
         this.timeoutSeconds = timeoutSeconds;
         this.maxOutputTokens = maxOutputTokens;
         this.temperature = temperature;
+        this.promptBuilder = promptBuilder;
     }
 
     public boolean isConfigured() { return apiKey != null && !apiKey.isBlank(); }
 
     public Optional<String> generate(ReasoningContext ctx) {
         if (!isConfigured()) { log.warn("Gemini API key not configured"); return Optional.empty(); }
-        String prompt = String.format(PROMPT,
-                ctx.ticker(), ctx.signalType(),
-                ctx.confidence().doubleValue() * 100,
-                ctx.newsContext() != null ? ctx.newsContext() : "none");
+        String prompt = promptBuilder.build(ctx);
         try {
             GeminiResponse response = webClient.post()
                     .uri(u -> u.path("/v1beta/models/gemini-1.5-flash-latest:generateContent")
