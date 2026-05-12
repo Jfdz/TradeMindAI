@@ -3,6 +3,8 @@ package com.tradingsaas.tradingcore.adapter.out.llm;
 import com.tradingsaas.tradingcore.adapter.out.llm.dto.GeminiRequest;
 import com.tradingsaas.tradingcore.adapter.out.llm.dto.GeminiResponse;
 import com.tradingsaas.tradingcore.domain.port.out.ReasoningGenerator.ReasoningContext;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,8 +24,11 @@ public class GeminiReasoningAdapter {
     private final int timeoutSeconds;
     private final int maxOutputTokens;
     private final double temperature;
-    private final LlmOutputValidator validator = new LlmOutputValidator();
+    private final LlmOutputValidator validator;
     private final ReasoningPromptBuilder promptBuilder;
+    private final Counter okCounter;
+    private final Counter refusedCounter;
+    private final Counter errorCounter;
 
     @Autowired
     public GeminiReasoningAdapter(
@@ -32,24 +37,43 @@ public class GeminiReasoningAdapter {
             @Value("${trading-core.llm.gemini.timeout-seconds:10}") int timeoutSeconds,
             @Value("${trading-core.llm.gemini.max-output-tokens:100}") int maxOutputTokens,
             @Value("${trading-core.llm.gemini.temperature:0.7}") double temperature,
-            ReasoningPromptBuilder promptBuilder) {
+            ReasoningPromptBuilder promptBuilder,
+            LlmOutputValidator validator,
+            MeterRegistry meterRegistry) {
         this.webClient = WebClient.builder().baseUrl(baseUrl).build();
         this.apiKey = apiKey;
         this.timeoutSeconds = timeoutSeconds;
         this.maxOutputTokens = maxOutputTokens;
         this.temperature = temperature;
         this.promptBuilder = promptBuilder;
+        this.validator = validator;
+        this.okCounter = providerCounter(meterRegistry, "ok");
+        this.refusedCounter = providerCounter(meterRegistry, "refused");
+        this.errorCounter = providerCounter(meterRegistry, "error");
     }
 
     GeminiReasoningAdapter(WebClient webClient, String apiKey,
                            int timeoutSeconds, int maxOutputTokens, double temperature,
-                           ReasoningPromptBuilder promptBuilder) {
+                           ReasoningPromptBuilder promptBuilder,
+                           LlmOutputValidator validator,
+                           MeterRegistry meterRegistry) {
         this.webClient = webClient;
         this.apiKey = apiKey;
         this.timeoutSeconds = timeoutSeconds;
         this.maxOutputTokens = maxOutputTokens;
         this.temperature = temperature;
         this.promptBuilder = promptBuilder;
+        this.validator = validator;
+        this.okCounter = providerCounter(meterRegistry, "ok");
+        this.refusedCounter = providerCounter(meterRegistry, "refused");
+        this.errorCounter = providerCounter(meterRegistry, "error");
+    }
+
+    private static Counter providerCounter(MeterRegistry registry, String outcome) {
+        return Counter.builder("signal_reasoning_llm_total")
+                .tag("provider", "gemini")
+                .tag("outcome", outcome)
+                .register(registry);
     }
 
     public boolean isConfigured() { return apiKey != null && !apiKey.isBlank(); }
@@ -66,9 +90,12 @@ public class GeminiReasoningAdapter {
                     .bodyToMono(GeminiResponse.class)
                     .timeout(Duration.ofSeconds(timeoutSeconds))
                     .block();
-            return validator.validate(response != null ? response.extractText() : null);
+            Optional<String> validated = validator.validate(response != null ? response.extractText() : null);
+            if (validated.isPresent()) okCounter.increment(); else refusedCounter.increment();
+            return validated;
         } catch (Exception e) {
             log.warn("Gemini call failed for {}: {}", ctx.ticker(), e.getMessage());
+            errorCounter.increment();
             return Optional.empty();
         }
     }
