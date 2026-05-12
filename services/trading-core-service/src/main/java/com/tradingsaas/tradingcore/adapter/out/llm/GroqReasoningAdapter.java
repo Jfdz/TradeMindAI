@@ -3,6 +3,8 @@ package com.tradingsaas.tradingcore.adapter.out.llm;
 import com.tradingsaas.tradingcore.adapter.out.llm.dto.GroqRequest;
 import com.tradingsaas.tradingcore.adapter.out.llm.dto.GroqResponse;
 import com.tradingsaas.tradingcore.domain.port.out.ReasoningGenerator.ReasoningContext;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,8 +25,11 @@ public class GroqReasoningAdapter {
     private final int timeoutSeconds;
     private final int maxOutputTokens;
     private final double temperature;
-    private final LlmOutputValidator validator = new LlmOutputValidator();
+    private final LlmOutputValidator validator;
     private final ReasoningPromptBuilder promptBuilder;
+    private final Counter okCounter;
+    private final Counter refusedCounter;
+    private final Counter errorCounter;
 
     @Autowired
     public GroqReasoningAdapter(
@@ -34,7 +39,9 @@ public class GroqReasoningAdapter {
             @Value("${trading-core.llm.groq.timeout-seconds:10}") int timeoutSeconds,
             @Value("${trading-core.llm.groq.max-output-tokens:100}") int maxOutputTokens,
             @Value("${trading-core.llm.groq.temperature:0.7}") double temperature,
-            ReasoningPromptBuilder promptBuilder) {
+            ReasoningPromptBuilder promptBuilder,
+            LlmOutputValidator validator,
+            MeterRegistry meterRegistry) {
         this.webClient = WebClient.builder().baseUrl(baseUrl).build();
         this.apiKey = apiKey;
         this.model = model;
@@ -42,11 +49,17 @@ public class GroqReasoningAdapter {
         this.maxOutputTokens = maxOutputTokens;
         this.temperature = temperature;
         this.promptBuilder = promptBuilder;
+        this.validator = validator;
+        this.okCounter = providerCounter(meterRegistry, "ok");
+        this.refusedCounter = providerCounter(meterRegistry, "refused");
+        this.errorCounter = providerCounter(meterRegistry, "error");
     }
 
     GroqReasoningAdapter(WebClient webClient, String apiKey, String model,
                          int timeoutSeconds, int maxOutputTokens, double temperature,
-                         ReasoningPromptBuilder promptBuilder) {
+                         ReasoningPromptBuilder promptBuilder,
+                         LlmOutputValidator validator,
+                         MeterRegistry meterRegistry) {
         this.webClient = webClient;
         this.apiKey = apiKey;
         this.model = model;
@@ -54,6 +67,17 @@ public class GroqReasoningAdapter {
         this.maxOutputTokens = maxOutputTokens;
         this.temperature = temperature;
         this.promptBuilder = promptBuilder;
+        this.validator = validator;
+        this.okCounter = providerCounter(meterRegistry, "ok");
+        this.refusedCounter = providerCounter(meterRegistry, "refused");
+        this.errorCounter = providerCounter(meterRegistry, "error");
+    }
+
+    private static Counter providerCounter(MeterRegistry registry, String outcome) {
+        return Counter.builder("signal_reasoning_llm_total")
+                .tag("provider", "groq")
+                .tag("outcome", outcome)
+                .register(registry);
     }
 
     public boolean isConfigured() { return apiKey != null && !apiKey.isBlank(); }
@@ -70,9 +94,12 @@ public class GroqReasoningAdapter {
                     .bodyToMono(GroqResponse.class)
                     .timeout(Duration.ofSeconds(timeoutSeconds))
                     .block();
-            return validator.validate(response != null ? response.extractText() : null);
+            Optional<String> validated = validator.validate(response != null ? response.extractText() : null);
+            if (validated.isPresent()) okCounter.increment(); else refusedCounter.increment();
+            return validated;
         } catch (Exception e) {
             log.warn("Groq call failed for {}: {}", ctx.ticker(), e.getMessage());
+            errorCounter.increment();
             return Optional.empty();
         }
     }

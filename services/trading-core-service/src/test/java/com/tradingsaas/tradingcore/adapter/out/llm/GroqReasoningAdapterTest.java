@@ -1,6 +1,7 @@
 package com.tradingsaas.tradingcore.adapter.out.llm;
 
 import com.tradingsaas.tradingcore.domain.port.out.ReasoningGenerator.ReasoningContext;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
@@ -26,9 +27,11 @@ class GroqReasoningAdapterTest {
     @BeforeEach void setUp() throws IOException {
         server = new MockWebServer();
         server.start();
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
         adapter = new GroqReasoningAdapter(
                 WebClient.builder().baseUrl(server.url("/").toString()).build(),
-                "test-key", "llama-3.1-8b-instant", 10, 100, 0.7, new ReasoningPromptBuilder());
+                "test-key", "llama-3.1-8b-instant", 10, 100, 0.7, new ReasoningPromptBuilder(),
+                new LlmOutputValidator(registry), registry);
     }
 
     @AfterEach void tearDown() throws IOException { server.shutdown(); }
@@ -43,6 +46,16 @@ class GroqReasoningAdapterTest {
 
     @Test void returnsEmptyOnHttpError() {
         server.enqueue(new MockResponse().setResponseCode(503));
+        Optional<String> result = adapter.generate(
+                new ReasoningContext("TSLA", "BUY", BigDecimal.valueOf(0.78), "news"));
+        assertThat(result).isEmpty();
+    }
+
+    @Test void returnsEmptyWhenModelRefuses() {
+        String refusal =
+                "{\"choices\":[{\"message\":{\"content\":\"I'm unable to provide investment advice.\"}}]}";
+        server.enqueue(new MockResponse().setBody(refusal)
+                .addHeader("Content-Type", "application/json"));
         Optional<String> result = adapter.generate(
                 new ReasoningContext("TSLA", "BUY", BigDecimal.valueOf(0.78), "news"));
         assertThat(result).isEmpty();
@@ -78,9 +91,11 @@ class GroqReasoningAdapterTest {
     }
 
     @Test void skipsHttpCallWhenNotConfigured() {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
         GroqReasoningAdapter unconfigured = new GroqReasoningAdapter(
                 WebClient.builder().baseUrl(server.url("/").toString()).build(),
-                "", "llama-3.1-8b-instant", 10, 100, 0.7, new ReasoningPromptBuilder());
+                "", "llama-3.1-8b-instant", 10, 100, 0.7, new ReasoningPromptBuilder(),
+                new LlmOutputValidator(registry), registry);
         assertThat(unconfigured.generate(
                 new ReasoningContext("TSLA", "BUY", BigDecimal.valueOf(0.78), "news"))).isEmpty();
         assertThat(server.getRequestCount()).isZero();
