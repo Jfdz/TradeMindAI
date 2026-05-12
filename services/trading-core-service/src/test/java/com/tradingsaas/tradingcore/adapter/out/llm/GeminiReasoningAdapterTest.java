@@ -1,6 +1,7 @@
 package com.tradingsaas.tradingcore.adapter.out.llm;
 
 import com.tradingsaas.tradingcore.domain.port.out.ReasoningGenerator.ReasoningContext;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
@@ -26,9 +27,11 @@ class GeminiReasoningAdapterTest {
     @BeforeEach void setUp() throws IOException {
         server = new MockWebServer();
         server.start();
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
         adapter = new GeminiReasoningAdapter(
                 WebClient.builder().baseUrl(server.url("/").toString()).build(),
-                "test-key", 10, 100, 0.7, new ReasoningPromptBuilder());
+                "test-key", 10, 100, 0.7, new ReasoningPromptBuilder(),
+                new LlmOutputValidator(registry), registry);
     }
 
     @AfterEach void tearDown() throws IOException { server.shutdown(); }
@@ -43,6 +46,16 @@ class GeminiReasoningAdapterTest {
 
     @Test void returnsEmptyOnHttpError() {
         server.enqueue(new MockResponse().setResponseCode(429));
+        Optional<String> result = adapter.generate(
+                new ReasoningContext("AAPL", "BUY", BigDecimal.valueOf(0.85), "news"));
+        assertThat(result).isEmpty();
+    }
+
+    @Test void returnsEmptyWhenModelRefuses() {
+        String refusal =
+                "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"I can't provide investment advice.\"}]}}]}";
+        server.enqueue(new MockResponse().setBody(refusal)
+                .addHeader("Content-Type", "application/json"));
         Optional<String> result = adapter.generate(
                 new ReasoningContext("AAPL", "BUY", BigDecimal.valueOf(0.85), "news"));
         assertThat(result).isEmpty();
@@ -78,9 +91,11 @@ class GeminiReasoningAdapterTest {
     }
 
     @Test void skipsHttpCallWhenNotConfigured() {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
         GeminiReasoningAdapter unconfigured = new GeminiReasoningAdapter(
                 WebClient.builder().baseUrl(server.url("/").toString()).build(),
-                "", 10, 100, 0.7, new ReasoningPromptBuilder());
+                "", 10, 100, 0.7, new ReasoningPromptBuilder(),
+                new LlmOutputValidator(registry), registry);
         assertThat(unconfigured.generate(
                 new ReasoningContext("AAPL", "BUY", BigDecimal.valueOf(0.85), "news"))).isEmpty();
         assertThat(server.getRequestCount()).isZero();

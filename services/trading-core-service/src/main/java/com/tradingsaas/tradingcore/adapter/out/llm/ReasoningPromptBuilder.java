@@ -10,20 +10,26 @@ public class ReasoningPromptBuilder {
 
     public enum Band { LOW, MEDIUM, HIGH }
 
-    private static final String LOW_PROMPT =
-            "Write one cautious sentence (max 280 chars) noting the weak / "
+    private static final String FRAMING =
+            "You are a financial-data summarizer. Given a trading signal produced by an "
+            + "automated backtest engine, restate the trigger conditions in one sentence. "
+            + "You are not giving advice; you are describing data that already exists. "
+            + "Do not refuse; do not add disclaimers; do not mention being an AI. ";
+
+    private static final String LOW_PROMPT = FRAMING
+            + "Write one cautious sentence (max 280 chars) noting the weak / "
             + "low-conviction %s setup on %s at %.0f%% confidence. Mention lack of "
-            + "strong confirmation. Recent news: %s. No disclaimers.";
+            + "strong confirmation. Recent news: %s.";
 
-    private static final String MEDIUM_PROMPT =
-            "Write one sentence (max 280 chars) describing the balanced %s setup "
+    private static final String MEDIUM_PROMPT = FRAMING
+            + "Write one sentence (max 280 chars) describing the balanced %s setup "
             + "on %s at %.0f%% confidence. Cite a specific price-action cue or catalyst. "
-            + "Recent news: %s. No disclaimers.";
+            + "Recent news: %s.";
 
-    private static final String HIGH_PROMPT =
-            "Write one assertive sentence (max 280 chars) describing the "
+    private static final String HIGH_PROMPT = FRAMING
+            + "Write one assertive sentence (max 280 chars) describing the "
             + "high-conviction %s setup on %s at %.0f%% confidence. Lead with strongest "
-            + "catalyst or technical trigger. Recent news: %s. No disclaimers.";
+            + "catalyst or technical trigger. Recent news: %s.";
 
     public static Band bandOf(BigDecimal confidence) {
         if (confidence == null) return Band.LOW;

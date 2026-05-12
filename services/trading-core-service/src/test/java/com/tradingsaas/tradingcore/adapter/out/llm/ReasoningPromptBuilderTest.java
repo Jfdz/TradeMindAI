@@ -55,4 +55,16 @@ class ReasoningPromptBuilderTest {
         String prompt = builder.build(new ReasoningContext("TSLA", "BUY", BigDecimal.valueOf(0.80), "news"));
         assertThat(prompt).containsIgnoringCase("high-conviction");
     }
+
+    @Test void allBands_promptContainsSummarizerFraming() {
+        for (double conf : new double[] {0.30, 0.55, 0.80}) {
+            String prompt = builder.build(
+                    new ReasoningContext("TSLA", "BUY", BigDecimal.valueOf(conf), "news"));
+            assertThat(prompt)
+                    .as("framing missing for confidence=%s", conf)
+                    .containsIgnoringCase("financial-data summarizer")
+                    .containsIgnoringCase("not giving advice")
+                    .containsIgnoringCase("Do not refuse");
+        }
+    }
 }
