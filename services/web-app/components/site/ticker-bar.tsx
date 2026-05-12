@@ -52,7 +52,10 @@ function TickerBarUnavailable() {
 
 export async function TickerBar() {
   noStore();
-  const url = `${API_BASE_URL}/api/v1/prices/latest?${TICKERS.map((t) => `tickers=${encodeURIComponent(t)}`).join("&")}&timeframe=DAILY`;
+  const params = new URLSearchParams();
+  for (const ticker of TICKERS) params.append("tickers", ticker);
+  params.set("timeframe", "DAILY");
+  const url = `${API_BASE_URL}/api/v1/prices/latest?${params.toString()}`;
   try {
     const res = await fetch(url, { next: { revalidate: 60 } });
 
