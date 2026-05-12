@@ -14,12 +14,12 @@ const mockPrice = (ticker: string, open: number, close: number, date = "2026-05-
 describe("TickerBar", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
-    process.env.INTERNAL_SECRET = "test-secret";
+    process.env.MARKET_DATA_INTERNAL_SECRET = "test-secret";
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    delete process.env.INTERNAL_SECRET;
+    delete process.env.MARKET_DATA_INTERNAL_SECRET;
   });
 
   it("renders live prices from backend response", async () => {
@@ -136,8 +136,8 @@ describe("TickerBar", () => {
     );
   });
 
-  it("shows unavailable pill and skips fetch when INTERNAL_SECRET is missing", async () => {
-    delete process.env.INTERNAL_SECRET;
+  it("shows unavailable pill and skips fetch when MARKET_DATA_INTERNAL_SECRET is missing", async () => {
+    delete process.env.MARKET_DATA_INTERNAL_SECRET;
 
     const node = await TickerBar();
     const html = renderToStaticMarkup(node);

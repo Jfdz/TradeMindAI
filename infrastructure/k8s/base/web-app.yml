@@ -71,6 +71,11 @@ spec:
                 configMapKeyRef:
                   name: web-app-config
                   key: MARKET_DATA_SERVICE_URL
+            - name: MARKET_DATA_INTERNAL_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: internal-service-secret
+                  key: market-data
             - name: FINNHUB_API_KEY
               valueFrom:
                 secretKeyRef:
