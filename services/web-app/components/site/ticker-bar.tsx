@@ -5,7 +5,14 @@ import type { TickerQuote } from "@/lib/trademind-content";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
 
-const TICKERS = ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL", "META", "BTC-USD", "ETH-USD"];
+const TICKERS = [
+  "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "AMD", "NFLX", "INTC",
+  "JPM", "V", "BA", "DIS", "WMT",
+  "PYPL", "COIN", "UBER", "SPOT", "PLTR",
+  "AVGO", "ORCL", "CRM", "ADBE", "QCOM", "NOW",
+  "CRWD", "PANW", "FTNT", "CSCO",
+  "BTC-USD", "ETH-USD",
+];
 
 const DISPLAY_LABEL: Record<string, string> = {
   "BTC-USD": "BTC/USD",
