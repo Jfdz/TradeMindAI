@@ -19,9 +19,14 @@ public class LlmOutputValidator {
 
     // Catches refusal phrasings observed in production and near-variants. Compiled once.
     private static final List<Pattern> REFUSAL_PATTERNS = List.of(
-            Pattern.compile("\\bI (can'?t|cannot|won'?t)\\b.*\\b(answer|provide|generate|give|help|write|create|make)\\b",
+            Pattern.compile("\\bI (can'?t|cannot|won'?t)\\b.*\\b("
+                    + "answer|provide|generate|give|help|write|create|make|"
+                    + "fulfill|comply|complete|do|respond|engage|assist|deliver|share|offer"
+                    + ")\\b",
                     Pattern.CASE_INSENSITIVE | Pattern.DOTALL),
             Pattern.compile("\\bI'?m (unable|not able|sorry|afraid)\\b", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("\\b(unable|refuse|decline) to (help|assist|answer|fulfill|comply|provide|engage|respond)\\b",
+                    Pattern.CASE_INSENSITIVE),
             Pattern.compile("\\b(investment|financial|trading)\\s+advice\\b", Pattern.CASE_INSENSITIVE),
             Pattern.compile("\\b(as an?|I am an?|I'?m an?)\\s+(AI|assistant|language model|LLM)\\b",
                     Pattern.CASE_INSENSITIVE),

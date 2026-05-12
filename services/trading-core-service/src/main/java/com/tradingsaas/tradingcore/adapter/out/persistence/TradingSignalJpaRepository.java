@@ -1,6 +1,7 @@
 package com.tradingsaas.tradingcore.adapter.out.persistence;
 
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.TradingSignalJpaEntity;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -26,4 +27,13 @@ public interface TradingSignalJpaRepository extends JpaRepository<TradingSignalJ
                          @Param("reasoning") String reasoning,
                          @Param("status") ReasoningStatus status,
                          @Param("generatedAt") Instant generatedAt);
+
+    @Query("SELECT e FROM TradingSignalJpaEntity e "
+            + "WHERE e.reasoningStatus = :status "
+            + "AND (e.reasoningGeneratedAt IS NULL OR e.reasoningGeneratedAt < :olderThan) "
+            + "ORDER BY e.generatedAt DESC")
+    List<TradingSignalJpaEntity> findByReasoningStatusAndOlderThan(
+            @Param("status") ReasoningStatus status,
+            @Param("olderThan") Instant olderThan,
+            Pageable pageable);
 }
