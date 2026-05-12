@@ -1,3 +1,5 @@
+import { unstable_noStore as noStore } from "next/cache";
+
 import { TickerBarMarquee } from "./ticker-bar-marquee";
 import type { TickerQuote } from "@/lib/trademind-content";
 
@@ -50,6 +52,7 @@ function TickerBarUnavailable() {
 }
 
 export async function TickerBar() {
+  noStore();
   const url = `${MARKET_DATA_SERVICE_URL}/api/v1/prices/latest?${TICKERS.map((t) => `tickers=${encodeURIComponent(t)}`).join("&")}&timeframe=DAILY`;
   const internalSecret = process.env.MARKET_DATA_INTERNAL_SECRET ?? "";
   if (!internalSecret) {

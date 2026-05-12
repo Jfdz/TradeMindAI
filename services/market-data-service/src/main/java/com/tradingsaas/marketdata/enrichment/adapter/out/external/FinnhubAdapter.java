@@ -37,11 +37,7 @@ public class FinnhubAdapter implements MarketEnrichmentProvider {
 
     private final WebClient webClient;
     private final String apiKey;
-    private final Counter okCounter;
-    private final Counter noLogoCounter;
-    private final Counter unauthorizedCounter;
-    private final Counter rateLimitedCounter;
-    private final Counter upstreamErrorCounter;
+    private final MeterRegistry meterRegistry;
 
     public FinnhubAdapter(
             WebClient finnhubWebClient,
@@ -49,18 +45,15 @@ public class FinnhubAdapter implements MarketEnrichmentProvider {
             MeterRegistry meterRegistry) {
         this.webClient = Objects.requireNonNull(finnhubWebClient, "finnhubWebClient must not be null");
         this.apiKey = apiKey;
-        this.okCounter          = counter(meterRegistry, "ok");
-        this.noLogoCounter      = counter(meterRegistry, "no_logo");
-        this.unauthorizedCounter = counter(meterRegistry, "unauthorized");
-        this.rateLimitedCounter  = counter(meterRegistry, "rate_limited");
-        this.upstreamErrorCounter = counter(meterRegistry, "upstream_error");
+        this.meterRegistry = meterRegistry;
     }
 
-    private static Counter counter(MeterRegistry registry, String outcome) {
-        return Counter.builder("finnhub_requests_total")
-                .tag("endpoint", "profile")
+    private void record(String endpoint, String outcome) {
+        Counter.builder("finnhub_requests_total")
+                .tag("endpoint", endpoint)
                 .tag("outcome", outcome)
-                .register(registry);
+                .register(meterRegistry)
+                .increment();
     }
 
     @Override
@@ -79,9 +72,9 @@ public class FinnhubAdapter implements MarketEnrichmentProvider {
             }
             if (dto.logo() == null || dto.logo().isBlank()) {
                 log.info("event=finnhub.profile.no_logo ticker={}", ticker);
-                noLogoCounter.increment();
+                record("profile", "no_logo");
             } else {
-                okCounter.increment();
+                record("profile", "ok");
             }
             return new CompanyProfile(
                     dto.ticker(),
@@ -97,16 +90,16 @@ public class FinnhubAdapter implements MarketEnrichmentProvider {
                     dto.industry());
 
         } catch (WebClientResponseException.Unauthorized e) {
-            unauthorizedCounter.increment();
+            record("profile", "unauthorized");
             log.error("event=finnhub.profile.unauthorized ticker={} key_present={}", ticker, !apiKey.isBlank());
             throw new EnrichmentUnavailableException(ticker, "unauthorized", e);
         } catch (WebClientResponseException.TooManyRequests e) {
-            rateLimitedCounter.increment();
+            record("profile", "rate_limited");
             log.warn("event=finnhub.profile.rate_limited ticker={} retryAfter={}",
                     ticker, e.getHeaders().getFirst("Retry-After"));
             throw new EnrichmentUnavailableException(ticker, "rate_limited", e);
         } catch (WebClientResponseException e) {
-            upstreamErrorCounter.increment();
+            record("profile", "upstream_error");
             log.warn("event=finnhub.profile.upstream_error ticker={} status={}", ticker, e.getStatusCode().value());
             throw new EnrichmentUnavailableException(ticker, "upstream_" + e.getStatusCode().value(), e);
         }
@@ -114,86 +107,152 @@ public class FinnhubAdapter implements MarketEnrichmentProvider {
 
     @Override
     public List<NewsItem> fetchMarketNews(String category, int limit) {
-        List<NewsDto> dtos = webClient.get()
-                .uri(b -> b.path("/news").queryParam("category", category).build())
-                .header(TOKEN_HEADER, apiKey)
-                .accept(MediaType.APPLICATION_JSON)
-                .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<List<NewsDto>>() {})
-                .block();
+        try {
+            List<NewsDto> dtos = webClient.get()
+                    .uri(b -> b.path("/news").queryParam("category", category).build())
+                    .header(TOKEN_HEADER, apiKey)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<List<NewsDto>>() {})
+                    .block();
 
-        if (dtos == null) {
-            return List.of();
+            record("market_news", "ok");
+            return dtos == null ? List.of() : dtos.stream().limit(limit).map(this::toNewsItem).toList();
+        } catch (WebClientResponseException.Unauthorized e) {
+            record("market_news", "unauthorized");
+            log.error("event=finnhub.market_news.unauthorized key_present={}", !apiKey.isBlank());
+            throw new EnrichmentUnavailableException(category, "unauthorized", e);
+        } catch (WebClientResponseException.TooManyRequests e) {
+            record("market_news", "rate_limited");
+            log.warn("event=finnhub.market_news.rate_limited retryAfter={}", e.getHeaders().getFirst("Retry-After"));
+            throw new EnrichmentUnavailableException(category, "rate_limited", e);
+        } catch (WebClientResponseException e) {
+            record("market_news", "upstream_error");
+            log.warn("event=finnhub.market_news.upstream_error status={}", e.getStatusCode().value());
+            throw new EnrichmentUnavailableException(category, "upstream_" + e.getStatusCode().value(), e);
         }
-        return dtos.stream().limit(limit).map(this::toNewsItem).toList();
     }
 
     @Override
     public List<NewsItem> fetchTickerNews(String ticker, Instant from, Instant to, int limit) {
         String fromDate = DATE_FMT.format(from.atZone(ZoneOffset.UTC).toLocalDate());
         String toDate = DATE_FMT.format(to.atZone(ZoneOffset.UTC).toLocalDate());
+        try {
+            List<NewsDto> dtos = webClient.get()
+                    .uri(b -> b.path("/company-news")
+                            .queryParam("symbol", ticker)
+                            .queryParam("from", fromDate)
+                            .queryParam("to", toDate)
+                            .build())
+                    .header(TOKEN_HEADER, apiKey)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<List<NewsDto>>() {})
+                    .block();
 
-        List<NewsDto> dtos = webClient.get()
-                .uri(b -> b.path("/company-news")
-                        .queryParam("symbol", ticker)
-                        .queryParam("from", fromDate)
-                        .queryParam("to", toDate)
-                        .build())
-                .header(TOKEN_HEADER, apiKey)
-                .accept(MediaType.APPLICATION_JSON)
-                .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<List<NewsDto>>() {})
-                .block();
-
-        if (dtos == null) {
-            return List.of();
+            record("ticker_news", "ok");
+            return dtos == null ? List.of() : dtos.stream().limit(limit).map(this::toNewsItem).toList();
+        } catch (WebClientResponseException.Unauthorized e) {
+            record("ticker_news", "unauthorized");
+            log.error("event=finnhub.ticker_news.unauthorized ticker={} key_present={}", ticker, !apiKey.isBlank());
+            throw new EnrichmentUnavailableException(ticker, "unauthorized", e);
+        } catch (WebClientResponseException.TooManyRequests e) {
+            record("ticker_news", "rate_limited");
+            log.warn("event=finnhub.ticker_news.rate_limited ticker={} retryAfter={}",
+                    ticker, e.getHeaders().getFirst("Retry-After"));
+            throw new EnrichmentUnavailableException(ticker, "rate_limited", e);
+        } catch (WebClientResponseException e) {
+            record("ticker_news", "upstream_error");
+            log.warn("event=finnhub.ticker_news.upstream_error ticker={} status={}", ticker, e.getStatusCode().value());
+            throw new EnrichmentUnavailableException(ticker, "upstream_" + e.getStatusCode().value(), e);
         }
-        return dtos.stream().limit(limit).map(this::toNewsItem).toList();
     }
 
     @Override
     public List<EarningsEvent> fetchEarnings(String ticker) {
-        List<EarningsDto> dtos = webClient.get()
-                .uri(b -> b.path("/stock/earnings").queryParam("symbol", ticker).build())
-                .header(TOKEN_HEADER, apiKey)
-                .accept(MediaType.APPLICATION_JSON)
-                .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<List<EarningsDto>>() {})
-                .block();
+        try {
+            List<EarningsDto> dtos = webClient.get()
+                    .uri(b -> b.path("/stock/earnings").queryParam("symbol", ticker).build())
+                    .header(TOKEN_HEADER, apiKey)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<List<EarningsDto>>() {})
+                    .block();
 
-        if (dtos == null) {
-            return List.of();
+            record("earnings", "ok");
+            return dtos == null ? List.of() : dtos.stream().map(this::toEarningsEvent).toList();
+        } catch (WebClientResponseException.Unauthorized e) {
+            record("earnings", "unauthorized");
+            log.error("event=finnhub.earnings.unauthorized ticker={} key_present={}", ticker, !apiKey.isBlank());
+            throw new EnrichmentUnavailableException(ticker, "unauthorized", e);
+        } catch (WebClientResponseException.TooManyRequests e) {
+            record("earnings", "rate_limited");
+            log.warn("event=finnhub.earnings.rate_limited ticker={} retryAfter={}",
+                    ticker, e.getHeaders().getFirst("Retry-After"));
+            throw new EnrichmentUnavailableException(ticker, "rate_limited", e);
+        } catch (WebClientResponseException e) {
+            record("earnings", "upstream_error");
+            log.warn("event=finnhub.earnings.upstream_error ticker={} status={}", ticker, e.getStatusCode().value());
+            throw new EnrichmentUnavailableException(ticker, "upstream_" + e.getStatusCode().value(), e);
         }
-        return dtos.stream().map(this::toEarningsEvent).toList();
     }
 
     @Override
     public List<AnalystRecommendation> fetchRecommendations(String ticker) {
-        List<RecommendationDto> dtos = webClient.get()
-                .uri(b -> b.path("/stock/recommendation").queryParam("symbol", ticker).build())
-                .header(TOKEN_HEADER, apiKey)
-                .accept(MediaType.APPLICATION_JSON)
-                .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<List<RecommendationDto>>() {})
-                .block();
+        try {
+            List<RecommendationDto> dtos = webClient.get()
+                    .uri(b -> b.path("/stock/recommendation").queryParam("symbol", ticker).build())
+                    .header(TOKEN_HEADER, apiKey)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<List<RecommendationDto>>() {})
+                    .block();
 
-        if (dtos == null) {
-            return List.of();
+            record("recommendations", "ok");
+            return dtos == null ? List.of() : dtos.stream().map(this::toRecommendation).toList();
+        } catch (WebClientResponseException.Unauthorized e) {
+            record("recommendations", "unauthorized");
+            log.error("event=finnhub.recommendations.unauthorized ticker={} key_present={}", ticker, !apiKey.isBlank());
+            throw new EnrichmentUnavailableException(ticker, "unauthorized", e);
+        } catch (WebClientResponseException.TooManyRequests e) {
+            record("recommendations", "rate_limited");
+            log.warn("event=finnhub.recommendations.rate_limited ticker={} retryAfter={}",
+                    ticker, e.getHeaders().getFirst("Retry-After"));
+            throw new EnrichmentUnavailableException(ticker, "rate_limited", e);
+        } catch (WebClientResponseException e) {
+            record("recommendations", "upstream_error");
+            log.warn("event=finnhub.recommendations.upstream_error ticker={} status={}", ticker, e.getStatusCode().value());
+            throw new EnrichmentUnavailableException(ticker, "upstream_" + e.getStatusCode().value(), e);
         }
-        return dtos.stream().map(this::toRecommendation).toList();
     }
 
     @Override
     public List<String> fetchPeers(String ticker) {
-        List<String> peers = webClient.get()
-                .uri(b -> b.path("/stock/peers").queryParam("symbol", ticker).build())
-                .header(TOKEN_HEADER, apiKey)
-                .accept(MediaType.APPLICATION_JSON)
-                .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<List<String>>() {})
-                .block();
+        try {
+            List<String> peers = webClient.get()
+                    .uri(b -> b.path("/stock/peers").queryParam("symbol", ticker).build())
+                    .header(TOKEN_HEADER, apiKey)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<List<String>>() {})
+                    .block();
 
-        return peers != null ? peers : List.of();
+            record("peers", "ok");
+            return peers != null ? peers : List.of();
+        } catch (WebClientResponseException.Unauthorized e) {
+            record("peers", "unauthorized");
+            log.error("event=finnhub.peers.unauthorized ticker={} key_present={}", ticker, !apiKey.isBlank());
+            throw new EnrichmentUnavailableException(ticker, "unauthorized", e);
+        } catch (WebClientResponseException.TooManyRequests e) {
+            record("peers", "rate_limited");
+            log.warn("event=finnhub.peers.rate_limited ticker={} retryAfter={}",
+                    ticker, e.getHeaders().getFirst("Retry-After"));
+            throw new EnrichmentUnavailableException(ticker, "rate_limited", e);
+        } catch (WebClientResponseException e) {
+            record("peers", "upstream_error");
+            log.warn("event=finnhub.peers.upstream_error ticker={} status={}", ticker, e.getStatusCode().value());
+            throw new EnrichmentUnavailableException(ticker, "upstream_" + e.getStatusCode().value(), e);
+        }
     }
 
     public boolean isApiKeyPresent() {
