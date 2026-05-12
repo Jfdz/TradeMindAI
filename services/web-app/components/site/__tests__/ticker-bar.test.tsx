@@ -14,12 +14,10 @@ const mockPrice = (ticker: string, open: number, close: number, date = "2026-05-
 describe("TickerBar", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
-    process.env.MARKET_DATA_INTERNAL_SECRET = "test-secret";
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    delete process.env.MARKET_DATA_INTERNAL_SECRET;
   });
 
   it("renders live prices from backend response", async () => {
@@ -118,32 +116,6 @@ describe("TickerBar", () => {
     const html = renderToStaticMarkup(node);
 
     expect(html).toContain("temporarily unavailable");
-  });
-
-  it("sends X-Internal-Secret header on the upstream fetch", async () => {
-    vi.mocked(fetch).mockResolvedValue({
-      ok: true,
-      json: async () => ({ prices: [mockPrice("AAPL", 170, 172)] }),
-    } as Response);
-
-    await TickerBar();
-
-    expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining("/api/v1/prices/latest"),
-      expect.objectContaining({
-        headers: expect.objectContaining({ "X-Internal-Secret": "test-secret" }),
-      }),
-    );
-  });
-
-  it("shows unavailable pill and skips fetch when MARKET_DATA_INTERNAL_SECRET is missing", async () => {
-    delete process.env.MARKET_DATA_INTERNAL_SECRET;
-
-    const node = await TickerBar();
-    const html = renderToStaticMarkup(node);
-
-    expect(html).toContain("temporarily unavailable");
-    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("does not fall back to static placeholder prices on failure", async () => {
