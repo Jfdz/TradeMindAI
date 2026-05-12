@@ -51,8 +51,16 @@ function TickerBarUnavailable() {
 
 export async function TickerBar() {
   const url = `${MARKET_DATA_SERVICE_URL}/api/v1/prices/latest?${TICKERS.map((t) => `tickers=${encodeURIComponent(t)}`).join("&")}&timeframe=DAILY`;
+  const internalSecret = process.env.INTERNAL_SECRET ?? "";
+  if (!internalSecret) {
+    console.error("[ticker-bar] fetch failed", { url, error: "INTERNAL_SECRET not set" });
+    return <TickerBarUnavailable />;
+  }
   try {
-    const res = await fetch(url, { next: { revalidate: 60 } });
+    const res = await fetch(url, {
+      next: { revalidate: 60 },
+      headers: { "X-Internal-Secret": internalSecret },
+    });
 
     if (!res.ok) {
       console.error("[ticker-bar] fetch failed", { url, status: res.status });
