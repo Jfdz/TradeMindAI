@@ -142,7 +142,7 @@ spec:
           port: 5432
 
 ---
-# trading-core-service can reach redis
+# trading-core-service, market-data-service, and ai-engine can reach redis
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -159,6 +159,12 @@ spec:
         - podSelector:
             matchLabels:
               app: trading-core-service
+        - podSelector:
+            matchLabels:
+              app: market-data-service
+        - podSelector:
+            matchLabels:
+              app: ai-engine
       ports:
         - protocol: TCP
           port: 6379
