@@ -3,10 +3,16 @@ import { unstable_noStore as noStore } from "next/cache";
 import { TickerBarMarquee } from "./ticker-bar-marquee";
 import type { TickerQuote } from "@/lib/trademind-content";
 
-const MARKET_DATA_SERVICE_URL =
-  process.env.MARKET_DATA_SERVICE_URL ?? "http://localhost:8081";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
 
-const TICKERS = ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL", "META", "BTC-USD", "ETH-USD"];
+const TICKERS = [
+  "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "AMD", "NFLX", "INTC",
+  "JPM", "V", "BA", "DIS", "WMT",
+  "PYPL", "COIN", "UBER", "SPOT", "PLTR",
+  "AVGO", "ORCL", "CRM", "ADBE", "QCOM", "NOW",
+  "CRWD", "PANW", "FTNT", "CSCO",
+  "BTC-USD", "ETH-USD",
+];
 
 const DISPLAY_LABEL: Record<string, string> = {
   "BTC-USD": "BTC/USD",
@@ -53,17 +59,12 @@ function TickerBarUnavailable() {
 
 export async function TickerBar() {
   noStore();
-  const url = `${MARKET_DATA_SERVICE_URL}/api/v1/prices/latest?${TICKERS.map((t) => `tickers=${encodeURIComponent(t)}`).join("&")}&timeframe=DAILY`;
-  const internalSecret = process.env.MARKET_DATA_INTERNAL_SECRET ?? "";
-  if (!internalSecret) {
-    console.error("[ticker-bar] fetch failed", { url, error: "MARKET_DATA_INTERNAL_SECRET not set" });
-    return <TickerBarUnavailable />;
-  }
+  const params = new URLSearchParams();
+  for (const ticker of TICKERS) params.append("tickers", ticker);
+  params.set("timeframe", "DAILY");
+  const url = `${API_BASE_URL}/api/v1/prices/latest?${params.toString()}`;
   try {
-    const res = await fetch(url, {
-      next: { revalidate: 60 },
-      headers: { "X-Internal-Secret": internalSecret },
-    });
+    const res = await fetch(url, { next: { revalidate: 60 } });
 
     if (!res.ok) {
       console.error("[ticker-bar] fetch failed", { url, status: res.status });
