@@ -109,6 +109,14 @@ market-data:
   yahoo:
     base-url: https://query1.finance.yahoo.com
     timeout-seconds: 10
+  yahoo-rss:
+    enabled: ${YAHOO_RSS_ENABLED:false}
+    base-url: ${YAHOO_RSS_BASE_URL:https://feeds.finance.yahoo.com}
+    timeout-seconds: ${YAHOO_RSS_TIMEOUT_SECONDS:5}
+    user-agent: ${YAHOO_RSS_USER_AGENT:TradeMindAI/1.0 (+https://trademindai.local)}
+  news-aggregator:
+    parallel-timeout-seconds: ${NEWS_AGGREGATOR_TIMEOUT_SECONDS:5}
+    cache-ttl: ${NEWS_AGGREGATOR_CACHE_TTL:PT30M}
   symbols: ${STOCK_SYMBOLS:AAPL,MSFT,GOOGL,TSLA,AMZN,NVDA,META,AMD}
   ingestion:
     batch-size: ${DATA_INGESTION_BATCH_SIZE:50}
