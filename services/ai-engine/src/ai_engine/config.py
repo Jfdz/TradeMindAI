@@ -12,6 +12,19 @@ class Settings(BaseSettings):
     market_data_service_url: str = "http://market-data-service:8081"
     internal_secret: str = ""
     market_data_internal_secret: str = ""
+    trading_core_service_url: str = "https://trading-core-service:8082"
+    trading_core_internal_secret: str = ""
+    # C4 — LLM reasoning provider selection.
+    #   "stub" (default): no LLM, every call returns REFUSED_LLM_DISABLED.
+    #   "anthropic_oauth": uses CLAUDE_CODE_OAUTH_TOKEN (Claude Max). Temporary.
+    #   "anthropic_api_key": uses ANTHROPIC_API_KEY (paid API tier). Target end state.
+    llm_provider: str = "stub"
+    claude_code_oauth_token: str = ""
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-haiku-4-5"
+    # C9 — RabbitMQ queue ai-engine consumes for signal reasoning requests.
+    # Defaults to the trading-core publisher's queue name; override in tests.
+    reasoning_request_queue: str = "trading-core.signal.reasoning.requested"
 
     def parsed_cors_allowed_origins(self) -> list[str]:
         return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]

@@ -31,6 +31,7 @@ import java.util.Map;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
+    private final InternalSecretFilter internalSecretFilter;
     private final ObjectMapper objectMapper;
     private final LettuceBasedProxyManager<String> rateLimitProxyManager;
     private final String[] allowedCorsOrigins;
@@ -39,6 +40,7 @@ public class SecurityConfig {
     private final long rateLimitPremiumPm;
 
     SecurityConfig(JwtAuthenticationFilter jwtFilter,
+                   InternalSecretFilter internalSecretFilter,
                    ObjectMapper objectMapper,
                    LettuceBasedProxyManager<String> rateLimitProxyManager,
                    @org.springframework.beans.factory.annotation.Value("${trading-core.cors.allowed-origins}") String[] allowedCorsOrigins,
@@ -46,6 +48,7 @@ public class SecurityConfig {
                    @org.springframework.beans.factory.annotation.Value("${trading-core.rate-limit.basic-per-minute:50}") long rateLimitBasicPm,
                    @org.springframework.beans.factory.annotation.Value("${trading-core.rate-limit.premium-per-minute:500}") long rateLimitPremiumPm) {
         this.jwtFilter = jwtFilter;
+        this.internalSecretFilter = internalSecretFilter;
         this.objectMapper = objectMapper;
         this.rateLimitProxyManager = rateLimitProxyManager;
         this.allowedCorsOrigins = allowedCorsOrigins;
@@ -81,9 +84,12 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/backtests/symbols/*/available").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/prices/latest", "/api/v1/prices/*/latest").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // Service-to-service internal endpoints (gated by InternalSecretFilter)
+                .requestMatchers("/api/v1/internal/**").permitAll()
                 // Admin-only endpoints
                 .requestMatchers("/api/v1/ingestion/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/models/**").hasRole("ADMIN")
+                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 // Everything else requires authentication
                 .anyRequest().authenticated()
             )
@@ -100,6 +106,7 @@ public class SecurityConfig {
                     "connect-src 'self' https: ws: wss: http://localhost:* http://127.0.0.1:*"))
                 .referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.SAME_ORIGIN))
             )
+            .addFilterBefore(internalSecretFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
 

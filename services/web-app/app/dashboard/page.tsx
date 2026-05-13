@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useCallback, useMemo, useState } from "react";
 
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
+import { AiDecisionCard } from "@/components/dashboard/ai-decision-card";
 import { LiveSignalsStrip } from "@/components/dashboard/live-signals-strip";
 import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
@@ -284,7 +285,7 @@ export default function DashboardHomePage() {
               </p>
             )}
             {session?.isAdmin && (
-              <div className="mt-4 flex items-center gap-3">
+              <div className="mt-4 flex flex-wrap items-center gap-3">
                 <Button
                   size="sm"
                   variant="outline"
@@ -294,6 +295,12 @@ export default function DashboardHomePage() {
                 >
                   {generateSignals.isPending ? "Generating..." : "Generate Signals"}
                 </Button>
+                <Link
+                  href="/dashboard/admin/reasoning-audit"
+                  className="text-xs text-cyan underline-offset-4 hover:underline"
+                >
+                  Reasoning audit →
+                </Link>
                 {generateSignals.isError && (
                   <span className="text-xs text-red">
                     {generateSignals.error instanceof Error ? generateSignals.error.message : "Failed"}
@@ -375,41 +382,12 @@ export default function DashboardHomePage() {
 
           <div className="mt-6 space-y-4">
             {signals.slice(0, 4).map((signal) => (
-              <Link
+              <AiDecisionCard
                 key={signal.id}
-                href={`/dashboard/signals/${signal.id}`}
-                className="block rounded-[20px] border border-border bg-bg-2 p-4 transition hover:border-border-strong hover:bg-bg-3"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <StockLogo ticker={signal.symbol} logoUrl={signalLogos?.[signal.symbol]} size={28} />
-                    <div>
-                      <div className="font-display text-lg font-semibold tracking-[-0.03em] text-white">{signal.symbol}</div>
-                      <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">
-                        {signal.timeframe} · {signal.age}
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    className={cn(
-                      "rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]",
-                      getSignalTypeStyle(signal.type)
-                    )}
-                  >
-                    {signal.type}
-                  </div>
-                </div>
-                <div className="mt-4 grid gap-3 text-sm text-text-2 sm:grid-cols-2">
-                  <div>
-                    <span className="text-text-3">Confidence</span>
-                    <div className="mt-1 font-mono text-white">{formatConfidence(signal.confidence)}</div>
-                  </div>
-                  <div>
-                    <span className="text-text-3">Reasoning</span>
-                    <div className="mt-1 line-clamp-2 text-text-1">{signal.reasoning}</div>
-                  </div>
-                </div>
-              </Link>
+                signal={signal}
+                logoUrl={signalLogos?.[signal.symbol]}
+                typeBadgeClass={getSignalTypeStyle(signal.type)}
+              />
             ))}
             {signals.length === 0 ? (
               <div className="rounded-[20px] border border-dashed border-border bg-bg-2 px-4 py-6 text-sm text-text-2">

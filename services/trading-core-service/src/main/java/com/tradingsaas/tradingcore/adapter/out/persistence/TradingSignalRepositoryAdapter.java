@@ -2,6 +2,7 @@ package com.tradingsaas.tradingcore.adapter.out.persistence;
 
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.TradingSignalJpaEntity;
 import com.tradingsaas.tradingcore.adapter.out.persistence.mapper.TradingSignalEntityMapper;
+import com.tradingsaas.tradingcore.domain.model.ReasoningArtifact;
 import com.tradingsaas.tradingcore.domain.model.ReasoningStatus;
 import com.tradingsaas.tradingcore.domain.model.SignalType;
 import com.tradingsaas.tradingcore.domain.model.Timeframe;
@@ -58,6 +59,46 @@ class TradingSignalRepositoryAdapter implements TradingSignalRepository {
     @Transactional
     public void updateReasoning(UUID id, String reasoning, ReasoningStatus status, Instant reasoningGeneratedAt) {
         repository.updateReasoning(id, reasoning, status, reasoningGeneratedAt);
+    }
+
+    @Override
+    @Transactional
+    public boolean updateReasoningArtifact(
+            UUID id,
+            String reasoning,
+            ReasoningStatus status,
+            Instant reasoningGeneratedAt,
+            ReasoningArtifact artifact) {
+        Optional<TradingSignalJpaEntity> found = repository.findById(id);
+        if (found.isEmpty()) {
+            return false;
+        }
+        TradingSignalJpaEntity entity = found.get();
+        entity.setReasoning(reasoning);
+        entity.setReasoningStatus(status);
+        entity.setReasoningGeneratedAt(reasoningGeneratedAt);
+        mapper.applyArtifact(entity, artifact);
+        repository.save(entity);
+        return true;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<TradingSignal> findAdminSignals(String tickerFilter, Pageable pageable) {
+        Page<TradingSignalJpaEntity> page;
+        if (tickerFilter == null || tickerFilter.isBlank()) {
+            page = repository.findAllByOrderByGeneratedAtDesc(pageable);
+        } else {
+            page = repository.findByTickerIgnoreCaseOrderByGeneratedAtDesc(
+                    tickerFilter.trim(), pageable);
+        }
+        return page.map(mapper::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> findDistinctTickers() {
+        return repository.findDistinctTickers();
     }
 
     @Override

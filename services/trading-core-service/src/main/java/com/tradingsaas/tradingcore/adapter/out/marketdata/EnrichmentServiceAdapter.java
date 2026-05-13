@@ -82,6 +82,22 @@ public class EnrichmentServiceAdapter {
         return result != null ? result : List.of();
     }
 
+    public List<NewsItemResponse> fetchAggregatedTickerNews(String ticker, Instant from, Instant to, int limit) {
+        List<NewsItemResponse> result = webClient.get()
+                .uri(uri -> uri.path("/api/v1/news-aggregated/{ticker}")
+                        .queryParam("from", from.toString())
+                        .queryParam("to", to.toString())
+                        .queryParam("limit", limit)
+                        .build(ticker))
+                .headers(this::addInternalSecret)
+                .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), res -> Mono.empty())
+                .bodyToMono(NEWS_LIST_TYPE)
+                .defaultIfEmpty(List.of())
+                .block();
+        return result != null ? result : List.of();
+    }
+
     public List<EarningsEventResponse> fetchEarnings(String ticker) {
         List<EarningsEventResponse> result = webClient.get()
                 .uri("/api/v1/enrichment/earnings/{ticker}", ticker)

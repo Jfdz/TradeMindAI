@@ -13,6 +13,7 @@ import com.tradingsaas.tradingcore.domain.port.out.TradingSignalRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -22,7 +23,22 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Legacy in-process reasoning consumer (Gemini + deterministic fallback).
+ *
+ * <p>Gated behind {@code trading-core.reasoning.legacy-listener.enabled}
+ * (default {@code true}). Once ai-engine's grounded pipeline (Track C)
+ * is verified in staging, ops flips the flag to {@code false} and ai-engine
+ * becomes the sole consumer of the reasoning queue. Keeping the class
+ * (instead of deleting) provides a one-flag rollback path if the new
+ * pipeline regresses.
+ */
 @Component
+@ConditionalOnProperty(
+        prefix = "trading-core.reasoning",
+        name = "legacy-listener.enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class ReasoningGenerationListener {
 
     private static final Logger log = LoggerFactory.getLogger(ReasoningGenerationListener.class);

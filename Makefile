@@ -66,6 +66,12 @@ test-%: ## Test a specific service (e.g. make test-ai-engine)
 			cd services/web-app && npm test -- --watchAll=false ;; \
 	esac
 
+eval-reasonings: ## Run the C8 reasoning eval corpus against ReasoningValidator
+	@echo "=== ai-engine reasoning eval ==="
+	cd services/ai-engine && python -m scripts.run_reasoning_eval \
+		--min-correctness 0.95 \
+		--max-false-positive-rate 0.05
+
 # ── Database ──────────────────────────────────────────────────────────────────
 
 db-shell: ## Open a psql shell to the database
