@@ -72,5 +72,15 @@ class SignalQueryServiceTest {
 
         @Override
         public void updateReasoning(UUID id, String reasoning, ReasoningStatus status, Instant at) {}
+
+        @Override
+        public Optional<TradingSignal> findRecentEquivalent(
+                String ticker,
+                com.tradingsaas.tradingcore.domain.model.SignalType signalType,
+                com.tradingsaas.tradingcore.domain.model.Timeframe timeframe,
+                java.math.BigDecimal entryPrice,
+                Instant sinceAtLeast) {
+            return Optional.empty();
+        }
     }
 }
