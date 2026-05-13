@@ -82,11 +82,16 @@ spec:
                 secretKeyRef:
                   name: rabbitmq-credentials
                   key: password
-            - name: JWT_SECRET
+            - name: CLERK_ISSUER_URI
               valueFrom:
-                secretKeyRef:
-                  name: jwt-secret
-                  key: secret
+                configMapKeyRef:
+                  name: trading-core-service-config
+                  key: CLERK_ISSUER_URI
+            - name: CLERK_AUDIENCE
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-core-service-config
+                  key: CLERK_AUDIENCE
             - name: AI_ENGINE_SERVICE_URL
               valueFrom:
                 configMapKeyRef:

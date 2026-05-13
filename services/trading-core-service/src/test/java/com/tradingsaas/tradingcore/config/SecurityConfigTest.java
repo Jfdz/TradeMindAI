@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @WebMvcTest(controllers = SecurityConfigTest.TestController.class)
-@Import({SecurityConfig.class, AudienceValidator.class})
+@Import({SecurityConfig.class})
 @TestPropertySource(properties = {
         "trading-core.cors.allowed-origins=https://trading-saas.example.com",
         "spring.security.oauth2.resourceserver.jwt.issuer-uri=https://clerk.example.dev",

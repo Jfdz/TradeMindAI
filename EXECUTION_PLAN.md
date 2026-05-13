@@ -112,7 +112,7 @@ Source design: `PLAN.md` | Branch: `feature/refactor-auth-clerk`
 ## Phase 3 — User Migration to Clerk
 
 - [ ] **3.1** Export active users from Postgres to `/tmp/clerk-users.ndjson` (NDJSON: one JSON body per line, fields: `email_address[]`, `password_digest`, `password_hasher: "bcrypt"`, `first_name`, `last_name`, `external_id`)
-- [ ] **3.2** Create `scripts/migrate-users-to-clerk.mjs`; run against dev instance: `CLERK_SECRET_KEY=sk_test_... node scripts/migrate-users-to-clerk.mjs`
+- [x] **3.2** Create `scripts/migrate-users-to-clerk.mjs`; run against dev instance: `CLERK_SECRET_KEY=sk_test_... node scripts/migrate-users-to-clerk.mjs`
 - [ ] **3.3** Review `clerk-import-failures.json`; resolve any failures (duplicate email, malformed hash, etc.)
 - [ ] **3.4** Validate 3 known accounts — email+password login → `/dashboard`, `users.clerk_user_id` populated via JIT filter, original UUIDs intact (FK chains to signals/portfolios valid)
 
@@ -145,7 +145,7 @@ Source design: `PLAN.md` | Branch: `feature/refactor-auth-clerk`
 
 ### Final gates
 - [ ] **4.2** Confirm `APP_CORS_ALLOWED_ORIGINS` includes `http://localhost:3000` and `https://app.trademindai.com` in backend deploy config
-- [ ] **4.3** `npm run test` (web-app) + `./mvnw verify` (trading-core) — all green
+- [x] **4.3** `npm run test` (web-app) + `./mvnw verify` (trading-core) — all green (95 Vitest + 215 JUnit, 0 failures)
 - [ ] **4.4** `npm run e2e` — Playwright suite passes
 - [ ] **4.5** Merge PR, watch release-orchestrator CI, smoke test on staging with canary account
 

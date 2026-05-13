@@ -449,6 +449,7 @@ class PortfolioOverviewServiceTest {
     private static PortfolioJpaEntity portfolio(UUID userId, BigDecimal totalCapital) {
         UserJpaEntity user = new UserJpaEntity(
                 userId,
+                null,
                 "user@example.com",
                 "$2a$10$hash",
                 "Test",
