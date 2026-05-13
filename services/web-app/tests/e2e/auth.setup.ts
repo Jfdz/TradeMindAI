@@ -1,4 +1,5 @@
-import { test as setup, expect } from "@playwright/test";
+import { test as setup } from "@playwright/test";
+import { setupClerkTestingToken } from "@clerk/testing/playwright";
 import path from "path";
 
 const authFile = path.join(__dirname, "../../.auth/session.json");
@@ -11,13 +12,15 @@ setup("authenticate", async ({ page }) => {
     throw new Error("E2E_EMAIL and E2E_PASSWORD env vars must be set");
   }
 
+  await setupClerkTestingToken({ page });
+
   await page.goto("/auth/login");
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  // Clerk <SignIn /> multi-step: identifier → Continue → password → Continue
+  await page.locator("input[name='identifier']").fill(email);
+  await page.getByRole("button", { name: /continue/i }).click();
+  await page.locator("input[name='password']").fill(password);
+  await page.getByRole("button", { name: /continue/i }).click();
 
   await page.waitForURL("**/dashboard**", { timeout: 15_000 });
-  await expect(page).toHaveURL(/\/dashboard/);
-
   await page.context().storageState({ path: authFile });
 });

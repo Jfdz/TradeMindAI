@@ -122,7 +122,7 @@ Source design: `PLAN.md` | Branch: `feature/refactor-auth-clerk`
 
 ### Tests
 - [x] **4.1a** Remove `next-auth` mocks from Vitest tests; rewrote `middleware.test.ts` and `api-client.test.ts` for Clerk — 95 tests green
-- [ ] **4.1b** Update Playwright e2e: use `@clerk/testing` `setupClerkTestingToken` or `storageState` for test account auth
+- [x] **4.1b** Update Playwright e2e: `@clerk/testing` added; `clerkSetup` global setup (env-guarded); `auth.setup.ts` uses `setupClerkTestingToken` + Clerk form; `auth.spec.ts` uses Clerk field names. Code-complete — requires Phase 0 Clerk keys to run.
 
 ### E2E verification gate (all must pass before merge)
 
@@ -144,7 +144,7 @@ Source design: `PLAN.md` | Branch: `feature/refactor-auth-clerk`
 | 14 | Playwright happy path | Green with Clerk testing helpers |
 
 ### Final gates
-- [ ] **4.2** Confirm `APP_CORS_ALLOWED_ORIGINS` includes `http://localhost:3000` and `https://app.trademindai.com` in backend deploy config
+- [!] **4.2** CORS domain mismatch — `application.yml` dev default is `http://localhost:3000` ✓; `application-prod.yml` + k8s configmap use `https://trademind.es`. Plan originally said `https://app.trademindai.com` — **which is the real prod frontend domain?** Update configmap to whichever is correct before merge.
 - [x] **4.3** `npm run test` (web-app) + `./mvnw verify` (trading-core) — all green (95 Vitest + 215 JUnit, 0 failures)
 - [ ] **4.4** `npm run e2e` — Playwright suite passes
 - [ ] **4.5** Merge PR, watch release-orchestrator CI, smoke test on staging with canary account
@@ -158,6 +158,24 @@ Source design: `PLAN.md` | Branch: `feature/refactor-auth-clerk`
 3. **Phase 3** against dev Clerk instance — validate 3 known accounts
 4. **Phase 4** — all tests green, PR merge
 5. **Phase 3** against prod Clerk instance during maintenance window → redeploy → canary smoke test
+
+---
+
+---
+
+## Blocked on Phase 0 — What the user must do before merge
+
+Code is complete. Every remaining gate depends on live Clerk keys.
+
+| Action | Who | Blocks |
+|---|---|---|
+| Create Clerk app + configure JWT template `"backend"` (0.1–0.4) | **User** | Everything |
+| Capture `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_ISSUER_URI` | **User** | Local run, e2e, staging |
+| Set `.env.local` in `services/web-app/` with the above keys | **User** | `npm run e2e` |
+| Add `E2E_EMAIL`, `E2E_PASSWORD` (test Clerk account) to `.env.local` | **User** | `auth.spec.ts`, `auth.setup.ts` |
+| Run `scripts/migrate-users-to-clerk.mjs` against dev DB (3.1, 3.3, 3.4) | **User** | Canary smoke test |
+| Confirm real prod frontend domain (4.2 CORS mismatch) | **User** | Configmap update |
+| Review CORS + run `npm run e2e` with live keys (4.4) | **User/Claude** | 4.5 merge |
 
 ---
 

@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
+import { setupClerkTestingToken } from "@clerk/testing/playwright";
 
+// All tests in this file run without a pre-existing session (public/auth project)
 test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe("auth", () => {
@@ -9,30 +11,41 @@ test.describe("auth", () => {
   });
 
   test("invalid credentials shows error", async ({ page }) => {
+    await setupClerkTestingToken({ page });
     await page.goto("/auth/login");
-    await page.locator("#email").fill("invalid@example.com");
-    await page.locator("#password").fill("wrongpassword123");
-    await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page.getByText("Invalid email or password")).toBeVisible({ timeout: 10_000 });
+    // Clerk <SignIn /> multi-step form: identifier then password
+    await page.locator("input[name='identifier']").fill("invalid@example.com");
+    await page.getByRole("button", { name: /continue/i }).click();
+    await page.locator("input[name='password']").fill("wrongpassword123");
+    await page.getByRole("button", { name: /continue/i }).click();
+    // Clerk renders form errors inside its component (cl-formFieldErrorText or cl-alert)
+    await expect(
+      page.locator(".cl-formFieldErrorText, .cl-alert, [data-clerk-field-error]").first()
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(page).toHaveURL(/\/auth\/login/);
   });
 
   test("valid credentials redirect to dashboard", async ({ page }) => {
     const email = process.env.E2E_EMAIL!;
     const password = process.env.E2E_PASSWORD!;
+    await setupClerkTestingToken({ page });
     await page.goto("/auth/login");
-    await page.locator("#email").fill(email);
-    await page.locator("#password").fill(password);
-    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.locator("input[name='identifier']").fill(email);
+    await page.getByRole("button", { name: /continue/i }).click();
+    await page.locator("input[name='password']").fill(password);
+    await page.getByRole("button", { name: /continue/i }).click();
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
   });
 
   test("logout redirects to landing page", async ({ page }) => {
     const email = process.env.E2E_EMAIL!;
     const password = process.env.E2E_PASSWORD!;
+    await setupClerkTestingToken({ page });
     await page.goto("/auth/login");
-    await page.locator("#email").fill(email);
-    await page.locator("#password").fill(password);
-    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.locator("input[name='identifier']").fill(email);
+    await page.getByRole("button", { name: /continue/i }).click();
+    await page.locator("input[name='password']").fill(password);
+    await page.getByRole("button", { name: /continue/i }).click();
     await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
     await page.getByRole("button", { name: "Exit" }).click();
     await expect(page).toHaveURL(/^\/?$|\/$/);
