@@ -8,16 +8,17 @@ import com.tradingsaas.tradingcore.domain.model.AiPrediction;
 import com.tradingsaas.tradingcore.domain.model.ReasoningStatus;
 import com.tradingsaas.tradingcore.domain.model.Confidence;
 import com.tradingsaas.tradingcore.domain.model.SignalType;
+import com.tradingsaas.tradingcore.domain.model.Timeframe;
 import com.tradingsaas.tradingcore.domain.model.TradingSignal;
 import com.tradingsaas.tradingcore.domain.model.backtest.OhlcvBar;
 import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort;
 import com.tradingsaas.tradingcore.domain.port.out.TradingSignalRepository;
 import java.time.Instant;
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
@@ -94,6 +95,63 @@ class SignalGenerationServiceTest {
     }
 
     @Test
+    void skipsInsertAndReturnsExistingWhenEquivalentSignalAlreadyPresent() {
+        UUID symbolId = UUID.fromString("66666666-6666-6666-6666-666666666666");
+        AiPrediction prediction = new AiPrediction(
+                "NVDA",
+                SignalType.BUY,
+                new Confidence(new BigDecimal("0.70")),
+                new BigDecimal("2.30"),
+                List.of(),
+                Instant.parse("2026-04-17T10:00:00Z"));
+
+        TradingSignal existing = new TradingSignal(
+                UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+                symbolId, "NVDA", SignalType.BUY,
+                new Confidence(new BigDecimal("0.70")), Timeframe.DAILY,
+                Instant.parse("2026-04-17T08:00:00Z"),
+                new BigDecimal("2.00"), new BigDecimal("4.00"),
+                new BigDecimal("2.30"), new BigDecimal("450.00"));
+        RecordingRepository repository = new RecordingRepository(existing);
+        SignalGenerationService service = new SignalGenerationService(
+                repository, new StubMarketDataPort(Map.of("NVDA", new BigDecimal("450.00"))));
+
+        TradingSignal generated = service.generate(symbolId, prediction);
+
+        assertEquals(existing.getId(), generated.getId());
+        assertEquals(0, repository.saveCallCount);
+    }
+
+    @Test
+    void insertsNewSignalWhenSameTickerButDifferentEntryPrice() {
+        UUID symbolId = UUID.fromString("77777777-7777-7777-7777-777777777777");
+        AiPrediction prediction = new AiPrediction(
+                "NVDA",
+                SignalType.BUY,
+                new Confidence(new BigDecimal("0.70")),
+                new BigDecimal("2.30"),
+                List.of(),
+                Instant.parse("2026-04-17T15:00:00Z"));
+
+        TradingSignal existing = new TradingSignal(
+                UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                symbolId, "NVDA", SignalType.BUY,
+                new Confidence(new BigDecimal("0.70")), Timeframe.DAILY,
+                Instant.parse("2026-04-17T08:00:00Z"),
+                new BigDecimal("2.00"), new BigDecimal("4.00"),
+                new BigDecimal("2.30"), new BigDecimal("450.00"));
+        RecordingRepository repository = new RecordingRepository(existing);
+        // Different entry_price -> not a duplicate.
+        SignalGenerationService service = new SignalGenerationService(
+                repository, new StubMarketDataPort(Map.of("NVDA", new BigDecimal("455.20"))));
+
+        TradingSignal generated = service.generate(symbolId, prediction);
+
+        assertEquals(1, repository.saveCallCount);
+        assertEquals(new BigDecimal("455.20"), generated.getEntryPrice());
+    }
+
+    @Test
     void persistsNullEntryPriceWhenMarketDataThrows() {
         UUID symbolId = UUID.fromString("55555555-5555-5555-5555-555555555555");
         AiPrediction prediction = new AiPrediction(
@@ -113,11 +171,20 @@ class SignalGenerationServiceTest {
     }
 
     private static final class RecordingRepository implements TradingSignalRepository {
-        private TradingSignal savedSignal;
+        TradingSignal savedSignal;
+        int saveCallCount;
+        TradingSignal preExisting;
+
+        RecordingRepository() {}
+
+        RecordingRepository(TradingSignal preExisting) {
+            this.preExisting = preExisting;
+        }
 
         @Override
         public TradingSignal save(TradingSignal signal) {
             this.savedSignal = signal;
+            this.saveCallCount++;
             return signal;
         }
 
@@ -127,17 +194,29 @@ class SignalGenerationServiceTest {
         }
 
         @Override
-        public java.util.Optional<TradingSignal> findById(UUID id) {
-            return java.util.Optional.empty();
+        public Optional<TradingSignal> findById(UUID id) {
+            return Optional.empty();
         }
 
         @Override
-        public java.util.Optional<TradingSignal> findLatest() {
-            return java.util.Optional.empty();
+        public Optional<TradingSignal> findLatest() {
+            return Optional.empty();
         }
 
         @Override
-        public void updateReasoning(java.util.UUID id, String reasoning, ReasoningStatus status, Instant at) {}
+        public void updateReasoning(UUID id, String reasoning, ReasoningStatus status, Instant at) {}
+
+        @Override
+        public Optional<TradingSignal> findRecentEquivalent(
+                String ticker, SignalType signalType, Timeframe timeframe,
+                BigDecimal entryPrice, Instant sinceAtLeast) {
+            if (preExisting == null) return Optional.empty();
+            boolean matches = ticker.equals(preExisting.getTicker())
+                    && signalType == preExisting.getType()
+                    && timeframe == Timeframe.DAILY
+                    && java.util.Objects.equals(entryPrice, preExisting.getEntryPrice());
+            return matches ? Optional.of(preExisting) : Optional.empty();
+        }
     }
 
     private static final class StubMarketDataPort implements HistoricalMarketDataPort {

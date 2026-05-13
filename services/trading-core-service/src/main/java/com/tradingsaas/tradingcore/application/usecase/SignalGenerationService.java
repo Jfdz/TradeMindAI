@@ -10,16 +10,21 @@ import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort;
 import com.tradingsaas.tradingcore.domain.port.out.TradingSignalRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -29,30 +34,54 @@ class SignalGenerationService implements GenerateSignalUseCase {
     private static final BigDecimal DEFAULT_STOP_LOSS_PCT = new BigDecimal("2.00");
     private static final BigDecimal DEFAULT_TAKE_PROFIT_PCT = new BigDecimal("4.00");
 
+    // A duplicate window of 24h aligns with the unique-per-day index on the DB side
+    // (date_trunc('day', generated_at)) and tolerates clock skew across producers.
+    private static final java.time.Duration DUPLICATE_WINDOW = java.time.Duration.of(24, ChronoUnit.HOURS);
+
     private final TradingSignalRepository tradingSignalRepository;
     private final HistoricalMarketDataPort marketDataPort;
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
+    private final Counter dedupSkipCounter;
+    private final Counter dedupDbCollisionCounter;
 
     @Autowired
     SignalGenerationService(TradingSignalRepository tradingSignalRepository,
                             HistoricalMarketDataPort marketDataPort,
                             RabbitTemplate rabbitTemplate,
-                            ObjectMapper objectMapper) {
+                            ObjectMapper objectMapper,
+                            MeterRegistry meterRegistry) {
         this.tradingSignalRepository = tradingSignalRepository;
         this.marketDataPort = marketDataPort;
         this.rabbitTemplate = rabbitTemplate;
         this.objectMapper = objectMapper;
+        this.dedupSkipCounter = Counter.builder("signal_generation_dedup_total")
+                .tag("reason", "equivalent_within_window")
+                .register(meterRegistry);
+        this.dedupDbCollisionCounter = Counter.builder("signal_generation_dedup_total")
+                .tag("reason", "db_unique_violation")
+                .register(meterRegistry);
     }
 
     SignalGenerationService(TradingSignalRepository tradingSignalRepository,
                             HistoricalMarketDataPort marketDataPort) {
-        this(tradingSignalRepository, marketDataPort, null, null);
+        this(tradingSignalRepository, marketDataPort, null, null,
+                new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
     }
 
     @Override
     public TradingSignal generate(UUID symbolId, AiPrediction prediction) {
         BigDecimal entryPrice = fetchLatestPrice(prediction.getTicker());
+        Instant windowStart = Instant.now().minus(DUPLICATE_WINDOW);
+        Optional<TradingSignal> existing = tradingSignalRepository.findRecentEquivalent(
+                prediction.getTicker(), prediction.getSignalType(), Timeframe.DAILY,
+                entryPrice, windowStart);
+        if (existing.isPresent()) {
+            dedupSkipCounter.increment();
+            log.info("signal-generation: skipping duplicate ticker={} signalType={} entryPrice={} existingId={}",
+                    prediction.getTicker(), prediction.getSignalType(), entryPrice, existing.get().getId());
+            return existing.get();
+        }
         TradingSignal signal = new TradingSignal(
                 UUID.randomUUID(),
                 symbolId,
@@ -65,9 +94,22 @@ class SignalGenerationService implements GenerateSignalUseCase {
                 riskTakeProfitPct(prediction.getSignalType()),
                 prediction.getPredictedChangePct(),
                 entryPrice);
-        TradingSignal saved = tradingSignalRepository.save(signal);
-        publishReasoningRequested(saved);
-        return saved;
+        try {
+            TradingSignal saved = tradingSignalRepository.save(signal);
+            publishReasoningRequested(saved);
+            return saved;
+        } catch (DataIntegrityViolationException e) {
+            // A concurrent insert beat us between the findRecentEquivalent() check and the save();
+            // the DB unique index caught it. Treat the existing row as success.
+            dedupDbCollisionCounter.increment();
+            log.info("signal-generation: DB unique index caught duplicate ticker={} signalType={} entryPrice={}; using existing row",
+                    prediction.getTicker(), prediction.getSignalType(), entryPrice);
+            return tradingSignalRepository.findRecentEquivalent(
+                    prediction.getTicker(), prediction.getSignalType(), Timeframe.DAILY,
+                    entryPrice, windowStart)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "DB unique violation but no equivalent row found for " + prediction.getTicker(), e));
+        }
     }
 
     private void publishReasoningRequested(TradingSignal signal) {
