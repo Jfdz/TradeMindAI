@@ -1,0 +1,176 @@
+openapi: 3.0.3
+info:
+  title: market-data-service
+  description: |
+    Time-series OHLCV, technical indicators, and grounded snapshots
+    used by `ai-engine` (reasoning generation) and `trading-core-service`.
+  version: 0.1.0
+servers:
+  - url: http://localhost:8081
+    description: Local dev
+  - url: https://api.trademindai.local/market-data
+    description: Cluster-internal (staging/prod)
+
+tags:
+  - name: price-facts
+    description: Deterministic price snapshots used as ground truth for AI reasonings.
+
+paths:
+  /api/v1/price-facts/{ticker}:
+    get:
+      tags: [price-facts]
+      operationId: getPriceFacts
+      summary: Get a deterministic price + indicator snapshot for a ticker.
+      description: |
+        Returns a point-in-time snapshot of price, return percentages,
+        and technical indicators computed from `stock_prices`. Used by
+        `ai-engine` as the only source of numeric truth when generating
+        signal reasonings — values not present in this response MUST NOT
+        appear in generated text.
+
+        Determinism: same input data → same output. No wall-clock reads
+        affect indicator math; `snapshotAt` reflects the latest bar's date.
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Z0-9.\-]{1,10}$'
+          example: META
+        - name: timeframe
+          in: query
+          required: false
+          description: Only `DAILY` is supported in v0.1.0.
+          schema:
+            type: string
+            enum: [DAILY]
+            default: DAILY
+      responses:
+        '200':
+          description: Snapshot computed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceFactsResponse'
+        '400':
+          description: Invalid ticker format or unsupported timeframe.
+        '404':
+          description: Ticker not tracked, or no price history available.
+        '422':
+          description: |
+            Insufficient history to compute the full snapshot
+            (less than 200 daily bars — required for SMA200).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsufficientHistoryError'
+
+components:
+  schemas:
+    PriceFactsResponse:
+      type: object
+      required:
+        - ticker
+        - timeframe
+        - snapshotAt
+        - close
+        - barsAvailable
+      properties:
+        ticker:
+          type: string
+          example: META
+        timeframe:
+          type: string
+          enum: [DAILY]
+        snapshotAt:
+          type: string
+          format: date
+          description: Date of the latest bar used in computation.
+          example: '2026-05-12'
+        barsAvailable:
+          type: integer
+          description: Number of bars in the lookback window.
+          example: 252
+        close:
+          type: number
+          format: double
+          example: 603.00
+        previousClose:
+          type: number
+          format: double
+          nullable: true
+        pctChange1d:
+          type: number
+          format: double
+          nullable: true
+          description: Percentage change vs previous close (e.g. 2.04 = +2.04%).
+        pctChange5d:
+          type: number
+          format: double
+          nullable: true
+        pctChange30d:
+          type: number
+          format: double
+          nullable: true
+        high52w:
+          type: number
+          format: double
+          nullable: true
+        low52w:
+          type: number
+          format: double
+          nullable: true
+        sma20:
+          type: number
+          format: double
+          nullable: true
+        sma50:
+          type: number
+          format: double
+          nullable: true
+        sma200:
+          type: number
+          format: double
+          nullable: true
+          description: 'Null when fewer than 200 daily bars available.'
+        rsi14:
+          type: number
+          format: double
+          nullable: true
+        macdHistogram:
+          type: number
+          format: double
+          nullable: true
+        volume:
+          type: integer
+          format: int64
+          example: 12400000
+        volumeAvg20d:
+          type: number
+          format: double
+          nullable: true
+        support:
+          type: number
+          format: double
+          nullable: true
+          description: 30-day rolling low (proxy support level).
+        resistance:
+          type: number
+          format: double
+          nullable: true
+          description: 30-day rolling high (proxy resistance level).
+    InsufficientHistoryError:
+      type: object
+      required: [error, ticker, barsAvailable, barsRequired]
+      properties:
+        error:
+          type: string
+          enum: [INSUFFICIENT_HISTORY]
+        ticker:
+          type: string
+        barsAvailable:
+          type: integer
+        barsRequired:
+          type: integer
+          example: 200
