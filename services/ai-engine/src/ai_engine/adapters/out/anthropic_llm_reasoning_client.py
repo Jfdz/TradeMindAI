@@ -50,8 +50,21 @@ class AnthropicLlmReasoningClient:
         self._model = model
 
     def generate(
-        self, signal: SignalInput, context: ReasoningContext
+        self,
+        signal: SignalInput,
+        context: ReasoningContext,
+        validator_feedback: str | None = None,
     ) -> ReasoningResult:
+        user_prompt = build_user_prompt(signal, context)
+        if validator_feedback:
+            user_prompt = (
+                "PREVIOUS ATTEMPT FAILED VALIDATION. Fix the violations below and "
+                "emit a fresh emit_reasoning call. Your previous output is not "
+                "available to you — write the reasoning from scratch using only "
+                "values from <price_facts> and URLs from <news>.\n\n"
+                f"Violations:\n{validator_feedback}\n\n"
+                f"{user_prompt}"
+            )
         try:
             response = self._client.messages.create(
                 model=self._model,
@@ -60,12 +73,7 @@ class AnthropicLlmReasoningClient:
                 system=SYSTEM_PROMPT,
                 tools=[REASONING_TOOL_SCHEMA],
                 tool_choice={"type": "tool", "name": "emit_reasoning"},
-                messages=[
-                    {
-                        "role": "user",
-                        "content": build_user_prompt(signal, context),
-                    }
-                ],
+                messages=[{"role": "user", "content": user_prompt}],
             )
         except Exception as exc:
             logger.warning(

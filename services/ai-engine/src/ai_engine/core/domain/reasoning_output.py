@@ -26,6 +26,7 @@ class ReasoningOutcome(str, Enum):
 
     GENERATED = "GENERATED"
     REFUSED_BY_LLM = "REFUSED_BY_LLM"
+    REFUSED_BY_VALIDATOR = "REFUSED_BY_VALIDATOR"
     REFUSED_LLM_DISABLED = "REFUSED_LLM_DISABLED"
     REFUSED_NO_FACTS = "REFUSED_NO_FACTS"
     ERROR = "ERROR"
@@ -97,6 +98,16 @@ class ReasoningResult:
         )
 
     @classmethod
+    def refused_by_validator(
+        cls, reason: str, raw_response: dict | None = None
+    ) -> ReasoningResult:
+        return cls(
+            outcome=ReasoningOutcome.REFUSED_BY_VALIDATOR,
+            refusal_reason=reason,
+            raw_response=raw_response,
+        )
+
+    @classmethod
     def refused_llm_disabled(cls) -> ReasoningResult:
         return cls(
             outcome=ReasoningOutcome.REFUSED_LLM_DISABLED,
@@ -126,8 +137,15 @@ class LlmReasoningPort(Protocol):
     Implementations must never raise. Every failure mode maps to a
     `ReasoningResult` variant so the orchestrator can react with a
     single match statement.
+
+    `validator_feedback`: when provided (C5 retry path), the adapter
+    must inject the feedback text into the user prompt so the LLM
+    knows what its previous attempt did wrong. Stubs ignore it.
     """
 
     def generate(
-        self, signal: SignalInput, context: ReasoningContext
+        self,
+        signal: SignalInput,
+        context: ReasoningContext,
+        validator_feedback: str | None = None,
     ) -> ReasoningResult: ...
