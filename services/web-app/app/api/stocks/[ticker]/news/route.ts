@@ -19,7 +19,7 @@ export async function GET(
   const to = new Date(now.getTime() - weeksAgo * 7 * 24 * 60 * 60 * 1000);
   const from = new Date(to.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const news = await fetchTickerNews(
+  const news = await fetchTickerNewsForView(
     ticker,
     from.toISOString(),
     to.toISOString(),

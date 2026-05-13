@@ -4,7 +4,7 @@ import {
   fetchPeers,
   fetchProfile,
   fetchRecommendations,
-  fetchTickerNews,
+  fetchTickerNewsForView,
   type AnalystRecommendationResponse,
   type CompanyProfileResponse,
   type EarningsEventResponse,
@@ -33,7 +33,7 @@ export async function fetchStockDetail(ticker: string): Promise<StockDetailData>
   const [profileResult, newsResult, earningsResult, recsResult, peersResult] =
     await Promise.allSettled([
       fetchProfile(ticker, token),
-      fetchTickerNews(ticker, from, to, 20, token),
+      fetchTickerNewsForView(ticker, from, to, 20, token),
       fetchEarnings(ticker, token),
       fetchRecommendations(ticker, token),
       fetchPeers(ticker, token),

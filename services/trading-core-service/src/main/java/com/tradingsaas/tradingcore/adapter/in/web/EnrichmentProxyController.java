@@ -47,6 +47,15 @@ public class EnrichmentProxyController {
         return ResponseEntity.ok(adapter.fetchTickerNews(ticker, Instant.parse(from), Instant.parse(to), limit));
     }
 
+    @GetMapping("/news-aggregated/{ticker}")
+    public ResponseEntity<List<NewsItemResponse>> getAggregatedTickerNews(
+            @PathVariable String ticker,
+            @RequestParam String from,
+            @RequestParam String to,
+            @RequestParam(defaultValue = "20") int limit) {
+        return ResponseEntity.ok(adapter.fetchAggregatedTickerNews(ticker, Instant.parse(from), Instant.parse(to), limit));
+    }
+
     @GetMapping("/earnings/{ticker}")
     public ResponseEntity<List<EarningsEventResponse>> getEarnings(@PathVariable String ticker) {
         return ResponseEntity.ok(adapter.fetchEarnings(ticker));

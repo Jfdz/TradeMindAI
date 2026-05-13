@@ -1,11 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  fetchAggregatedTickerNews,
   fetchEarnings,
   fetchMarketNews,
   fetchPeers,
   fetchProfile,
   fetchRecommendations,
   fetchTickerNews,
+  fetchTickerNewsForView,
 } from "./enrichment-client";
 
 const mockFetch = vi.fn();
@@ -87,6 +89,89 @@ describe("fetchTickerNews", () => {
       expect.stringContaining("/api/v1/enrichment/news/AAPL"),
       expect.anything(),
     );
+  });
+});
+
+describe("fetchAggregatedTickerNews", () => {
+  it("calls the news-aggregated endpoint with from/to/limit", async () => {
+    mockFetch.mockResolvedValue(
+      okJson([
+        {
+          id: 42,
+          headline: "Aggregated headline",
+          publishedAt: "2026-05-12T10:00:00Z",
+          image: "https://x/a.png",
+        },
+      ]),
+    );
+
+    const result = await fetchAggregatedTickerNews(
+      "AAPL",
+      "2026-05-01T00:00:00Z",
+      "2026-05-31T00:00:00Z",
+      15,
+      "tok-1",
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].headline).toBe("Aggregated headline");
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/enrichment/news-aggregated/AAPL"),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer tok-1" }),
+      }),
+    );
+    const calledWith = mockFetch.mock.calls[0][0] as string;
+    expect(calledWith).toContain("limit=15");
+    expect(calledWith).toContain("from=2026-05-01T00");
+    expect(calledWith).toContain("to=2026-05-31T00");
+  });
+
+  it("returns empty array on 5xx", async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 503 });
+
+    const result = await fetchAggregatedTickerNews(
+      "AAPL",
+      "2026-05-01T00:00:00Z",
+      "2026-05-31T00:00:00Z",
+    );
+
+    expect(result).toEqual([]);
+  });
+});
+
+describe("fetchTickerNewsForView", () => {
+  const originalFlag = process.env.USE_AGGREGATED_NEWS;
+
+  afterEach(() => {
+    if (originalFlag === undefined) {
+      delete process.env.USE_AGGREGATED_NEWS;
+    } else {
+      process.env.USE_AGGREGATED_NEWS = originalFlag;
+    }
+  });
+
+  it("hits the aggregated endpoint when USE_AGGREGATED_NEWS=true", async () => {
+    process.env.USE_AGGREGATED_NEWS = "true";
+    mockFetch.mockResolvedValue(okJson([{ id: 1, headline: "Agg", publishedAt: "2026-05-12T10:00:00Z" }]));
+
+    await fetchTickerNewsForView("AAPL", "2026-05-01T00:00:00Z", "2026-05-31T00:00:00Z", 5);
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/enrichment/news-aggregated/AAPL"),
+      expect.anything(),
+    );
+  });
+
+  it("hits the single-provider endpoint when the flag is off", async () => {
+    delete process.env.USE_AGGREGATED_NEWS;
+    mockFetch.mockResolvedValue(okJson([{ id: 1, headline: "Single", publishedAt: "2026-05-12T10:00:00Z" }]));
+
+    await fetchTickerNewsForView("AAPL", "2026-05-01T00:00:00Z", "2026-05-31T00:00:00Z", 5);
+
+    const calledUrl = mockFetch.mock.calls[0][0] as string;
+    expect(calledUrl).toContain("/api/v1/enrichment/news/AAPL");
+    expect(calledUrl).not.toContain("news-aggregated");
   });
 });
 

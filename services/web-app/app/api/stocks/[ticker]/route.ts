@@ -5,7 +5,7 @@ import {
   fetchPeers,
   fetchProfile,
   fetchRecommendations,
-  fetchTickerNews,
+  fetchTickerNewsForView,
 } from "@/lib/enrichment-client";
 
 export async function GET(
@@ -26,7 +26,7 @@ export async function GET(
   const [profileResult, newsResult, earningsResult, recsResult, peersResult] =
     await Promise.allSettled([
       fetchProfile(ticker, token),
-      fetchTickerNews(ticker, from, to, 20, token),
+      fetchTickerNewsForView(ticker, from, to, 20, token),
       fetchEarnings(ticker, token),
       fetchRecommendations(ticker, token),
       fetchPeers(ticker, token),

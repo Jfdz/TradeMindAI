@@ -355,6 +355,36 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
                 .block();
     }
 
+    public Optional<PriceFactsResponse> fetchPriceFacts(String ticker) {
+        try {
+            PriceFactsResponse response = webClient.get()
+                    .uri("/api/v1/price-facts/{ticker}", ticker)
+                    .headers(this::addInternalSecret)
+                    .exchangeToMono(res -> {
+                        int code = res.statusCode().value();
+                        if (res.statusCode().is2xxSuccessful()) {
+                            return res.bodyToMono(PriceFactsResponse.class);
+                        }
+                        if (code == 404) {
+                            return res.releaseBody().then(Mono.empty());
+                        }
+                        if (code == 422) {
+                            return res.releaseBody()
+                                    .then(Mono.error(new InsufficientHistoryUpstreamException(ticker)));
+                        }
+                        return res.releaseBody()
+                                .then(Mono.error(new MarketDataUpstreamException(
+                                        "market-data returned HTTP " + code + " for price-facts/" + ticker)));
+                    })
+                    .block();
+            return Optional.ofNullable(response);
+        } catch (InsufficientHistoryUpstreamException | MarketDataUpstreamException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw new MarketDataUpstreamException("market-data unavailable for price-facts/" + ticker, e);
+        }
+    }
+
     private void addInternalSecret(org.springframework.http.HttpHeaders headers) {
         if (internalSecret != null && !internalSecret.isBlank()) {
             headers.set(INTERNAL_SECRET_HEADER, internalSecret);
@@ -403,4 +433,50 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Ohlcv(double open, double high, double low, double close, long volume) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record PriceFactsResponse(
+            String ticker,
+            String timeframe,
+            String snapshotAt,
+            int barsAvailable,
+            BigDecimal close,
+            BigDecimal previousClose,
+            BigDecimal pctChange1d,
+            BigDecimal pctChange5d,
+            BigDecimal pctChange30d,
+            BigDecimal high52w,
+            BigDecimal low52w,
+            BigDecimal sma20,
+            BigDecimal sma50,
+            BigDecimal sma200,
+            BigDecimal rsi14,
+            BigDecimal macdHistogram,
+            long volume,
+            BigDecimal volumeAvg20d,
+            BigDecimal support,
+            BigDecimal resistance) {}
+
+    public static final class InsufficientHistoryUpstreamException extends RuntimeException {
+        private final String ticker;
+
+        public InsufficientHistoryUpstreamException(String ticker) {
+            super("market-data signalled INSUFFICIENT_HISTORY for " + ticker);
+            this.ticker = ticker;
+        }
+
+        public String ticker() {
+            return ticker;
+        }
+    }
+
+    public static final class MarketDataUpstreamException extends RuntimeException {
+        public MarketDataUpstreamException(String message) {
+            super(message);
+        }
+
+        public MarketDataUpstreamException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
 }

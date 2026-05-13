@@ -104,6 +104,39 @@ export async function fetchTickerNews(
   return result ?? [];
 }
 
+export async function fetchAggregatedTickerNews(
+  ticker: string,
+  from: string,
+  to: string,
+  limit = 20,
+  token?: string,
+): Promise<NewsItemResponse[]> {
+  const result = await enrichmentFetch<NewsItemResponse[]>(
+    `/api/v1/enrichment/news-aggregated/${encodeURIComponent(ticker)}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&limit=${limit}`,
+    token,
+  );
+  return result ?? [];
+}
+
+/**
+ * Picks the aggregated multi-provider endpoint when
+ * `USE_AGGREGATED_NEWS=true`, otherwise falls back to the
+ * single-provider (Finnhub) endpoint. Lets us roll back without
+ * a redeploy if the aggregator misbehaves.
+ */
+export async function fetchTickerNewsForView(
+  ticker: string,
+  from: string,
+  to: string,
+  limit = 20,
+  token?: string,
+): Promise<NewsItemResponse[]> {
+  if (process.env.USE_AGGREGATED_NEWS === "true") {
+    return fetchAggregatedTickerNews(ticker, from, to, limit, token);
+  }
+  return fetchTickerNews(ticker, from, to, limit, token);
+}
+
 export async function fetchEarnings(
   ticker: string,
   token?: string,

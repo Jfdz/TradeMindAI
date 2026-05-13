@@ -10,6 +10,7 @@ import com.tradingsaas.marketdata.enrichment.domain.model.CompanyProfile;
 import com.tradingsaas.marketdata.enrichment.domain.model.EarningsEvent;
 import com.tradingsaas.marketdata.enrichment.domain.model.NewsItem;
 import com.tradingsaas.marketdata.enrichment.domain.port.out.MarketEnrichmentProvider;
+import com.tradingsaas.marketdata.enrichment.domain.port.out.NewsProviderPort;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
@@ -29,7 +30,10 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 @Component
-public class FinnhubAdapter implements MarketEnrichmentProvider {
+public class FinnhubAdapter implements MarketEnrichmentProvider, NewsProviderPort {
+
+    public static final String PROVIDER_NAME = "finnhub";
+    public static final int PROVIDER_PRIORITY = 10;
 
     private static final Logger log = LoggerFactory.getLogger(FinnhubAdapter.class);
     private static final String TOKEN_HEADER = "X-Finnhub-Token";
@@ -257,6 +261,16 @@ public class FinnhubAdapter implements MarketEnrichmentProvider {
 
     public boolean isApiKeyPresent() {
         return !apiKey.isBlank();
+    }
+
+    @Override
+    public String providerName() {
+        return PROVIDER_NAME;
+    }
+
+    @Override
+    public int priority() {
+        return PROVIDER_PRIORITY;
     }
 
     private NewsItem toNewsItem(NewsDto dto) {
