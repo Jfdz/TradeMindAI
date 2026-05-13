@@ -5,6 +5,11 @@ import path from "path";
 const authFile = path.join(__dirname, "../../.auth/session.json");
 
 setup("authenticate", async ({ page }) => {
+  setup.skip(
+    !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY not set — skipping Clerk auth setup"
+  );
+
   const email = process.env.E2E_EMAIL;
   const password = process.env.E2E_PASSWORD;
 

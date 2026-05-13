@@ -11,6 +11,10 @@ test.describe("auth", () => {
   });
 
   test("invalid credentials shows error", async ({ page }) => {
+    test.skip(
+      !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+      "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY not set — skipping Clerk render test"
+    );
     await setupClerkTestingToken({ page });
     await page.goto("/auth/login");
     // Clerk <SignIn /> multi-step form: identifier then password
@@ -26,6 +30,10 @@ test.describe("auth", () => {
   });
 
   test("valid credentials redirect to dashboard", async ({ page }) => {
+    test.skip(
+      !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+      "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY not set — skipping Clerk render test"
+    );
     const email = process.env.E2E_EMAIL!;
     const password = process.env.E2E_PASSWORD!;
     await setupClerkTestingToken({ page });
@@ -38,6 +46,10 @@ test.describe("auth", () => {
   });
 
   test("logout redirects to landing page", async ({ page }) => {
+    test.skip(
+      !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+      "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY not set — skipping Clerk render test"
+    );
     const email = process.env.E2E_EMAIL!;
     const password = process.env.E2E_PASSWORD!;
     await setupClerkTestingToken({ page });

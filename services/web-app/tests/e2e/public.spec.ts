@@ -24,6 +24,10 @@ test.describe("public pages", () => {
   });
 
   test("login page renders Clerk sign-in form", async ({ page }) => {
+    test.skip(
+      !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+      "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY not set — skipping Clerk render test"
+    );
     await page.goto("/auth/login");
     await expect(page.locator("body")).not.toContainText("Application error");
     // Clerk <SignIn /> renders identifier (email) input on first step
@@ -31,6 +35,10 @@ test.describe("public pages", () => {
   });
 
   test("register page renders Clerk sign-up form", async ({ page }) => {
+    test.skip(
+      !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+      "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY not set — skipping Clerk render test"
+    );
     await page.goto("/auth/register");
     await expect(page.locator("body")).not.toContainText("Application error");
     // Clerk <SignUp /> renders email address input on first step
