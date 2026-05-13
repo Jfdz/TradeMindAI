@@ -26,6 +26,7 @@ public class TradingSignal {
     private final String reasoning;
     private final ReasoningStatus reasoningStatus;
     private final Instant reasoningGeneratedAt;
+    private final ReasoningArtifact reasoningArtifact;
 
     public TradingSignal(UUID id,
                          UUID symbolId,
@@ -100,6 +101,25 @@ public class TradingSignal {
                          String reasoning,
                          ReasoningStatus reasoningStatus,
                          Instant reasoningGeneratedAt) {
+        this(id, symbolId, ticker, type, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct,
+                predictedChangePct, entryPrice, reasoning, reasoningStatus, reasoningGeneratedAt, null);
+    }
+
+    public TradingSignal(UUID id,
+                         UUID symbolId,
+                         String ticker,
+                         SignalType type,
+                         Confidence confidence,
+                         Timeframe timeframe,
+                         Instant generatedAt,
+                         BigDecimal stopLossPct,
+                         BigDecimal takeProfitPct,
+                         BigDecimal predictedChangePct,
+                         BigDecimal entryPrice,
+                         String reasoning,
+                         ReasoningStatus reasoningStatus,
+                         Instant reasoningGeneratedAt,
+                         ReasoningArtifact reasoningArtifact) {
         Objects.requireNonNull(type, "type must not be null");
         Objects.requireNonNull(confidence, "confidence must not be null");
         Objects.requireNonNull(timeframe, "timeframe must not be null");
@@ -127,6 +147,7 @@ public class TradingSignal {
         this.reasoning = reasoning;
         this.reasoningStatus = reasoningStatus;
         this.reasoningGeneratedAt = reasoningGeneratedAt;
+        this.reasoningArtifact = reasoningArtifact;
     }
 
     public UUID getId() {
@@ -183,6 +204,21 @@ public class TradingSignal {
 
     public Instant getReasoningGeneratedAt() {
         return reasoningGeneratedAt;
+    }
+
+    public ReasoningArtifact getReasoningArtifact() {
+        return reasoningArtifact;
+    }
+
+    /**
+     * Returns a copy of this signal with the given reasoning artifact attached.
+     * Used by the C6 internal endpoint after ai-engine emits the artifact.
+     */
+    public TradingSignal withReasoningArtifact(ReasoningArtifact artifact) {
+        return new TradingSignal(
+                id, symbolId, ticker, type, confidence, timeframe, generatedAt,
+                stopLossPct, takeProfitPct, predictedChangePct, entryPrice,
+                reasoning, reasoningStatus, reasoningGeneratedAt, artifact);
     }
 
     @Override

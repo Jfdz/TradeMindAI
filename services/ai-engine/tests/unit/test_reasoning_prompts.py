@@ -1,0 +1,89 @@
+"""Verify SYSTEM_PROMPT shape, tool schema, and user prompt builder."""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+
+from ai_engine.core.domain.reasoning_context import ReasoningContext
+from ai_engine.core.domain.reasoning_output import SignalInput
+from ai_engine.core.domain.reasoning_prompts import (
+    REASONING_TOOL_SCHEMA,
+    SYSTEM_PROMPT,
+    build_user_prompt,
+)
+from tests.unit._reasoning_factories import (
+    build_news_item,
+    build_reasoning_context,
+    build_signal_input,
+)
+
+
+def _context_with_news() -> ReasoningContext:
+    return build_reasoning_context(news=(build_news_item(),))
+
+
+def test_system_prompt_contains_hard_rule_anchors():
+    # These anchors are the contract: the C5 validator enforces a subset
+    # of these rules deterministically. If they drift here, the validator
+    # will catch it — but failing this test is faster feedback.
+    for anchor in ("HARD RULES", "NUMBERS:", "NEWS:", "CONFIDENCE:", "INSUFFICIENT FACTS:"):
+        assert anchor in SYSTEM_PROMPT, f"missing rule anchor: {anchor}"
+
+
+def test_system_prompt_forbids_absolute_words():
+    # Rule 5 — these must appear in the rule text so the LLM is warned.
+    for word in ("definitely", "guaranteed", "certain"):
+        assert word in SYSTEM_PROMPT
+
+
+def test_tool_schema_requires_reasoning_and_refusal():
+    schema = REASONING_TOOL_SCHEMA["input_schema"]
+    assert set(schema["required"]) == {"reasoning", "refusal"}
+
+
+def test_tool_schema_disallows_additional_properties():
+    assert REASONING_TOOL_SCHEMA["input_schema"]["additionalProperties"] is False
+
+
+def test_tool_schema_caps_reasoning_at_400_chars():
+    assert REASONING_TOOL_SCHEMA["input_schema"]["properties"]["reasoning"]["maxLength"] == 400
+
+
+def test_user_prompt_includes_all_signal_fields():
+    prompt = build_user_prompt(build_signal_input(), _context_with_news())
+    assert "ticker: META" in prompt
+    assert "type: BUY" in prompt
+    assert "confidence: 0.62" in prompt
+    assert "entry_price: 603.0" in prompt
+
+
+def test_user_prompt_includes_price_facts():
+    prompt = build_user_prompt(build_signal_input(), _context_with_news())
+    assert "close: 603.0" in prompt
+    assert "sma_200: 510.0" in prompt
+    assert "rsi_14: 58.3" in prompt
+
+
+def test_user_prompt_includes_news_block_with_url():
+    prompt = build_user_prompt(build_signal_input(), _context_with_news())
+    assert "META beats Q1 expectations" in prompt
+    assert "https://reuters.com/x" in prompt
+    assert "Reuters" in prompt
+
+
+def test_user_prompt_handles_empty_news_with_placeholder():
+    prompt = build_user_prompt(build_signal_input(), build_reasoning_context())
+    assert "(no recent news in window)" in prompt
+
+
+def test_user_prompt_renders_null_predicted_change():
+    sig = SignalInput(
+        ticker="META",
+        signal_type="HOLD",
+        confidence=0.45,
+        entry_price=600.0,
+        predicted_change_pct=None,
+        generated_at=datetime(2026, 5, 13, tzinfo=timezone.utc),
+    )
+    prompt = build_user_prompt(sig, _context_with_news())
+    assert "predicted_change_pct: null" in prompt
