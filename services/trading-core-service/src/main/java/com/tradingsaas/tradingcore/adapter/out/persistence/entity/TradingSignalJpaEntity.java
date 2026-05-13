@@ -11,7 +11,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "trading_signals", schema = "trading_core")
@@ -62,6 +66,44 @@ public class TradingSignalJpaEntity {
 
     @Column(name = "reasoning_generated_at")
     private Instant reasoningGeneratedAt;
+
+    // -- C6 audit columns (V20). All nullable. Populated by ai-engine
+    // -- via PUT /api/v1/internal/signals/{id}/reasoning.
+
+    @Column(name = "reasoning_outcome", length = 50)
+    private String reasoningOutcome;
+
+    @Column(name = "reasoning_provider", length = 50)
+    private String reasoningProvider;
+
+    @Column(name = "reasoning_model_version", length = 100)
+    private String reasoningModelVersion;
+
+    @Column(name = "reasoning_retry_count", nullable = false)
+    private int reasoningRetryCount;
+
+    @Column(name = "reasoning_refusal_reason", columnDefinition = "TEXT")
+    private String reasoningRefusalReason;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "reasoning_facts_snapshot", columnDefinition = "JSONB")
+    private Map<String, Object> reasoningFactsSnapshot;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "reasoning_price_refs", columnDefinition = "JSONB")
+    private List<String> reasoningPriceRefs;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "reasoning_news_refs", columnDefinition = "JSONB")
+    private List<String> reasoningNewsRefs;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "reasoning_validator_violations", columnDefinition = "JSONB")
+    private List<Map<String, Object>> reasoningValidatorViolations;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "reasoning_raw_audit", columnDefinition = "JSONB")
+    private Map<String, Object> reasoningRawAudit;
 
     protected TradingSignalJpaEntity() {}
 
@@ -119,4 +161,30 @@ public class TradingSignalJpaEntity {
     public String getReasoning() { return reasoning; }
     public ReasoningStatus getReasoningStatus() { return reasoningStatus; }
     public Instant getReasoningGeneratedAt() { return reasoningGeneratedAt; }
+
+    public String getReasoningOutcome() { return reasoningOutcome; }
+    public String getReasoningProvider() { return reasoningProvider; }
+    public String getReasoningModelVersion() { return reasoningModelVersion; }
+    public int getReasoningRetryCount() { return reasoningRetryCount; }
+    public String getReasoningRefusalReason() { return reasoningRefusalReason; }
+    public Map<String, Object> getReasoningFactsSnapshot() { return reasoningFactsSnapshot; }
+    public List<String> getReasoningPriceRefs() { return reasoningPriceRefs; }
+    public List<String> getReasoningNewsRefs() { return reasoningNewsRefs; }
+    public List<Map<String, Object>> getReasoningValidatorViolations() { return reasoningValidatorViolations; }
+    public Map<String, Object> getReasoningRawAudit() { return reasoningRawAudit; }
+
+    public void setReasoning(String reasoning) { this.reasoning = reasoning; }
+    public void setReasoningStatus(ReasoningStatus reasoningStatus) { this.reasoningStatus = reasoningStatus; }
+    public void setReasoningGeneratedAt(Instant reasoningGeneratedAt) { this.reasoningGeneratedAt = reasoningGeneratedAt; }
+
+    public void setReasoningOutcome(String reasoningOutcome) { this.reasoningOutcome = reasoningOutcome; }
+    public void setReasoningProvider(String reasoningProvider) { this.reasoningProvider = reasoningProvider; }
+    public void setReasoningModelVersion(String reasoningModelVersion) { this.reasoningModelVersion = reasoningModelVersion; }
+    public void setReasoningRetryCount(int reasoningRetryCount) { this.reasoningRetryCount = reasoningRetryCount; }
+    public void setReasoningRefusalReason(String reasoningRefusalReason) { this.reasoningRefusalReason = reasoningRefusalReason; }
+    public void setReasoningFactsSnapshot(Map<String, Object> reasoningFactsSnapshot) { this.reasoningFactsSnapshot = reasoningFactsSnapshot; }
+    public void setReasoningPriceRefs(List<String> reasoningPriceRefs) { this.reasoningPriceRefs = reasoningPriceRefs; }
+    public void setReasoningNewsRefs(List<String> reasoningNewsRefs) { this.reasoningNewsRefs = reasoningNewsRefs; }
+    public void setReasoningValidatorViolations(List<Map<String, Object>> reasoningValidatorViolations) { this.reasoningValidatorViolations = reasoningValidatorViolations; }
+    public void setReasoningRawAudit(Map<String, Object> reasoningRawAudit) { this.reasoningRawAudit = reasoningRawAudit; }
 }
