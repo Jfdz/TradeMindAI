@@ -89,6 +89,7 @@ public class SecurityConfig {
                 // Admin-only endpoints
                 .requestMatchers("/api/v1/ingestion/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/models/**").hasRole("ADMIN")
+                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 // Everything else requires authentication
                 .anyRequest().authenticated()
             )
