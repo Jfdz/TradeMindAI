@@ -88,6 +88,9 @@ public class PendingReasoningBackfillRunner {
             event.put("confidence", entity.getConfidence());
             event.put("predictedChangePct", entity.getPredictedChangePct());
             event.put("entryPrice", entity.getEntryPrice());
+            // C9 — ai-engine consumer needs generated_at to build SignalInput.
+            event.put("generatedAt",
+                    entity.getGeneratedAt() != null ? entity.getGeneratedAt().toString() : null);
             String payload = objectMapper.writeValueAsString(event);
             rabbitTemplate.convertAndSend(RabbitMQConfig.REASONING_QUEUE, payload);
             return true;
