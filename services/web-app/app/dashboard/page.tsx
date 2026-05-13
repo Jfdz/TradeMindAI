@@ -3,8 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
+import { useCallback, useMemo, useState } from "react";
 
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
 import { LiveSignalsStrip } from "@/components/dashboard/live-signals-strip";
@@ -14,6 +13,7 @@ import { LiveLed } from "@/components/ui/live-led";
 import { StockLogo } from "@/components/ui/stock-logo";
 import type { DashboardCandle, EnrichedHolding, FilteredSignal } from "@/lib/dashboard/dashboard-api";
 import { fetchDashboardPageData } from "@/lib/dashboard/client-data";
+import { useAgeOutToast } from "@/lib/dashboard/use-age-out-toast";
 import { useStockLogos } from "@/lib/dashboard/use-stock-logos";
 import { buildSignalMarker } from "@/lib/dashboard/signal-derivation";
 import { signedTone, TONE_NEUTRAL } from "@/lib/dashboard/format";
@@ -166,31 +166,8 @@ export default function DashboardHomePage() {
   );
   const activeSymbol = selectedSignal?.symbol ?? null;
 
-  // Notify the user when a signal they explicitly selected ages out of the LIVE window.
-  // We only fire the toast after the user has actively picked something — the default
-  // top-of-list focus aging out is shown via the empty-state instead.
-  const lastSelectedRef = useRef<FilteredSignal | null>(null);
-  useEffect(() => {
-    if (!selectedSignalId) {
-      lastSelectedRef.current = null;
-      return;
-    }
-    const stillLive = liveSignals.find((s) => s.id === selectedSignalId);
-    if (stillLive) {
-      lastSelectedRef.current = stillLive;
-      return;
-    }
-    if (lastSelectedRef.current) {
-      const aged = lastSelectedRef.current;
-      toast.info(`${aged.symbol} ${aged.type} aged out of LIVE`, {
-        description: topLiveSignal
-          ? `Switched to ${topLiveSignal.symbol} ${topLiveSignal.type}`
-          : "No live signals right now",
-      });
-      setSelectedSignalId(null);
-      lastSelectedRef.current = null;
-    }
-  }, [liveSignals, selectedSignalId, topLiveSignal]);
+  const clearSelection = useCallback(() => setSelectedSignalId(null), []);
+  useAgeOutToast(liveSignals, selectedSignalId, topLiveSignal, clearSelection);
 
   const { data: dynamicCandles } = useQuery<DashboardCandle[]>({
     queryKey: ["candles", activeSymbol],
