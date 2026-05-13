@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     market_data_service_url: str = "http://market-data-service:8081"
     internal_secret: str = ""
     market_data_internal_secret: str = ""
+    trading_core_service_url: str = "http://trading-core-service:8082"
+    trading_core_internal_secret: str = ""
 
     def parsed_cors_allowed_origins(self) -> list[str]:
         return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
