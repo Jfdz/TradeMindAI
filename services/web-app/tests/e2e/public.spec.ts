@@ -23,31 +23,17 @@ test.describe("public pages", () => {
     await expect(planCards).toHaveCount(3, { timeout: 8_000 });
   });
 
-  test("login page renders form", async ({ page }) => {
+  test("login page renders Clerk sign-in form", async ({ page }) => {
     await page.goto("/auth/login");
-    await expect(page.locator("#email")).toBeVisible();
-    await expect(page.locator("#password")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+    await expect(page.locator("body")).not.toContainText("Application error");
+    // Clerk <SignIn /> renders identifier (email) input on first step
+    await expect(page.locator("input[name='identifier']")).toBeVisible({ timeout: 10_000 });
   });
 
-  test("register page renders all fields", async ({ page }) => {
+  test("register page renders Clerk sign-up form", async ({ page }) => {
     await page.goto("/auth/register");
-    await expect(page.locator("#firstName")).toBeVisible();
-    await expect(page.locator("#lastName")).toBeVisible();
-    await expect(page.locator("#email")).toBeVisible();
-    await expect(page.locator("#password")).toBeVisible();
-    await expect(page.locator("#confirmPassword")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Create account" })).toBeVisible();
-  });
-
-  test("register form validates password mismatch", async ({ page }) => {
-    await page.goto("/auth/register");
-    await page.locator("#firstName").fill("Test");
-    await page.locator("#lastName").fill("User");
-    await page.locator("#email").fill("test@example.com");
-    await page.locator("#password").fill("password123");
-    await page.locator("#confirmPassword").fill("different999");
-    await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page.getByText("Passwords do not match")).toBeVisible();
+    await expect(page.locator("body")).not.toContainText("Application error");
+    // Clerk <SignUp /> renders email address input on first step
+    await expect(page.locator("input[name='emailAddress']")).toBeVisible({ timeout: 10_000 });
   });
 });
