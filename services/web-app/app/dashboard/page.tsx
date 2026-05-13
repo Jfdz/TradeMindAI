@@ -284,7 +284,7 @@ export default function DashboardHomePage() {
               </p>
             )}
             {session?.isAdmin && (
-              <div className="mt-4 flex items-center gap-3">
+              <div className="mt-4 flex flex-wrap items-center gap-3">
                 <Button
                   size="sm"
                   variant="outline"
@@ -294,6 +294,12 @@ export default function DashboardHomePage() {
                 >
                   {generateSignals.isPending ? "Generating..." : "Generate Signals"}
                 </Button>
+                <Link
+                  href="/dashboard/admin/reasoning-audit"
+                  className="text-xs text-cyan underline-offset-4 hover:underline"
+                >
+                  Reasoning audit →
+                </Link>
                 {generateSignals.isError && (
                   <span className="text-xs text-red">
                     {generateSignals.error instanceof Error ? generateSignals.error.message : "Failed"}
