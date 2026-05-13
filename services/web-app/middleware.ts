@@ -1,30 +1,28 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-export async function middleware(request: NextRequest) {
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
+const isProtected = createRouteMatcher(["/dashboard(.*)"]);
+const isAuthPage = createRouteMatcher(["/auth(.*)"]);
 
-  const { pathname } = request.nextUrl;
-
-  // Authenticated users visiting public/auth pages → send to dashboard
-  if (token && (pathname === "/" || pathname.startsWith("/auth/"))) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+export default clerkMiddleware(async (auth, request) => {
+  if (isProtected(request)) {
+    await auth.protect({
+      unauthenticatedUrl: new URL("/auth/login", request.url).toString(),
+    });
   }
 
-  // Unauthenticated users visiting protected pages → send to login
-  if (!token && pathname.startsWith("/dashboard")) {
-    const loginUrl = new URL("/auth/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
+  if (isAuthPage(request)) {
+    const { userId } = await auth();
+    if (userId) {
+      const url = new URL("/dashboard", request.url);
+      const { NextResponse } = await import("next/server");
+      return NextResponse.redirect(url);
+    }
   }
-
-  return NextResponse.next();
-}
+});
 
 export const config = {
-  matcher: ["/", "/auth/:path*", "/dashboard/:path*"],
+  matcher: [
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
+  ],
 };
