@@ -1,6 +1,4 @@
-import { getSession } from "next-auth/react";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
+const PROXY_BASE = "/api/proxy";
 
 export type PagedResponse<T> = {
   content: T[];
@@ -215,19 +213,10 @@ export class ApiError extends Error {
 }
 
 async function requestJson<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const session = await getSession();
-  if ((session as { error?: string } | null)?.error === "RefreshAccessTokenError") {
-    const { signOut } = await import("next-auth/react");
-    await signOut({ callbackUrl: "/auth/login" });
-    throw new ApiError(401, "Session expired", "Unauthorized");
-  }
-  const token = (session as { accessToken?: string } | null)?.accessToken;
-
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${PROXY_BASE}${path}`, {
     ...options,
     headers: {
       Accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.body ? { "Content-Type": "application/json" } : {}),
       ...(options.headers ?? {}),
     },

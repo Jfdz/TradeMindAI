@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
+import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
 import {
   fetchEarnings,
   fetchPeers,
@@ -13,12 +12,12 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ ticker: string }> },
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
+  const { getToken } = await auth();
+  const token = await getToken({ template: "backend" });
+  if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const token = (session as { accessToken?: string })?.accessToken;
   const { ticker } = await params;
   const now = new Date();
   const from = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString();

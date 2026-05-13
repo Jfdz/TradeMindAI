@@ -1,0 +1,13 @@
+import { SignUp } from "@clerk/nextjs";
+
+export default function RegisterPage() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-bg-0">
+      <SignUp
+        path="/auth/register"
+        signInUrl="/auth/login"
+        fallbackRedirectUrl="/dashboard"
+      />
+    </div>
+  );
+}

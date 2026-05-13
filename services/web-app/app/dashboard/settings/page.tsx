@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { useUser, useClerk } from "@clerk/nextjs";
 
 import { apiClient, ApiError, type SessionResponse } from "@/lib/api-client";
 import { fetchSettingsPageData } from "@/lib/dashboard/client-data";
@@ -71,11 +71,12 @@ const notificationRows = [
 type NotificationKey = (typeof notificationRows)[number]["key"];
 
 export default function SettingsPage() {
-  const { data: session } = useSession();
+  const { user } = useUser();
+  const { signOut } = useClerk();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
-  const [name, setName] = useState(session?.user?.name ?? "TradeMind Operator");
-  const [email, setEmail] = useState(session?.user?.email ?? "user@tradermind.ai");
+  const [name, setName] = useState(user?.fullName ?? "TradeMind Operator");
+  const [email, setEmail] = useState(user?.primaryEmailAddress?.emailAddress ?? "user@tradermind.ai");
   const [timezone, setTimezone] = useState("Europe/Madrid");
   const [currentPlan, setCurrentPlan] = useState("FREE");
   const [message, setMessage] = useState("Loading account settings...");
@@ -134,7 +135,7 @@ export default function SettingsPage() {
       const status = err instanceof ApiError ? err.status : 0;
       console.error("settings/profile save failed", err);
       setMessage(saveErrorMessage(status, "Unable to save profile changes right now."));
-      if (status === 401) await signOut({ callbackUrl: "/auth/login" });
+      if (status === 401) await signOut({ redirectUrl: "/auth/login" });
     } finally {
       setIsSaving(false);
     }
@@ -152,15 +153,15 @@ export default function SettingsPage() {
       const status = err instanceof ApiError ? err.status : 0;
       console.error("settings/notifications save failed", err);
       setMessage(saveErrorMessage(status, "Unable to save notification preferences right now."));
-      if (status === 401) await signOut({ callbackUrl: "/auth/login" });
+      if (status === 401) await signOut({ redirectUrl: "/auth/login" });
     } finally {
       setIsSaving(false);
     }
   }
 
   function resetProfile() {
-    setName(session?.user?.name ?? "TradeMind Operator");
-    setEmail(session?.user?.email ?? "user@tradermind.ai");
+    setName(user?.fullName ?? "TradeMind Operator");
+    setEmail(user?.primaryEmailAddress?.emailAddress ?? "user@tradermind.ai");
     setTimezone("Europe/Madrid");
     setMessage("Profile changes reset locally.");
   }

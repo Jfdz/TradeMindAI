@@ -1,19 +1,18 @@
-import { getServerSession } from "next-auth";
+import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
 import { fetchTickerNews } from "@/lib/enrichment-client";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ ticker: string }> },
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
+  const { getToken } = await auth();
+  const token = await getToken({ template: "backend" });
+  if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const weeksAgo = Number(request.nextUrl.searchParams.get("weeksAgo") ?? "0");
-  const token = (session as { accessToken?: string })?.accessToken;
   const { ticker } = await params;
 
   const now = new Date();

@@ -135,11 +135,12 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
-      JWT_SECRET: ${JWT_SECRET:-dev-secret-key-change-in-production-min-32-chars}
       AI_ENGINE_SERVICE_URL: http://ai-engine:8000
       MARKET_DATA_SERVICE_URL: http://market-data-service:8081
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
       MARKET_DATA_INTERNAL_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
+      CLERK_ISSUER_URI: ${CLERK_ISSUER_URI:-}
+      CLERK_AUDIENCE: ${CLERK_AUDIENCE:-https://api.trademindai.com}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
     depends_on:
@@ -203,13 +204,12 @@ services:
     ports:
       - "${WEB_APP_PORT:-3000}:3000"
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8082
       API_BASE_URL: http://trading-core-service:8082
       AI_ENGINE_SERVICE_URL: http://ai-engine:8000
       INTERNAL_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
       NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-TradeMindAI}
-      NEXTAUTH_SECRET: ${SESSION_SECRET:-dev-session-secret-change-in-production}
-      NEXTAUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
       FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
     depends_on:
       - trading-core-service

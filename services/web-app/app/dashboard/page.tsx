@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useUser } from "@clerk/nextjs";
 import { useCallback, useMemo, useState } from "react";
 
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
@@ -100,7 +100,7 @@ function Sparkline({ values, color }: { readonly values: number[]; readonly colo
 
 export default function DashboardHomePage() {
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
+  const { user } = useUser();
   const { data, isLoading, error } = useQuery({
     queryKey: DASHBOARD_QUERY_KEY,
     queryFn: fetchDashboardPageData,
@@ -118,8 +118,8 @@ export default function DashboardHomePage() {
   const signalLogos = useStockLogos(useMemo(() => signals.map((s: FilteredSignal) => s.symbol), [signals]));
 
   const displayName = useMemo(
-    () => session?.user?.name?.split(" ")[0] ?? session?.user?.email?.split("@")[0] ?? "there",
-    [session?.user?.email, session?.user?.name]
+    () => user?.firstName ?? user?.primaryEmailAddress?.emailAddress?.split("@")[0] ?? "there",
+    [user?.firstName, user?.primaryEmailAddress?.emailAddress]
   );
 
   const summaryCards = useMemo(() => {
@@ -283,7 +283,7 @@ export default function DashboardHomePage() {
                 Partial pricing returned from market data. Some holdings and signals are still waiting on fresh prices.
               </p>
             )}
-            {session?.isAdmin && (
+            {(user?.publicMetadata as { role?: string } | undefined)?.role === "admin" && (
               <div className="mt-4 flex items-center gap-3">
                 <Button
                   size="sm"

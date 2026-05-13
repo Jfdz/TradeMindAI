@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
 import {
   fetchEarnings,
   fetchPeers,
@@ -21,8 +20,8 @@ export type StockDetailData = {
 };
 
 async function getToken(): Promise<string | undefined> {
-  const session = await getServerSession(authOptions);
-  return (session as { accessToken?: string } | null)?.accessToken;
+  const { getToken } = await auth();
+  return (await getToken({ template: "backend" })) ?? undefined;
 }
 
 export async function fetchStockDetail(ticker: string): Promise<StockDetailData> {
