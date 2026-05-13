@@ -82,7 +82,9 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
             if (byEmail.isPresent()) {
                 User migrated = byEmail.get().attachClerkUserId(clerkUserId);
                 try {
-                    return userRepository.save(migrated);
+                    User saved = userRepository.save(migrated);
+                    log.info("Attached clerkUserId to migrated user userId={} email={}", saved.getId(), email);
+                    return saved;
                 } catch (Exception e) {
                     log.warn("Failed to attach clerkUserId to existing user email={}", email, e);
                     return byEmail.get();
@@ -127,7 +129,9 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
         );
 
         try {
-            return userRepository.save(newUser);
+            User saved = userRepository.save(newUser);
+            log.info("JIT-provisioned new user userId={} email={}", saved.getId(), email);
+            return saved;
         } catch (Exception e) {
             log.error("Failed to JIT-provision user clerkUserId={} email={}", clerkUserId, email, e);
             return null;
