@@ -15,7 +15,6 @@
  *   npm install pg  (run once: npm install --no-save pg)
  */
 
-import { createWriteStream } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import pg from "pg";
 
@@ -91,19 +90,17 @@ async function main() {
     const { id, email, first_name, last_name, password_hash } = user;
     await sleep(DELAY_MS);
 
-    // Skip if already in Clerk
-    if (!DRY_RUN) {
-      const existing = await findClerkUserByEmail(email);
-      if (existing) {
-        console.log(`SKIP  ${email} — already in Clerk (${existing.id})`);
-        results.push({ email, pgId: id, outcome: "skipped", clerkId: existing.id });
-        continue;
-      }
-    }
-
     if (DRY_RUN) {
       console.log(`DRY   ${email}`);
       results.push({ email, pgId: id, outcome: "dry-run" });
+      continue;
+    }
+
+    // Skip if already in Clerk
+    const existing = await findClerkUserByEmail(email);
+    if (existing) {
+      console.log(`SKIP  ${email} — already in Clerk (${existing.id})`);
+      results.push({ email, pgId: id, outcome: "skipped", clerkId: existing.id });
       continue;
     }
 
