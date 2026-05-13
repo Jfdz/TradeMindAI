@@ -1,13 +1,10 @@
 import { clerkSetup } from "@clerk/testing/playwright";
 
 export default async function globalSetup() {
-  if (
-    !process.env.CLERK_SECRET_KEY ||
-    !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-  ) {
+  if (process.env.E2E_CLERK_TESTS_ENABLED !== "true") {
     console.warn(
-      "[e2e] CLERK_SECRET_KEY or NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY not set — " +
-        "skipping Clerk global setup. Auth tests will fail until Phase 0 is complete."
+      "[e2e] E2E_CLERK_TESTS_ENABLED is not 'true' — skipping Clerk global setup. " +
+        "Set E2E_CLERK_TESTS_ENABLED=true once the Clerk app is configured for this environment."
     );
     return;
   }

@@ -2,9 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
-const clerkReady =
-  /^pk_(test|live)_/.test(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "") &&
-  /^sk_(test|live)_/.test(process.env.CLERK_SECRET_KEY ?? "");
+const clerkEnabled = process.env.E2E_CLERK_TESTS_ENABLED === "true";
 
 test.describe("public pages", () => {
   test("landing page hero and CTAs", async ({ page }) => {
@@ -29,8 +27,8 @@ test.describe("public pages", () => {
 
   test("login page renders Clerk sign-in form", async ({ page }) => {
     test.skip(
-      !clerkReady,
-      "Clerk keys missing or invalid — set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY"
+      !clerkEnabled,
+      "Clerk e2e disabled — set E2E_CLERK_TESTS_ENABLED=true once Clerk app is configured for this environment"
     );
     await page.goto("/auth/login");
     await expect(page.locator("body")).not.toContainText("Application error");
@@ -40,8 +38,8 @@ test.describe("public pages", () => {
 
   test("register page renders Clerk sign-up form", async ({ page }) => {
     test.skip(
-      !clerkReady,
-      "Clerk keys missing or invalid — set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY"
+      !clerkEnabled,
+      "Clerk e2e disabled — set E2E_CLERK_TESTS_ENABLED=true once Clerk app is configured for this environment"
     );
     await page.goto("/auth/register");
     await expect(page.locator("body")).not.toContainText("Application error");

@@ -4,12 +4,10 @@ import path from "path";
 
 const authFile = path.join(__dirname, "../../.auth/session.json");
 
-const clerkReady =
-  /^pk_(test|live)_/.test(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "") &&
-  /^sk_(test|live)_/.test(process.env.CLERK_SECRET_KEY ?? "");
+const clerkEnabled = process.env.E2E_CLERK_TESTS_ENABLED === "true";
 
 setup("authenticate", async ({ page }) => {
-  setup.skip(!clerkReady, "Clerk keys missing or invalid — set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY");
+  setup.skip(!clerkEnabled, "Clerk e2e disabled — set E2E_CLERK_TESTS_ENABLED=true once Clerk app is configured for this environment");
 
   const email = process.env.E2E_EMAIL;
   const password = process.env.E2E_PASSWORD;
