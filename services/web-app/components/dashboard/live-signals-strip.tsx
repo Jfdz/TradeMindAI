@@ -133,7 +133,6 @@ export function LiveSignalsStrip({ signals, selectedSignalId, onSignalChange }: 
   if (signals.length === 0) return null;
 
   const activeStyle = active ? sideClasses(active.type) : sideClasses("HOLD");
-  const liveCount = signals.filter((s) => s.live).length;
 
   return (
     <div ref={rootRef} className="relative">
@@ -181,7 +180,7 @@ export function LiveSignalsStrip({ signals, selectedSignalId, onSignalChange }: 
 
         <span className="inline-flex items-center gap-2 rounded-full border border-cyan/20 bg-cyan-dim px-3 py-1.5 font-mono text-[11px] tracking-[0.18em] uppercase text-cyan">
           <span className="h-1.5 w-1.5 rounded-full bg-cyan animate-pulse-soft" />
-          {liveCount} of {signals.length}
+          {signals.length} live
         </span>
         <kbd className="hidden md:inline-flex items-center gap-1 rounded-md border border-border bg-bg-2 px-2 py-1 font-mono text-[10px] tracking-[0.1em] uppercase text-text-3">
           ⌘K
@@ -264,7 +263,7 @@ export function LiveSignalsStrip({ signals, selectedSignalId, onSignalChange }: 
                           <span className="ml-auto flex items-center gap-3 font-mono text-[11px] text-text-2">
                             <span>{s.timeframe}</span>
                             <span className="text-text-3">·</span>
-                            <span className={cn(s.live && "text-cyan")}>{formatConfidence(s.confidence)}</span>
+                            <span className="text-cyan">{formatConfidence(s.confidence)}</span>
                             <span className="text-text-3">·</span>
                             <span>{s.age}</span>
                           </span>
