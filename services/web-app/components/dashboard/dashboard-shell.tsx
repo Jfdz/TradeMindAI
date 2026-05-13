@@ -178,7 +178,13 @@ export function DashboardShell({ children }: { readonly children: ReactNode }) {
                 <span className="h-2 w-2 rounded-full bg-green animate-pulse-soft" />
                 Live
               </div>
-              <Button size="sm" variant="ghost" onClick={() => void signOut({ redirectUrl: "/" })}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={async () => {
+                  await signOut({ redirectUrl: "/" });
+                }}
+              >
                 Exit
               </Button>
             </div>
