@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { fetchTickerNews } from "@/lib/enrichment-client";
+import { fetchTickerNewsForView } from "@/lib/enrichment-client";
 
 export async function GET(
   request: NextRequest,
