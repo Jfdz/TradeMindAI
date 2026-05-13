@@ -1,5 +1,6 @@
 package com.tradingsaas.tradingcore.adapter.in.web;
 
+import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningNewsSnapshot;
 import com.tradingsaas.tradingcore.domain.model.ReasoningStatus;
 import com.tradingsaas.tradingcore.domain.model.TradingSignal;
 import com.tradingsaas.tradingcore.domain.port.in.GetSignalsUseCase;
@@ -59,7 +60,8 @@ class SignalController {
             BigDecimal entryPrice,
             String reasoning,
             ReasoningStatus reasoningStatus,
-            Instant reasoningGeneratedAt) {
+            Instant reasoningGeneratedAt,
+            ReasoningNewsSnapshot reasoningNews) {
 
         static SignalResponse fromDomain(TradingSignal signal) {
             return new SignalResponse(
@@ -75,7 +77,8 @@ class SignalController {
                     signal.getEntryPrice(),
                     signal.getReasoning(),
                     signal.getReasoningStatus(),
-                    signal.getReasoningGeneratedAt());
+                    signal.getReasoningGeneratedAt(),
+                    ReasoningNewsSnapshot.fromArtifact(signal.getReasoningArtifact()));
         }
     }
 

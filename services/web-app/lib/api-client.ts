@@ -14,6 +14,20 @@ export type PagedResponse<T> = {
 
 export type ReasoningStatus = "PENDING" | "READY" | "FALLBACK" | "FAILED";
 
+/**
+ * First news item that grounded the AI reasoning for a signal. Sourced
+ * from the persisted `reasoning_facts_snapshot.news[0]` (Track C
+ * audit blob). When the LLM ran with no news in window, or when the
+ * artifact is missing, this field is absent on the wire.
+ */
+export type ReasoningNewsSnapshot = {
+  headline: string | null;
+  url: string | null;
+  imageUrl: string | null;
+  source: string | null;
+  publishedAt: string | null;
+};
+
 export type SignalResponse = {
   id: string;
   symbol: string;
@@ -28,6 +42,7 @@ export type SignalResponse = {
   reasoning?: string | null;
   reasoningStatus?: ReasoningStatus | null;
   reasoningGeneratedAt?: string | null;
+  reasoningNews?: ReasoningNewsSnapshot | null;
 };
 
 export type SubmitBacktestPayload = {
