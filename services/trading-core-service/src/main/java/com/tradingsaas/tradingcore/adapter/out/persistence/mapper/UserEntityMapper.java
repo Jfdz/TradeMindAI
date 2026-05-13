@@ -12,6 +12,7 @@ import org.mapstruct.ReportingPolicy;
 public interface UserEntityMapper {
 
     @Mapping(target = "subscription", source = "subscription")
+    @Mapping(target = "clerkUserId", source = "clerkUserId")
     User toDomain(UserJpaEntity entity);
 
     @Mapping(target = "userId", source = "user.id")

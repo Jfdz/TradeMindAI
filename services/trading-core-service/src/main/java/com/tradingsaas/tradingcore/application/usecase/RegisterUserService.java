@@ -37,6 +37,7 @@ class RegisterUserService implements RegisterUserUseCase {
 
         User user = new User(
                 userId,
+                null,
                 cmd.email(),
                 passwordEncoder.encode(cmd.rawPassword()),
                 cmd.firstName(),
