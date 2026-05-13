@@ -164,6 +164,8 @@ class EnrichmentServiceAdapterTest {
         assertEquals(List.of("MSFT", "GOOGL", "META"), result);
     }
 
+    // (price-facts is covered in MarketDataServiceAdapterPriceFactsTest)
+
     private EnrichmentServiceAdapter createAdapter(ExchangeFunction exchangeFunction) {
         WebClient webClient = WebClient.builder().exchangeFunction(exchangeFunction).build();
         return new EnrichmentServiceAdapter(webClient, "secret-x");
