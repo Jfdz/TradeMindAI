@@ -178,6 +178,8 @@ Code is complete. Every remaining gate depends on live Clerk keys.
 | Run `scripts/migrate-users-to-clerk.mjs` against dev DB (3.1, 3.3, 3.4) | **User** | Canary smoke test |
 | Confirm real prod frontend domain (4.2 CORS mismatch) | **User** | Configmap update |
 | Review CORS + run `npm run e2e` with live keys (4.4) | **User/Claude** | 4.5 merge |
+| Update `.env.example` (root) — replace `JWT_SECRET`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `NEXT_PUBLIC_API_BASE_URL` with Clerk equivalents | **User** | Developer onboarding |
+| Update `services/web-app/.env.example` — replace `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `NEXT_PUBLIC_API_BASE_URL` with Clerk equivalents (keys above) | **User** | Developer onboarding |
 
 ---
 
