@@ -104,4 +104,39 @@ describe("proxy route", () => {
     expect(res.headers.get("x-correlation-id")).toBe("abc-123");
     expect(res.headers.get("x-ratelimit-remaining")).toBe("42");
   });
+
+  it("forwards POST body to upstream", async () => {
+    getTokenMock.mockResolvedValue("tok");
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ id: "bt-1" }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const { POST } = await getHandlers();
+
+    const body = JSON.stringify({ symbol: "AAPL", from: "2026-01-01", to: "2026-04-01" });
+    const req = makeNextRequest("POST", "api/v1/backtests", body);
+    const res = await POST(req, { params: Promise.resolve({ path: ["api", "v1", "backtests"] }) });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/backtests"),
+      expect.objectContaining({
+        method: "POST",
+        body,
+        headers: expect.objectContaining({ "Content-Type": "application/json" }),
+      }),
+    );
+    expect(res.status).toBe(201);
+  });
+
+  it("returns 405 for disallowed HTTP methods", async () => {
+    getTokenMock.mockResolvedValue("tok");
+    const { GET } = await getHandlers();
+
+    const req = { ...makeNextRequest("HEAD", "api/v1/signals"), method: "HEAD" } as unknown as import("next/server").NextRequest;
+    const res = await GET(req, { params: Promise.resolve({ path: ["api", "v1", "signals"] }) });
+
+    expect(res.status).toBe(405);
+  });
 });
