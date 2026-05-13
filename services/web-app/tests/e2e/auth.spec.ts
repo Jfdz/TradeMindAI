@@ -4,6 +4,10 @@ import { setupClerkTestingToken } from "@clerk/testing/playwright";
 // All tests in this file run without a pre-existing session (public/auth project)
 test.use({ storageState: { cookies: [], origins: [] } });
 
+const clerkReady =
+  /^pk_(test|live)_/.test(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "") &&
+  /^sk_(test|live)_/.test(process.env.CLERK_SECRET_KEY ?? "");
+
 test.describe("auth", () => {
   test("unauthenticated /dashboard redirects to login", async ({ page }) => {
     await page.goto("/dashboard");
@@ -12,8 +16,8 @@ test.describe("auth", () => {
 
   test("invalid credentials shows error", async ({ page }) => {
     test.skip(
-      !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
-      "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY not set — skipping Clerk render test"
+      !clerkReady,
+      "Clerk keys missing or invalid — set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY"
     );
     await setupClerkTestingToken({ page });
     await page.goto("/auth/login");
@@ -31,8 +35,8 @@ test.describe("auth", () => {
 
   test("valid credentials redirect to dashboard", async ({ page }) => {
     test.skip(
-      !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
-      "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY not set — skipping Clerk render test"
+      !clerkReady,
+      "Clerk keys missing or invalid — set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY"
     );
     const email = process.env.E2E_EMAIL!;
     const password = process.env.E2E_PASSWORD!;
@@ -47,8 +51,8 @@ test.describe("auth", () => {
 
   test("logout redirects to landing page", async ({ page }) => {
     test.skip(
-      !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
-      "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY not set — skipping Clerk render test"
+      !clerkReady,
+      "Clerk keys missing or invalid — set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY"
     );
     const email = process.env.E2E_EMAIL!;
     const password = process.env.E2E_PASSWORD!;
