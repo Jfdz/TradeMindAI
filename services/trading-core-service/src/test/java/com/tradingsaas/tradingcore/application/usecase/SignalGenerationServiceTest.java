@@ -207,6 +207,13 @@ class SignalGenerationServiceTest {
         public void updateReasoning(UUID id, String reasoning, ReasoningStatus status, Instant at) {}
 
         @Override
+        public boolean updateReasoningArtifact(
+                UUID id, String reasoning, ReasoningStatus status, Instant at,
+                com.tradingsaas.tradingcore.domain.model.ReasoningArtifact artifact) {
+            return false;
+        }
+
+        @Override
         public Optional<TradingSignal> findRecentEquivalent(
                 String ticker, SignalType signalType, Timeframe timeframe,
                 BigDecimal entryPrice, Instant sinceAtLeast) {
