@@ -1,6 +1,9 @@
 package com.tradingsaas.tradingcore.adapter.out.persistence;
 
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.TradingSignalJpaEntity;
+import com.tradingsaas.tradingcore.domain.model.SignalType;
+import com.tradingsaas.tradingcore.domain.model.Timeframe;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -35,5 +38,20 @@ public interface TradingSignalJpaRepository extends JpaRepository<TradingSignalJ
     List<TradingSignalJpaEntity> findByReasoningStatusAndOlderThan(
             @Param("status") ReasoningStatus status,
             @Param("olderThan") Instant olderThan,
+            Pageable pageable);
+
+    @Query("SELECT e FROM TradingSignalJpaEntity e "
+            + "WHERE e.ticker = :ticker "
+            + "AND e.signalType = :signalType "
+            + "AND e.timeframe = :timeframe "
+            + "AND ((:entryPrice IS NULL AND e.entryPrice IS NULL) OR e.entryPrice = :entryPrice) "
+            + "AND e.generatedAt >= :sinceAtLeast "
+            + "ORDER BY e.generatedAt DESC")
+    List<TradingSignalJpaEntity> findRecentEquivalent(
+            @Param("ticker") String ticker,
+            @Param("signalType") SignalType signalType,
+            @Param("timeframe") Timeframe timeframe,
+            @Param("entryPrice") BigDecimal entryPrice,
+            @Param("sinceAtLeast") Instant sinceAtLeast,
             Pageable pageable);
 }
