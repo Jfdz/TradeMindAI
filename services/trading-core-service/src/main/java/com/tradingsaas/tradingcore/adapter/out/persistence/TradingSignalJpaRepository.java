@@ -54,4 +54,12 @@ public interface TradingSignalJpaRepository extends JpaRepository<TradingSignalJ
             @Param("entryPrice") BigDecimal entryPrice,
             @Param("sinceAtLeast") Instant sinceAtLeast,
             Pageable pageable);
+
+    // E1 admin reasoning-audit explorer.
+    Page<TradingSignalJpaEntity> findByTickerIgnoreCaseOrderByGeneratedAtDesc(
+            String ticker, Pageable pageable);
+
+    @Query("SELECT DISTINCT e.ticker FROM TradingSignalJpaEntity e "
+            + "WHERE e.ticker IS NOT NULL ORDER BY e.ticker ASC")
+    List<String> findDistinctTickers();
 }

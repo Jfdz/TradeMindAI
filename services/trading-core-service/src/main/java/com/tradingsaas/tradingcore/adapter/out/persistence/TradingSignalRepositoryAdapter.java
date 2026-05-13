@@ -84,6 +84,25 @@ class TradingSignalRepositoryAdapter implements TradingSignalRepository {
 
     @Override
     @Transactional(readOnly = true)
+    public Page<TradingSignal> findAdminSignals(String tickerFilter, Pageable pageable) {
+        Page<TradingSignalJpaEntity> page;
+        if (tickerFilter == null || tickerFilter.isBlank()) {
+            page = repository.findAllByOrderByGeneratedAtDesc(pageable);
+        } else {
+            page = repository.findByTickerIgnoreCaseOrderByGeneratedAtDesc(
+                    tickerFilter.trim(), pageable);
+        }
+        return page.map(mapper::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> findDistinctTickers() {
+        return repository.findDistinctTickers();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<TradingSignal> findRecentEquivalent(
             String ticker, SignalType signalType, Timeframe timeframe,
             BigDecimal entryPrice, Instant sinceAtLeast) {
