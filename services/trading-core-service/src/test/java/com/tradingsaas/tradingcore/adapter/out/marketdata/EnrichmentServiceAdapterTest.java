@@ -115,6 +115,42 @@ class EnrichmentServiceAdapterTest {
     }
 
     @Test
+    void fetchAggregatedTickerNewsPassesQueryParamsToAggregatorEndpoint() {
+        EnrichmentServiceAdapter adapter = createAdapter(request -> {
+            assertEquals("/api/v1/news-aggregated/AAPL", request.url().getPath());
+            String query = request.url().getQuery();
+            assertTrue(query.contains("from=2026-05-01T00%3A00%3A00Z") || query.contains("from=2026-05-01T00:00:00Z"));
+            assertTrue(query.contains("to=2026-05-31T00%3A00%3A00Z") || query.contains("to=2026-05-31T00:00:00Z"));
+            assertTrue(query.contains("limit=15"));
+            assertEquals("secret-x", request.headers().getFirst("X-Internal-Secret"));
+            return json("""
+                    [
+                      {"id": 42, "headline": "AAPL big news", "publishedAt": "2026-05-12T10:00:00Z",
+                       "category": null, "source": "Reuters", "summary": "S", "url": "https://x/a", "image": "https://x/a.png"}
+                    ]
+                    """);
+        });
+
+        List<NewsItemResponse> result = adapter.fetchAggregatedTickerNews(
+                "AAPL", Instant.parse("2026-05-01T00:00:00Z"), Instant.parse("2026-05-31T00:00:00Z"), 15);
+
+        assertEquals(1, result.size());
+        assertEquals("AAPL big news", result.getFirst().headline());
+        assertEquals("https://x/a.png", result.getFirst().image());
+    }
+
+    @Test
+    void fetchAggregatedTickerNewsReturnsEmptyOn5xx() {
+        EnrichmentServiceAdapter adapter = createAdapter(request ->
+                Mono.just(ClientResponse.create(HttpStatus.INTERNAL_SERVER_ERROR).build()));
+
+        List<NewsItemResponse> result = adapter.fetchAggregatedTickerNews(
+                "AAPL", Instant.parse("2026-05-01T00:00:00Z"), Instant.parse("2026-05-31T00:00:00Z"), 10);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
     void fetchPeersReturnsList() {
         EnrichmentServiceAdapter adapter = createAdapter(request -> {
             assertEquals("/api/v1/enrichment/peers/AAPL", request.url().getPath());
@@ -127,6 +163,8 @@ class EnrichmentServiceAdapterTest {
 
         assertEquals(List.of("MSFT", "GOOGL", "META"), result);
     }
+
+    // (price-facts is covered in MarketDataServiceAdapterPriceFactsTest)
 
     private EnrichmentServiceAdapter createAdapter(ExchangeFunction exchangeFunction) {
         WebClient webClient = WebClient.builder().exchangeFunction(exchangeFunction).build();

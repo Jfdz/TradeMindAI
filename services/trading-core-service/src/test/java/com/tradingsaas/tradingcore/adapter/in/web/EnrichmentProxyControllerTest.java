@@ -77,6 +77,24 @@ class EnrichmentProxyControllerTest {
     }
 
     @Test
+    void getAggregatedTickerNewsReturnsList() {
+        Instant from = Instant.parse("2026-05-01T00:00:00Z");
+        Instant to = Instant.parse("2026-05-31T00:00:00Z");
+        NewsItemResponse item = new NewsItemResponse(42L, "Aggregated headline", "2026-05-12T10:00:00Z",
+                null, "Reuters", "S", "https://x/a", "https://x/a.png");
+        when(adapter.fetchAggregatedTickerNews("AAPL", from, to, 20)).thenReturn(List.of(item));
+
+        ResponseEntity<List<NewsItemResponse>> response = controller.getAggregatedTickerNews(
+                "AAPL", "2026-05-01T00:00:00Z", "2026-05-31T00:00:00Z", 20);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().size());
+        assertEquals("Aggregated headline", response.getBody().getFirst().headline());
+        assertEquals("https://x/a.png", response.getBody().getFirst().image());
+    }
+
+    @Test
     void getEarningsReturnsList() {
         EarningsEventResponse event = new EarningsEventResponse(
                 "AAPL", LocalDate.of(2026, 3, 31), 2026, 1,

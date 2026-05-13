@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
-import { fetchTickerNews } from "@/lib/enrichment-client";
+import { fetchTickerNewsForView } from "@/lib/enrichment-client";
 
 export async function GET(
   request: NextRequest,
@@ -20,7 +20,7 @@ export async function GET(
   const to = new Date(now.getTime() - weeksAgo * 7 * 24 * 60 * 60 * 1000);
   const from = new Date(to.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const news = await fetchTickerNews(
+  const news = await fetchTickerNewsForView(
     ticker,
     from.toISOString(),
     to.toISOString(),

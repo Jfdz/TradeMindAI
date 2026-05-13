@@ -14,6 +14,8 @@ servers:
 tags:
   - name: price-facts
     description: Deterministic price snapshots used as ground truth for AI reasonings.
+  - name: news-aggregator
+    description: Multi-provider ticker news with dedupe across sources.
 
 paths:
   /api/v1/price-facts/{ticker}:
@@ -65,6 +67,66 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InsufficientHistoryError'
+
+  /api/v1/news-aggregated/{ticker}:
+    get:
+      tags: [news-aggregator]
+      operationId: getAggregatedTickerNews
+      summary: Get deduplicated ticker news across all registered providers.
+      description: |
+        Fans out to every `NewsProviderPort` implementation in parallel
+        (Finnhub primary, Yahoo RSS secondary when enabled), dedupes by
+        normalized URL keeping the higher-priority provider's copy on
+        ties, sorts by `publishedAt` descending, and caches the response
+        for 30 minutes.
+
+        Graceful degradation: a single provider failure does not fail
+        the response; the aggregator returns whatever the other providers
+        produced. If all providers fail, returns an empty list.
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Z0-9.\-]{1,10}$'
+          example: PLTR
+        - name: from
+          in: query
+          required: true
+          description: ISO-8601 instant; lower bound of the news window.
+          schema:
+            type: string
+            format: date-time
+          example: '2026-05-01T00:00:00Z'
+        - name: to
+          in: query
+          required: true
+          description: ISO-8601 instant; upper bound of the news window.
+          schema:
+            type: string
+            format: date-time
+          example: '2026-05-13T00:00:00Z'
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of items to return (clamped to 1..50).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        '200':
+          description: News items returned (possibly empty list).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NewsItemResponse'
+        '400':
+          description: Malformed `from`/`to` instants, or `from` after `to`.
 
 components:
   schemas:
@@ -160,6 +222,40 @@ components:
           format: double
           nullable: true
           description: 30-day rolling high (proxy resistance level).
+    NewsItemResponse:
+      type: object
+      required: [id, headline, publishedAt, url]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: |
+            Stable id for client-side pagination/dedupe. From Finnhub it
+            is the original integer id; from Yahoo RSS it is a stable
+            hash of the article URL.
+        headline:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+          description: ISO-8601 instant.
+        category:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
+        summary:
+          type: string
+          nullable: true
+        url:
+          type: string
+          format: uri
+        image:
+          type: string
+          format: uri
+          nullable: true
+          description: Cover image URL when the provider supplies one.
     InsufficientHistoryError:
       type: object
       required: [error, ticker, barsAvailable, barsRequired]

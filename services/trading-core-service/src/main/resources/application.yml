@@ -93,6 +93,7 @@ management:
       enabled: false
 
 trading-core:
+  internal-secret: ${INTERNAL_API_SECRET:${TRADING_CORE_INTERNAL_SECRET:}}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
   rate-limit:
