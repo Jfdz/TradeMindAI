@@ -1,10 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/dynamic", () => ({
-  default: (_importFn: unknown, _opts?: object) =>
-    function DynamicPlaceholder() {
-      return null;
-    },
+  default: () => function DynamicPlaceholder() { return null; },
 }));
 
 describe("TradingViewAttribution", () => {
