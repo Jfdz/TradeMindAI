@@ -62,7 +62,7 @@ jobs:
       - name: Verify secrets are real (not REPLACE_ME placeholders)
         run: |
           set -euo pipefail
-          REQUIRED_SECRETS="postgres-credentials redis-credentials rabbitmq-credentials jwt-secret nextauth-secret internal-secret"
+          REQUIRED_SECRETS="postgres-credentials redis-credentials rabbitmq-credentials clerk-credentials internal-secret"
           for s in $REQUIRED_SECRETS; do
             if ! kubectl get secret "$s" -n trading-saas >/dev/null 2>&1; then
               echo "❌ Secret $s does not exist — create it before deploying"
