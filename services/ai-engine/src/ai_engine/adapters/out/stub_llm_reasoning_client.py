@@ -27,8 +27,15 @@ class StubLlmReasoningClient:
     PROVIDER_NAME = "stub"
 
     def generate(
-        self, signal: SignalInput, context: ReasoningContext
+        self,
+        signal: SignalInput,
+        context: ReasoningContext,
+        validator_feedback: str | None = None,
     ) -> ReasoningResult:
+        # validator_feedback is accepted to satisfy the LlmReasoningPort
+        # signature; the stub does not call any LLM, so feedback has no
+        # effect on the outcome.
+        del validator_feedback
         logger.info(
             "event=llm_reasoning.stub_refusal ticker=%s confidence=%.2f news_count=%d",
             signal.ticker,
