@@ -69,6 +69,11 @@ class ReasoningResult:
     Invariants:
       - outcome == GENERATED → payload is non-None.
       - outcome != GENERATED → payload is None; refusal_reason or detail set.
+
+    `retry_count` tracks how many times the C5 validator forced a retry
+    before the final outcome. `validator_violations` carries the
+    structured violations on REFUSED_BY_VALIDATOR so C6 audit can replay
+    which rules tripped without re-parsing the feedback string.
     """
 
     outcome: ReasoningOutcome
@@ -76,6 +81,8 @@ class ReasoningResult:
     refusal_reason: str | None = None
     raw_response: dict | None = None
     detail: str | None = None
+    retry_count: int = 0
+    validator_violations: tuple[dict, ...] | None = None
 
     @classmethod
     def generated(
@@ -99,12 +106,16 @@ class ReasoningResult:
 
     @classmethod
     def refused_by_validator(
-        cls, reason: str, raw_response: dict | None = None
+        cls,
+        reason: str,
+        raw_response: dict | None = None,
+        violations: tuple[dict, ...] | None = None,
     ) -> ReasoningResult:
         return cls(
             outcome=ReasoningOutcome.REFUSED_BY_VALIDATOR,
             refusal_reason=reason,
             raw_response=raw_response,
+            validator_violations=violations,
         )
 
     @classmethod

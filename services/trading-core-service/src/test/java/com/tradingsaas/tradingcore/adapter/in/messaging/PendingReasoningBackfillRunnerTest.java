@@ -158,6 +158,11 @@ class PendingReasoningBackfillRunnerTest {
                 .containsEntry("signalId", row.getId().toString())
                 .containsEntry("ticker", "AAPL")
                 .containsEntry("signalType", "BUY")
-                .containsKey("confidence");
+                .containsKey("confidence")
+                // C9 — ai-engine consumer needs generatedAt to build SignalInput.
+                .containsKey("generatedAt");
+        assertThat(parsed.get("generatedAt"))
+                .as("generatedAt must be ISO-8601 stringified Instant")
+                .isInstanceOf(String.class);
     }
 }

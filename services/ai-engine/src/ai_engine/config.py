@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     claude_code_oauth_token: str = ""
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-haiku-4-5"
+    # C9 — RabbitMQ queue ai-engine consumes for signal reasoning requests.
+    # Defaults to the trading-core publisher's queue name; override in tests.
+    reasoning_request_queue: str = "trading-core.signal.reasoning.requested"
 
     def parsed_cors_allowed_origins(self) -> list[str]:
         return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
