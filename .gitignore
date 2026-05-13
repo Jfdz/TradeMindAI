@@ -161,6 +161,9 @@ build/
 out/
 !**/src/**/out/
 !**/src/**/out/**
+# Re-ignore Python bytecode caches that get re-included by the negations
+# above (e.g. ai-engine has `src/.../adapters/out/`, which the rule unblocks).
+**/__pycache__/
 
 # ============================================================================
 # IDE Local Storage
