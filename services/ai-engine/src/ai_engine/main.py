@@ -86,6 +86,12 @@ async def lifespan(app: FastAPI):
 async def _attempt_start_consumers(app: FastAPI, settings) -> bool:
     """Instantiate fresh consumers and connect to RabbitMQ. Returns True on success."""
     try:
+        from ai_engine.adapters.in_.reasoning_request_consumer import (
+            ReasoningRequestConsumer,
+        )
+        from ai_engine.adapters.out.persist_reasoning_factory import (
+            create_persist_reasoning_use_case,
+        )
         from ai_engine.adapters.out.rabbitmq_consumer import (
             MarketDataEventConsumer,
             PredictionRequestConsumer,
@@ -99,10 +105,23 @@ async def _attempt_start_consumers(app: FastAPI, settings) -> bool:
             settings.rabbitmq_url,
             _make_market_data_trigger(app, settings),
         )
+
+        # C9 — grounded reasoning pipeline trigger. Builds the full
+        # TradingCoreClient → LLM → validator → sink chain from Settings
+        # and binds it to the trading-core publisher's queue.
+        persist_use_case = create_persist_reasoning_use_case(settings)
+        reasoning_consumer = ReasoningRequestConsumer(
+            settings.rabbitmq_url,
+            persist_use_case,
+            queue_name=settings.reasoning_request_queue,
+        )
+
         await pred_consumer.start()
         await mde_consumer.start()
+        await reasoning_consumer.start()
 
-        app.state.consumers = [pred_consumer, mde_consumer]
+        app.state.consumers = [pred_consumer, mde_consumer, reasoning_consumer]
+        app.state.persist_reasoning_use_case = persist_use_case
         app.state.publish_predictions = _publish_predictions
         app.state.rabbitmq_url = settings.rabbitmq_url
         app.state.consumers_ready = True
