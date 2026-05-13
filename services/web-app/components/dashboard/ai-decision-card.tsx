@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { StockLogo } from "@/components/ui/stock-logo";
+import { formatAge } from "@/lib/dashboard/signal-derivation";
 import { formatConfidence } from "@/lib/signal-utils";
 import type { FilteredSignal } from "@/lib/dashboard/dashboard-api";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,15 @@ function shortHost(url: string | null | undefined): string {
   } catch {
     return "";
   }
+}
+
+function sourceLabel(
+  news: NonNullable<FilteredSignal["reasoningNews"]>,
+): string {
+  const name = news.source?.trim() || shortHost(news.url);
+  const when = news.publishedAt ? formatAge(news.publishedAt) : "";
+  if (name && when) return `${name} · ${when}`;
+  return name || when;
 }
 
 /**
@@ -116,6 +126,11 @@ export function AiDecisionCard({ signal, logoUrl, typeBadgeClass }: Props) {
             {news!.headline}
           </h4>
         )}
+        {signal.reasoning && (
+          <p className="line-clamp-2 text-xs leading-relaxed text-text-2">
+            {signal.reasoning}
+          </p>
+        )}
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-text-2">
           <div className="flex items-center gap-3">
             <span className="uppercase tracking-[0.22em] text-text-3">{signal.timeframe} · {signal.age}</span>
@@ -129,7 +144,7 @@ export function AiDecisionCard({ signal, logoUrl, typeBadgeClass }: Props) {
               onClick={(e) => e.stopPropagation()}
               className="rounded-full bg-cyan/15 px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-cyan hover:text-cyan-bright"
             >
-              {news!.source ? `${news!.source} ↗` : `${shortHost(news!.url)} ↗`}
+              {sourceLabel(news!)} ↗
             </a>
           )}
         </div>
@@ -196,7 +211,7 @@ function NewsFooter({
           onClick={(e) => e.stopPropagation()}
           className="shrink-0 rounded-full bg-cyan/15 px-2.5 py-1 uppercase tracking-[0.18em] text-cyan hover:text-cyan-bright"
         >
-          {news.source ? `${news.source} ↗` : `${shortHost(news.url)} ↗`}
+          {sourceLabel(news)} ↗
         </a>
       )}
     </div>
