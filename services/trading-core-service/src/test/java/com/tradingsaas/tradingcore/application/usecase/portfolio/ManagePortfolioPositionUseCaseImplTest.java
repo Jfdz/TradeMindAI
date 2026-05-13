@@ -63,8 +63,8 @@ class ManagePortfolioPositionUseCaseImplTest {
     private static PortfolioPositionJpaEntity position(UUID positionId, UUID userId, String status) {
         UserJpaEntity user = new UserJpaEntity(
                 userId,
-                null,
                 "user@example.com",
+                null,
                 "$2a$10$hash",
                 "Test",
                 "User",
