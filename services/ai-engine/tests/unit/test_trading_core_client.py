@@ -62,7 +62,7 @@ def _full_payload() -> dict:
 
 
 def _make_client(secret: str = "secret-x") -> TradingCoreClient:
-    return TradingCoreClient("http://trading-core:8082", internal_secret=secret)
+    return TradingCoreClient("https://trading-core:8082", internal_secret=secret)
 
 
 def test_fetch_returns_available_outcome_on_200(monkeypatch):
@@ -79,7 +79,7 @@ def test_fetch_returns_available_outcome_on_200(monkeypatch):
 
     result = _make_client().fetch_reasoning_context("AAPL", news_hours=48, news_limit=8)
 
-    assert captured["url"] == "http://trading-core:8082/api/v1/internal/reasoning-context/AAPL"
+    assert captured["url"] == "https://trading-core:8082/api/v1/internal/reasoning-context/AAPL"
     assert captured["params"] == {"newsHours": 48, "newsLimit": 8}
     assert captured["headers"] == {"X-Internal-Secret": "secret-x"}
     assert result.outcome == ContextOutcome.AVAILABLE
@@ -149,7 +149,7 @@ def test_fetch_returns_upstream_failed_on_transport_error(monkeypatch):
 
 
 def test_fetch_returns_upstream_failed_when_secret_missing(monkeypatch):
-    client = TradingCoreClient("http://trading-core:8082", internal_secret="")
+    client = TradingCoreClient("https://trading-core:8082", internal_secret="")
     result = client.fetch_reasoning_context("AAPL")
 
     assert result.outcome == ContextOutcome.UPSTREAM_FAILED

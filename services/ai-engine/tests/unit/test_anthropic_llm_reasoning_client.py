@@ -2,45 +2,16 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 from ai_engine.adapters.out.anthropic_llm_reasoning_client import (
     AnthropicLlmReasoningClient,
 )
-from ai_engine.core.domain.reasoning_context import (
-    SCHEMA_VERSION,
-    PriceFacts,
-    ReasoningContext,
+from ai_engine.core.domain.reasoning_output import ReasoningOutcome
+from tests.unit._reasoning_factories import (
+    build_reasoning_context,
+    build_signal_input,
 )
-from ai_engine.core.domain.reasoning_output import ReasoningOutcome, SignalInput
-
-
-def _ctx() -> ReasoningContext:
-    return ReasoningContext(
-        schema_version=SCHEMA_VERSION,
-        ticker="META",
-        generated_at=datetime(2026, 5, 13, tzinfo=timezone.utc),
-        price_facts=PriceFacts(
-            ticker="META", timeframe="DAILY", snapshot_at="2026-05-12",
-            bars_available=252, close=603.0, previous_close=590.94,
-            pct_change_1d=2.04, pct_change_5d=None, pct_change_30d=None,
-            high_52w=638.0, low_52w=412.0, sma_20=595.10, sma_50=580.20,
-            sma_200=510.0, rsi_14=58.3, macd_histogram=1.2,
-            volume=12_400_000, volume_avg_20d=14_100_000.0,
-            support=580.0, resistance=620.0,
-        ),
-        news=(),
-        errors=(),
-    )
-
-
-def _sig() -> SignalInput:
-    return SignalInput(
-        ticker="META", signal_type="BUY", confidence=0.62,
-        entry_price=603.0, predicted_change_pct=4.5,
-        generated_at=datetime(2026, 5, 13, tzinfo=timezone.utc),
-    )
 
 
 def _tool_use_block(input_dict: dict) -> MagicMock:
@@ -72,7 +43,9 @@ def test_generate_returns_generated_on_successful_tool_use():
         }),
     ])
 
-    result = AnthropicLlmReasoningClient(fake_sdk).generate(_sig(), _ctx())
+    result = AnthropicLlmReasoningClient(fake_sdk).generate(
+        build_signal_input(), build_reasoning_context()
+    )
 
     assert result.outcome == ReasoningOutcome.GENERATED
     assert result.payload is not None
@@ -91,7 +64,9 @@ def test_generate_passes_pinned_request_shape_to_sdk():
         }),
     ])
 
-    AnthropicLlmReasoningClient(fake_sdk).generate(_sig(), _ctx())
+    AnthropicLlmReasoningClient(fake_sdk).generate(
+        build_signal_input(), build_reasoning_context()
+    )
 
     call = fake_sdk.messages.create.call_args.kwargs
     assert call["model"] == "claude-haiku-4-5"
@@ -117,7 +92,9 @@ def test_generate_returns_refused_by_llm_when_refusal_true():
         }),
     ])
 
-    result = AnthropicLlmReasoningClient(fake_sdk).generate(_sig(), _ctx())
+    result = AnthropicLlmReasoningClient(fake_sdk).generate(
+        build_signal_input(), build_reasoning_context()
+    )
 
     assert result.outcome == ReasoningOutcome.REFUSED_BY_LLM
     assert result.refusal_reason == "insufficient_facts"
@@ -131,7 +108,9 @@ def test_generate_returns_refused_by_llm_with_unspecified_when_reason_missing():
         }),
     ])
 
-    result = AnthropicLlmReasoningClient(fake_sdk).generate(_sig(), _ctx())
+    result = AnthropicLlmReasoningClient(fake_sdk).generate(
+        build_signal_input(), build_reasoning_context()
+    )
 
     assert result.outcome == ReasoningOutcome.REFUSED_BY_LLM
     assert result.refusal_reason == "unspecified"
@@ -141,7 +120,9 @@ def test_generate_returns_error_on_sdk_exception():
     fake_sdk = MagicMock()
     fake_sdk.messages.create.side_effect = RuntimeError("connection refused")
 
-    result = AnthropicLlmReasoningClient(fake_sdk).generate(_sig(), _ctx())
+    result = AnthropicLlmReasoningClient(fake_sdk).generate(
+        build_signal_input(), build_reasoning_context()
+    )
 
     assert result.outcome == ReasoningOutcome.ERROR
     assert "connection refused" in (result.detail or "")
@@ -153,7 +134,9 @@ def test_generate_returns_error_when_no_tool_use_block():
     fake_sdk = MagicMock()
     fake_sdk.messages.create.return_value = _response([text_block], stop_reason="end_turn")
 
-    result = AnthropicLlmReasoningClient(fake_sdk).generate(_sig(), _ctx())
+    result = AnthropicLlmReasoningClient(fake_sdk).generate(
+        build_signal_input(), build_reasoning_context()
+    )
 
     assert result.outcome == ReasoningOutcome.ERROR
     assert result.detail == "anthropic_returned_no_tool_use"
@@ -168,7 +151,9 @@ def test_generate_returns_error_on_empty_reasoning_text():
         }),
     ])
 
-    result = AnthropicLlmReasoningClient(fake_sdk).generate(_sig(), _ctx())
+    result = AnthropicLlmReasoningClient(fake_sdk).generate(
+        build_signal_input(), build_reasoning_context()
+    )
 
     assert result.outcome == ReasoningOutcome.ERROR
 
@@ -182,7 +167,9 @@ def test_generate_uses_custom_model_when_provided():
         }),
     ])
 
-    AnthropicLlmReasoningClient(fake_sdk, model="claude-sonnet-4-6").generate(_sig(), _ctx())
+    AnthropicLlmReasoningClient(fake_sdk, model="claude-sonnet-4-6").generate(
+        build_signal_input(), build_reasoning_context()
+    )
 
     call = fake_sdk.messages.create.call_args.kwargs
     assert call["model"] == "claude-sonnet-4-6"
@@ -197,7 +184,9 @@ def test_generate_records_usage_in_raw_response():
         }),
     ])
 
-    result = AnthropicLlmReasoningClient(fake_sdk).generate(_sig(), _ctx())
+    result = AnthropicLlmReasoningClient(fake_sdk).generate(
+        build_signal_input(), build_reasoning_context()
+    )
 
     assert result.raw_response is not None
     usage = result.raw_response["usage"]
