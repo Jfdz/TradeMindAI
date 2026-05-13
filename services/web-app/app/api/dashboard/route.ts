@@ -16,7 +16,7 @@ import { convertPricesToCandles, deriveSignal } from "@/lib/dashboard/signal-der
 import { assignSymbolColors } from "@/lib/dashboard/symbol-colors";
 import { signalTypeColor } from "@/lib/signal-utils";
 
-const API_BASE_URL = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
+const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8082";
 
 function buildChartMarker(
   lastCandle: DashboardCandle,
