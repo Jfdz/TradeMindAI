@@ -14,7 +14,6 @@ from typing import Protocol
 
 from ai_engine.core.domain.reasoning_context import ReasoningContext
 
-
 REASONING_SCHEMA_VERSION = "v1.0"
 
 

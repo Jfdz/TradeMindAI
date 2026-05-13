@@ -149,7 +149,8 @@ def test_fetch_returns_upstream_failed_on_transport_error(monkeypatch):
 
 
 def test_fetch_returns_upstream_failed_when_secret_missing(monkeypatch):
-    result = TradingCoreClient("http://trading-core:8082", internal_secret="").fetch_reasoning_context("AAPL")
+    client = TradingCoreClient("http://trading-core:8082", internal_secret="")
+    result = client.fetch_reasoning_context("AAPL")
 
     assert result.outcome == ContextOutcome.UPSTREAM_FAILED
     assert result.detail == "internal_secret_not_configured"
@@ -166,11 +167,16 @@ def test_fetch_returns_upstream_failed_when_price_facts_close_is_null(monkeypatc
     assert "parse" in (result.detail or "")
 
 
-def test_fetch_returns_upstream_failed_when_payload_missing_priceFacts(monkeypatch):
+def test_fetch_returns_upstream_failed_when_payload_missing_price_facts(monkeypatch):
+    minimal_payload = {
+        "ticker": "AAPL",
+        "generatedAt": "2026-05-13T12:00:00Z",
+        "news": [],
+    }
     monkeypatch.setattr(
         module.httpx,
         "get",
-        lambda *a, **kw: _FakeResponse(200, {"ticker": "AAPL", "generatedAt": "2026-05-13T12:00:00Z", "news": []}),
+        lambda *a, **kw: _FakeResponse(200, minimal_payload),
     )
 
     result = _make_client().fetch_reasoning_context("AAPL")
@@ -180,10 +186,11 @@ def test_fetch_returns_upstream_failed_when_payload_missing_priceFacts(monkeypat
 
 def test_fetch_skips_news_entries_without_url_or_headline(monkeypatch):
     payload = _full_payload()
+    when = "2026-05-12T10:00:00Z"
     payload["news"] = [
-        {"id": 1, "headline": "ok", "url": "https://example.com/ok", "publishedAt": "2026-05-12T10:00:00Z"},
-        {"id": 2, "headline": "", "url": "https://example.com/empty", "publishedAt": "2026-05-12T10:00:00Z"},
-        {"id": 3, "headline": "no-url", "url": "", "publishedAt": "2026-05-12T10:00:00Z"},
+        {"id": 1, "headline": "ok", "url": "https://example.com/ok", "publishedAt": when},
+        {"id": 2, "headline": "", "url": "https://example.com/empty", "publishedAt": when},
+        {"id": 3, "headline": "no-url", "url": "", "publishedAt": when},
     ]
     monkeypatch.setattr(module.httpx, "get", lambda *a, **kw: _FakeResponse(200, payload))
 

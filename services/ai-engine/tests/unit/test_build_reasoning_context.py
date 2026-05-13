@@ -5,8 +5,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
-import pytest
-
 from ai_engine.core.domain.reasoning_context import (
     SCHEMA_VERSION,
     ContextOutcome,

@@ -66,7 +66,9 @@ def create_llm_reasoning_client(settings: Settings) -> LlmReasoningPort:
 
 
 def _build_anthropic_oauth(settings: Settings) -> LlmReasoningPort:
-    from anthropic import Anthropic  # imported lazily so stub mode doesn't require the SDK
+    # Imported lazily so stub mode doesn't require the SDK at import time.
+    from anthropic import Anthropic
+
     from ai_engine.adapters.out.anthropic_llm_reasoning_client import (
         AnthropicLlmReasoningClient,
     )
@@ -84,6 +86,7 @@ def _build_anthropic_oauth(settings: Settings) -> LlmReasoningPort:
 
 def _build_anthropic_api_key(settings: Settings) -> LlmReasoningPort:
     from anthropic import Anthropic
+
     from ai_engine.adapters.out.anthropic_llm_reasoning_client import (
         AnthropicLlmReasoningClient,
     )

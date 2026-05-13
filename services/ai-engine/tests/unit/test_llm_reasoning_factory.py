@@ -96,8 +96,9 @@ def test_oauth_factory_emits_warning_log(caplog):
     import logging
 
     fake_sdk = MagicMock()
+    factory_logger = "ai_engine.adapters.out.llm_reasoning_factory"
     with patch("anthropic.Anthropic", return_value=fake_sdk):
-        with caplog.at_level(logging.WARNING, logger="ai_engine.adapters.out.llm_reasoning_factory"):
+        with caplog.at_level(logging.WARNING, logger=factory_logger):
             create_llm_reasoning_client(
                 _StubSettings(
                     llm_provider="anthropic_oauth",
