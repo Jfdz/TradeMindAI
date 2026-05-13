@@ -3,7 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
 import { LiveSignalsStrip } from "@/components/dashboard/live-signals-strip";
@@ -156,13 +157,40 @@ export default function DashboardHomePage() {
     ];
   }, [holdings.length, portfolio, signals]);
 
-  const topSignal = signals[0] ?? null;
+  const liveSignals = useMemo(() => signals.filter((s) => s.live), [signals]);
+  const topLiveSignal = liveSignals[0] ?? null;
   const [selectedSignalId, setSelectedSignalId] = useState<string | null>(null);
   const selectedSignal = useMemo(
-    () => signals.find((s) => s.id === selectedSignalId) ?? topSignal,
-    [signals, selectedSignalId, topSignal]
+    () => liveSignals.find((s) => s.id === selectedSignalId) ?? topLiveSignal,
+    [liveSignals, selectedSignalId, topLiveSignal]
   );
   const activeSymbol = selectedSignal?.symbol ?? null;
+
+  // Notify the user when a signal they explicitly selected ages out of the LIVE window.
+  // We only fire the toast after the user has actively picked something — the default
+  // top-of-list focus aging out is shown via the empty-state instead.
+  const lastSelectedRef = useRef<FilteredSignal | null>(null);
+  useEffect(() => {
+    if (!selectedSignalId) {
+      lastSelectedRef.current = null;
+      return;
+    }
+    const stillLive = liveSignals.find((s) => s.id === selectedSignalId);
+    if (stillLive) {
+      lastSelectedRef.current = stillLive;
+      return;
+    }
+    if (lastSelectedRef.current) {
+      const aged = lastSelectedRef.current;
+      toast.info(`${aged.symbol} ${aged.type} aged out of LIVE`, {
+        description: topLiveSignal
+          ? `Switched to ${topLiveSignal.symbol} ${topLiveSignal.type}`
+          : "No live signals right now",
+      });
+      setSelectedSignalId(null);
+      lastSelectedRef.current = null;
+    }
+  }, [liveSignals, selectedSignalId, topLiveSignal]);
 
   const { data: dynamicCandles } = useQuery<DashboardCandle[]>({
     queryKey: ["candles", activeSymbol],
@@ -172,12 +200,12 @@ export default function DashboardHomePage() {
       if (!res.ok) return [];
       return res.json() as Promise<DashboardCandle[]>;
     },
-    enabled: !!activeSymbol && selectedSignal?.id !== topSignal?.id,
+    enabled: !!activeSymbol && selectedSignal?.id !== topLiveSignal?.id,
     staleTime: 60_000,
   });
   const activeCandles = useMemo(
-    () => (selectedSignal?.id === topSignal?.id ? chartCandles : (dynamicCandles ?? [])),
-    [selectedSignal?.id, topSignal?.id, dynamicCandles, chartCandles]
+    () => (selectedSignal?.id === topLiveSignal?.id ? chartCandles : (dynamicCandles ?? [])),
+    [selectedSignal?.id, topLiveSignal?.id, dynamicCandles, chartCandles]
   );
   const activeMarker = useMemo(
     () => buildSignalMarker(selectedSignal, activeCandles),
@@ -328,9 +356,11 @@ export default function DashboardHomePage() {
             <div>
               <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Live chart</div>
               <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">
-                {selectedSignal
-                  ? `${selectedSignal.symbol} ${selectedSignal.type} ${selectedSignal.timeframe}`
-                  : "Portfolio market view"}
+                {liveSignals.length === 0
+                  ? "No live signals right now"
+                  : selectedSignal
+                    ? `${selectedSignal.symbol} ${selectedSignal.type} ${selectedSignal.timeframe}`
+                    : "Live chart"}
               </h3>
             </div>
             <Button asChild variant="outlineCyan" size="sm">
@@ -341,10 +371,10 @@ export default function DashboardHomePage() {
             </Button>
           </div>
 
-          {signals.length > 0 && (
+          {liveSignals.length > 0 && (
             <div className="mt-4">
               <LiveSignalsStrip
-                signals={signals}
+                signals={liveSignals}
                 selectedSignalId={selectedSignalId ?? ""}
                 onSignalChange={setSelectedSignalId}
               />
@@ -352,11 +382,15 @@ export default function DashboardHomePage() {
           )}
 
           <div className="mt-4 rounded-[22px] border border-border bg-bg-0/70 p-3">
-            {activeCandles.length > 0 ? (
+            {liveSignals.length === 0 ? (
+              <div className="flex h-[320px] items-center justify-center rounded-[18px] border border-dashed border-border text-sm text-text-2">
+                No live signals in the last 24 hours.
+              </div>
+            ) : activeCandles.length > 0 ? (
               <CandlestickChart candles={activeCandles} markers={activeMarker ? [activeMarker] : undefined} showVolume={false} height={320} />
             ) : (
               <div className="flex h-[320px] items-center justify-center rounded-[18px] border border-dashed border-border text-sm text-text-2">
-                No chart data available yet.
+                Loading chart data…
               </div>
             )}
           </div>
