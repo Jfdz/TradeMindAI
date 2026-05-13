@@ -383,15 +383,11 @@ export default function DashboardHomePage() {
 
           <div className="mt-4 rounded-[22px] border border-border bg-bg-0/70 p-3">
             {liveSignals.length === 0 ? (
-              <div className="flex h-[320px] items-center justify-center rounded-[18px] border border-dashed border-border text-sm text-text-2">
-                No live signals in the last 24 hours.
-              </div>
+              <ChartPlaceholder>No live signals in the last 24 hours.</ChartPlaceholder>
             ) : activeCandles.length > 0 ? (
               <CandlestickChart candles={activeCandles} markers={activeMarker ? [activeMarker] : undefined} showVolume={false} height={320} />
             ) : (
-              <div className="flex h-[320px] items-center justify-center rounded-[18px] border border-dashed border-border text-sm text-text-2">
-                Loading chart data…
-              </div>
+              <ChartPlaceholder>Loading chart data…</ChartPlaceholder>
             )}
           </div>
         </article>
@@ -514,6 +510,14 @@ export default function DashboardHomePage() {
           </table>
         </div>
       </section>
+    </div>
+  );
+}
+
+function ChartPlaceholder({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex h-[320px] items-center justify-center rounded-[18px] border border-dashed border-border text-sm text-text-2">
+      {children}
     </div>
   );
 }
