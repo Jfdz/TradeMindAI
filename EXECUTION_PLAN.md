@@ -2,6 +2,8 @@
 
 Source design: `PLAN.md` | Branch: `feature/refactor-auth-clerk`
 
+> **STATUS: CODE COMPLETE** — 10 commits pushed, 95 Vitest + 215 JUnit pass, zero stale next-auth/JJWT references. All remaining gates require user action (Phase 0 Clerk keys). See "Blocked on Phase 0" section below.
+
 > **Migration correction:** PLAN.md references `V15` — that version already exists. Use **V20** for the `clerk_user_id` migration (current latest is V19).
 
 ---
