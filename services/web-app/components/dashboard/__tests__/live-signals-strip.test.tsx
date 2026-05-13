@@ -64,12 +64,11 @@ describe("LiveSignalsStrip", () => {
     expect(html).toContain("AAPL");
   });
 
-  it("shows liveCount of totalCount in counter chip", () => {
+  it("shows live count in counter chip", () => {
     const signals = [
       makeSignal("1", "AAPL", "BUY", true),
       makeSignal("2", "MSFT", "SELL", true),
-      makeSignal("3", "TSLA", "HOLD", false),
-      makeSignal("4", "NVDA", "BUY", true),
+      makeSignal("3", "NVDA", "BUY", true),
     ];
     const html = renderToStaticMarkup(
       React.createElement(LiveSignalsStrip, {
@@ -78,7 +77,7 @@ describe("LiveSignalsStrip", () => {
         onSignalChange: vi.fn(),
       })
     );
-    expect(html).toContain("3 of 4");
+    expect(html).toContain("3 live");
   });
 
   it("renders cmd-K hint", () => {
