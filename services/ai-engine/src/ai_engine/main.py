@@ -16,6 +16,10 @@ from ai_engine.adapters.in_.prediction import router as prediction_router
 from ai_engine.adapters.in_.training import router as training_router
 from alembic import command as alembic_command
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 logger = logging.getLogger(__name__)
 
 _SECURITY_HSTS = "max-age=31536000; includeSubDomains; preload"
