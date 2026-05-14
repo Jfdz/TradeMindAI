@@ -122,6 +122,11 @@ class SignalGenerationService implements GenerateSignalUseCase {
             event.put("confidence", signal.getConfidence() != null ? signal.getConfidence().getValue() : null);
             event.put("predictedChangePct", signal.getPredictedChangePct());
             event.put("entryPrice", signal.getEntryPrice());
+            // C9 — ai-engine SignalInput requires generated_at. Older
+            // messages without it default to message-receive time on
+            // the consumer side, but new publishes carry the real value.
+            event.put("generatedAt",
+                    signal.getGeneratedAt() != null ? signal.getGeneratedAt().toString() : null);
             String payload = objectMapper.writeValueAsString(event);
             rabbitTemplate.convertAndSend(
                     RabbitMQConfig.REASONING_QUEUE, payload);

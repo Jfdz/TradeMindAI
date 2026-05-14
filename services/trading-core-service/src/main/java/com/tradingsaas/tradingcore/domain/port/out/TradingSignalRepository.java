@@ -7,6 +7,7 @@ import com.tradingsaas.tradingcore.domain.model.Timeframe;
 import com.tradingsaas.tradingcore.domain.model.TradingSignal;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -55,4 +56,20 @@ public interface TradingSignalRepository {
             Timeframe timeframe,
             BigDecimal entryPrice,
             Instant sinceAtLeast);
+
+    /**
+     * Admin-only listing used by the reasoning-audit explorer (E1).
+     *
+     * <p>When {@code tickerFilter} is {@code null} or blank, returns all
+     * signals across the workspace ordered by {@code generated_at} desc.
+     * Otherwise restricts to rows whose ticker matches case-insensitively.
+     */
+    Page<TradingSignal> findAdminSignals(String tickerFilter, Pageable pageable);
+
+    /**
+     * Returns every ticker that has at least one row in {@code trading_signals},
+     * ordered alphabetically. Used to populate the admin ticker dropdown so
+     * the filter only offers tickers that actually have signals to audit.
+     */
+    List<String> findDistinctTickers();
 }

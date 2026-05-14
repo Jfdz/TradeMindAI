@@ -81,6 +81,17 @@ class SignalQueryServiceTest {
         }
 
         @Override
+        public org.springframework.data.domain.Page<TradingSignal> findAdminSignals(
+                String tickerFilter, org.springframework.data.domain.Pageable pageable) {
+            return org.springframework.data.domain.Page.empty();
+        }
+
+        @Override
+        public java.util.List<String> findDistinctTickers() {
+            return java.util.List.of();
+        }
+
+        @Override
         public Optional<TradingSignal> findRecentEquivalent(
                 String ticker,
                 com.tradingsaas.tradingcore.domain.model.SignalType signalType,

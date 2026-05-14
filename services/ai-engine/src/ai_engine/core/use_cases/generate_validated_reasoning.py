@@ -9,19 +9,23 @@ Composition over `BuildReasoningContextUseCase` (C3c) + `LlmReasoningPort` (C4)
   4. Otherwise call the LLM once more with the validator feedback. If
      this call's outcome != GENERATED → propagate that result.
   5. Validate the second payload. If pass → GENERATED with retry=1.
-  6. Otherwise → REFUSED_BY_VALIDATOR carrying the second feedback.
+  6. Otherwise → REFUSED_BY_VALIDATOR carrying the second feedback and
+     the structured violations (so C6 audit can replay which rules tripped).
 
 Never raises. Every failure mode is a `ReasoningOutcome` variant.
-Emits structured logs with `retry` and `outcome` tags so the C8 audit
-pipeline can compute generation-success and retry-rate metrics from log
-ingestion without a Prometheus dependency wired into ai-engine yet.
+
+C7 callers wanting to persist the artifact downstream use
+`execute_with_context()` to also get the `ReasoningContext` the LLM saw —
+that becomes the `factsSnapshot` JSONB sent to trading-core.
 """
 
 from __future__ import annotations
 
+import dataclasses
 import logging
+from dataclasses import dataclass
 
-from ai_engine.core.domain.reasoning_context import ContextOutcome
+from ai_engine.core.domain.reasoning_context import ContextOutcome, ReasoningContext
 from ai_engine.core.domain.reasoning_output import (
     LlmReasoningPort,
     ReasoningOutcome,
@@ -34,6 +38,19 @@ from ai_engine.core.use_cases.build_reasoning_context import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class GenerationOutcome:
+    """Bundle of (result, context) for callers that need the audit anchor.
+
+    `context` is None when context_use_case never returned AVAILABLE (i.e.
+    `result.outcome == REFUSED_NO_FACTS`). Otherwise it carries the exact
+    `ReasoningContext` the LLM saw and the validator checked against.
+    """
+
+    result: ReasoningResult
+    context: ReasoningContext | None
 
 
 class GenerateValidatedReasoningUseCase:
@@ -50,6 +67,10 @@ class GenerateValidatedReasoningUseCase:
         self._validator = validator
 
     def execute(self, signal: SignalInput) -> ReasoningResult:
+        """Backwards-compatible facade. Discards the context."""
+        return self.execute_with_context(signal).result
+
+    def execute_with_context(self, signal: SignalInput) -> GenerationOutcome:
         context_result = self._context_use_case.execute(signal.ticker)
         if context_result.outcome != ContextOutcome.AVAILABLE:
             logger.info(
@@ -58,8 +79,11 @@ class GenerateValidatedReasoningUseCase:
                 signal.ticker,
                 context_result.outcome.value,
             )
-            return ReasoningResult.refused_no_facts(
-                detail=f"context_outcome={context_result.outcome.value}"
+            return GenerationOutcome(
+                result=ReasoningResult.refused_no_facts(
+                    detail=f"context_outcome={context_result.outcome.value}"
+                ),
+                context=None,
             )
 
         assert context_result.context is not None  # invariant of AVAILABLE
@@ -72,7 +96,7 @@ class GenerateValidatedReasoningUseCase:
                 signal.ticker,
                 first.outcome.value,
             )
-            return first
+            return GenerationOutcome(result=first, context=ctx)
 
         assert first.payload is not None
         validation = self._validator.validate(first.payload, signal, ctx)
@@ -81,7 +105,7 @@ class GenerateValidatedReasoningUseCase:
                 "event=validated_reasoning.generated ticker=%s retry=0",
                 signal.ticker,
             )
-            return first
+            return GenerationOutcome(result=first, context=ctx)
 
         logger.info(
             "event=validated_reasoning.validation_failed ticker=%s "
@@ -98,7 +122,12 @@ class GenerateValidatedReasoningUseCase:
                 signal.ticker,
                 second.outcome.value,
             )
-            return second
+            # Tag the result with retry=1 so the persisted artifact reflects
+            # that the LLM was actually called twice.
+            return GenerationOutcome(
+                result=dataclasses.replace(second, retry_count=1),
+                context=ctx,
+            )
 
         assert second.payload is not None
         validation2 = self._validator.validate(second.payload, signal, ctx)
@@ -107,7 +136,10 @@ class GenerateValidatedReasoningUseCase:
                 "event=validated_reasoning.generated ticker=%s retry=1",
                 signal.ticker,
             )
-            return second
+            return GenerationOutcome(
+                result=dataclasses.replace(second, retry_count=1),
+                context=ctx,
+            )
 
         logger.warning(
             "event=validated_reasoning.refused_by_validator ticker=%s "
@@ -115,7 +147,16 @@ class GenerateValidatedReasoningUseCase:
             signal.ticker,
             len(validation2.violations),
         )
-        return ReasoningResult.refused_by_validator(
+        violations_payload = tuple(
+            {"type": v.type.value, "detail": v.detail}
+            for v in validation2.violations
+        )
+        refused_result = ReasoningResult.refused_by_validator(
             reason=validation2.feedback,
             raw_response=second.raw_response,
+            violations=violations_payload,
+        )
+        return GenerationOutcome(
+            result=dataclasses.replace(refused_result, retry_count=1),
+            context=ctx,
         )
