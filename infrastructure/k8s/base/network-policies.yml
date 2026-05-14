@@ -53,6 +53,9 @@ spec:
         - podSelector:
             matchLabels:
               app: web-app
+        - podSelector:
+            matchLabels:
+              app: ai-engine
       ports:
         - protocol: TCP
           port: 8082
