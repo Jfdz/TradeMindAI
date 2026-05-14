@@ -1,7 +1,7 @@
 import { test as setup } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 
 const authFile = path.join(__dirname, "../../.auth/session.json");
 
