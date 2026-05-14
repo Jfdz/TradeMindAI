@@ -1,10 +1,6 @@
 package com.tradingsaas.marketdata.config;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.context.annotation.Bean;
@@ -32,13 +28,10 @@ public class RedisConfig {
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate(LettuceConnectionFactory redisConnectionFactory) {
-        ObjectMapper redisObjectMapper = new ObjectMapper()
-                .registerModule(new JavaTimeModule())
-                .setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY)
-                .activateDefaultTyping(
-                        BasicPolymorphicTypeValidator.builder().allowIfBaseType(Object.class).build(),
-                        ObjectMapper.DefaultTyping.NON_FINAL,
-                        JsonTypeInfo.As.PROPERTY);
+        // GenericJackson2JsonRedisSerializer handles polymorphic typing on its own.
+        // The injected ObjectMapper only needs JavaTimeModule so Java 8 dates
+        // (LocalDate, Instant) on cached models like PriceFacts serialize cleanly.
+        ObjectMapper redisObjectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
         GenericJackson2JsonRedisSerializer serializer =
                 new GenericJackson2JsonRedisSerializer(redisObjectMapper);
 
