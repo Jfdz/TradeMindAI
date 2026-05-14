@@ -94,6 +94,7 @@ management:
 
 trading-core:
   internal-secret: ${INTERNAL_API_SECRET:${TRADING_CORE_INTERNAL_SECRET:}}
+  admin-emails: ${TRADING_CORE_ADMIN_EMAILS:}
   reasoning:
     # C9 cutover flag. When `true` (default), the legacy in-process
     # ReasoningGenerationListener consumes signal.reasoning.requested
