@@ -61,6 +61,6 @@ data:
   nextauth-url: https://trademind.es
   api-base-url: https://api.trademind.es
   api-base-url-internal: http://trading-core-service.trading-saas.svc.cluster.local:8082
-  ADMIN_EMAILS: noreply@trademind.es
+  ADMIN_EMAILS: noreply@trademind.es,demo@trademind.ai
   AI_ENGINE_SERVICE_URL: http://ai-engine.trading-saas.svc.cluster.local:8000
   MARKET_DATA_SERVICE_URL: http://market-data-service.trading-saas.svc.cluster.local:8081
