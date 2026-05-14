@@ -1,11 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const protectMock = vi.fn();
 const getUserIdMock = vi.fn<() => Promise<{ userId: string | null }>>(() => Promise.resolve({ userId: null }));
-
-const authContextMock = {
-  protect: protectMock,
-};
 
 vi.mock("@clerk/nextjs/server", () => ({
   clerkMiddleware: (handler: (auth: unknown, req: unknown) => unknown) => {
@@ -30,6 +26,12 @@ describe("middleware", () => {
   beforeEach(() => {
     protectMock.mockReset();
     getUserIdMock.mockResolvedValue({ userId: null });
+    vi.resetModules();
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_test_fake";
+  });
+
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
   });
 
   it("protects dashboard routes for unauthenticated users", async () => {
