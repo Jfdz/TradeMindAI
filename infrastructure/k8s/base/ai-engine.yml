@@ -38,6 +38,13 @@ spec:
                   key: CLAUDE_CODE_OAUTH_TOKEN
             - name: LLM_PROVIDER
               value: anthropic_oauth
+            - name: TRADING_CORE_SERVICE_URL
+              value: http://trading-core-service.trading-saas.svc.cluster.local:8082
+            - name: TRADING_CORE_INTERNAL_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: internal-secret
+                  key: secret
             - name: DB_HOST
               valueFrom:
                 secretKeyRef:
