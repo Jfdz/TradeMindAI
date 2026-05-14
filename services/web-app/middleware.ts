@@ -1,24 +1,29 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 const isProtected = createRouteMatcher(["/dashboard(.*)"]);
 const isAuthPage = createRouteMatcher(["/auth(.*)"]);
 
-export default clerkMiddleware(async (auth, request) => {
-  if (isProtected(request)) {
-    await auth.protect({
-      unauthenticatedUrl: new URL("/auth/login", request.url).toString(),
-    });
-  }
+function noopMiddleware(_req: NextRequest) {
+  return NextResponse.next();
+}
 
-  if (isAuthPage(request)) {
-    const { userId } = await auth();
-    if (userId) {
-      const url = new URL("/dashboard", request.url);
-      const { NextResponse } = await import("next/server");
-      return NextResponse.redirect(url);
-    }
-  }
-});
+export default process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+  ? clerkMiddleware(async (auth, request) => {
+      if (isProtected(request)) {
+        await auth.protect({
+          unauthenticatedUrl: new URL("/auth/login", request.url).toString(),
+        });
+      }
+
+      if (isAuthPage(request)) {
+        const { userId } = await auth();
+        if (userId) {
+          return NextResponse.redirect(new URL("/dashboard", request.url));
+        }
+      }
+    })
+  : noopMiddleware;
 
 export const config = {
   matcher: [
