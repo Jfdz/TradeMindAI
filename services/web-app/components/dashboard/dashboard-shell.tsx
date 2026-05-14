@@ -2,7 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useUser, useClerk } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
@@ -10,6 +9,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { BrandMark, MenuIcon, XIcon } from "@/components/site/icons";
 import { apiClient } from "@/lib/api-client";
+import { useAuthUser } from "@/lib/auth-context";
 import { dashboardNavItems } from "@/lib/trademind-content";
 import { cn } from "@/lib/utils";
 
@@ -30,8 +30,7 @@ function formatSignalBadge(count: number): string {
 
 export function DashboardShell({ children }: { readonly children: ReactNode }) {
   const pathname = usePathname();
-  const { user } = useUser();
-  const { signOut } = useClerk();
+  const { user, signOut } = useAuthUser();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const { data: signalCount } = useQuery({

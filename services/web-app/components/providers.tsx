@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { ThemeHydrator } from "@/components/theme/theme-hydrator";
+import { AuthContext, ClerkAuthBridge } from "@/lib/auth-context";
 
 const CLERK_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
@@ -47,12 +48,18 @@ export function Providers({ children }: { children: ReactNode }) {
   );
 
   if (!CLERK_KEY) {
-    return inner;
+    return (
+      <AuthContext.Provider value={{ user: null, signOut: async () => {} }}>
+        {inner}
+      </AuthContext.Provider>
+    );
   }
 
   return (
     <ClerkProvider appearance={clerkAppearance}>
-      {inner}
+      <ClerkAuthBridge>
+        {inner}
+      </ClerkAuthBridge>
     </ClerkProvider>
   );
 }

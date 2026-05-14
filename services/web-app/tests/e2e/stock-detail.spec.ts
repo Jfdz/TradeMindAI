@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+const CLERK_ENABLED = process.env.E2E_CLERK_TESTS_ENABLED === "true";
+
 const MOCK_PROFILE = {
   ticker: "AAPL",
   name: "Apple Inc.",
@@ -48,6 +50,7 @@ test.describe("stock-detail", () => {
   });
 
   test("renders company header with ticker", async ({ page }) => {
+    if (!CLERK_ENABLED) test.skip();
     await page.goto("/dashboard/stocks/AAPL");
     await expect(page.locator("body")).not.toContainText("Application error");
     await expect(
@@ -65,6 +68,7 @@ test.describe("stock-detail", () => {
   });
 
   test("renders news section", async ({ page }) => {
+    if (!CLERK_ENABLED) test.skip();
     await page.goto("/dashboard/stocks/AAPL");
     await expect(page.locator("body")).not.toContainText("Application error");
     await expect(

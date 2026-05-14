@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { useUser, useClerk } from "@clerk/nextjs";
 
+import { useAuthUser } from "@/lib/auth-context";
 import { apiClient, ApiError, type SessionResponse } from "@/lib/api-client";
 import { fetchSettingsPageData } from "@/lib/dashboard/client-data";
 import { Button } from "@/components/ui/button";
@@ -71,8 +71,7 @@ const notificationRows = [
 type NotificationKey = (typeof notificationRows)[number]["key"];
 
 export default function SettingsPage() {
-  const { user } = useUser();
-  const { signOut } = useClerk();
+  const { user, signOut } = useAuthUser();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
   const [name, setName] = useState(user?.fullName ?? "TradeMind Operator");
