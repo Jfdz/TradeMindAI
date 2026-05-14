@@ -13,3 +13,4 @@ now
 playwright-report/
 test-results/
 .auth/
+*.tsbuildinfo

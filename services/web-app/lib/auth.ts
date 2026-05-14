@@ -141,7 +141,12 @@ export const authOptions: NextAuthOptions = {
         return token;
       }
 
-      // Token still valid (120s buffer before real expiry)
+      // Token still valid (120s buffer before real expiry). Re-evaluate
+      // isAdmin on every callback so ADMIN_EMAILS changes propagate
+      // without forcing a fresh login.
+      if (typeof token.email === "string") {
+        token.isAdmin = ADMIN_EMAILS.has(token.email.toLowerCase());
+      }
       const expires = typeof token.accessTokenExpires === "number" ? token.accessTokenExpires : 0;
       if (Date.now() < expires - 120_000) {
         return token;
