@@ -23,6 +23,9 @@ public class TradingSignal {
     private final BigDecimal takeProfitPct;
     private final BigDecimal predictedChangePct;
     private final BigDecimal entryPrice;
+    private final BigDecimal targetPrice;
+    private final BigDecimal stopLoss;
+    private final BigDecimal expectedMovePct;
     private final String reasoning;
     private final ReasoningStatus reasoningStatus;
     private final Instant reasoningGeneratedAt;
@@ -34,7 +37,7 @@ public class TradingSignal {
                          Confidence confidence,
                          Timeframe timeframe,
                          Instant generatedAt) {
-        this(id, symbolId, null, type, confidence, timeframe, generatedAt, null, null, null, null, null, null, null);
+        this(id, symbolId, null, type, confidence, timeframe, generatedAt, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     public TradingSignal(UUID id,
@@ -46,7 +49,7 @@ public class TradingSignal {
                          Instant generatedAt,
                          BigDecimal stopLossPct,
                          BigDecimal takeProfitPct) {
-        this(id, symbolId, ticker, type, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, null, null, null, null, null);
+        this(id, symbolId, ticker, type, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, null, null, null, null, null, null, null, null, null);
     }
 
     public TradingSignal(UUID id,
@@ -57,7 +60,7 @@ public class TradingSignal {
                          Instant generatedAt,
                          BigDecimal stopLossPct,
                          BigDecimal takeProfitPct) {
-        this(id, symbolId, null, type, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, null, null, null, null, null);
+        this(id, symbolId, null, type, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, null, null, null, null, null, null, null, null, null);
     }
 
     public TradingSignal(UUID id,
@@ -70,7 +73,7 @@ public class TradingSignal {
                          BigDecimal stopLossPct,
                          BigDecimal takeProfitPct,
                          BigDecimal predictedChangePct) {
-        this(id, symbolId, ticker, type, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, predictedChangePct, null, null, null, null);
+        this(id, symbolId, ticker, type, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, predictedChangePct, null, null, null, null, null, null, null, null);
     }
 
     public TradingSignal(UUID id,
@@ -84,7 +87,25 @@ public class TradingSignal {
                          BigDecimal takeProfitPct,
                          BigDecimal predictedChangePct,
                          BigDecimal entryPrice) {
-        this(id, symbolId, ticker, type, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, predictedChangePct, entryPrice, null, null, null);
+        this(id, symbolId, ticker, type, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, predictedChangePct, entryPrice, null, null, null, null, null, null, null);
+    }
+
+    public TradingSignal(UUID id,
+                         UUID symbolId,
+                         String ticker,
+                         SignalType type,
+                         Confidence confidence,
+                         Timeframe timeframe,
+                         Instant generatedAt,
+                         BigDecimal stopLossPct,
+                         BigDecimal takeProfitPct,
+                         BigDecimal predictedChangePct,
+                         BigDecimal entryPrice,
+                         BigDecimal targetPrice,
+                         BigDecimal stopLoss,
+                         BigDecimal expectedMovePct) {
+        this(id, symbolId, ticker, type, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct,
+                predictedChangePct, entryPrice, targetPrice, stopLoss, expectedMovePct, null, null, null, null);
     }
 
     public TradingSignal(UUID id,
@@ -102,7 +123,7 @@ public class TradingSignal {
                          ReasoningStatus reasoningStatus,
                          Instant reasoningGeneratedAt) {
         this(id, symbolId, ticker, type, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct,
-                predictedChangePct, entryPrice, reasoning, reasoningStatus, reasoningGeneratedAt, null);
+                predictedChangePct, entryPrice, null, null, null, reasoning, reasoningStatus, reasoningGeneratedAt, null);
     }
 
     public TradingSignal(UUID id,
@@ -116,6 +137,28 @@ public class TradingSignal {
                          BigDecimal takeProfitPct,
                          BigDecimal predictedChangePct,
                          BigDecimal entryPrice,
+                         String reasoning,
+                         ReasoningStatus reasoningStatus,
+                         Instant reasoningGeneratedAt,
+                         ReasoningArtifact reasoningArtifact) {
+        this(id, symbolId, ticker, type, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct,
+                predictedChangePct, entryPrice, null, null, null, reasoning, reasoningStatus, reasoningGeneratedAt, reasoningArtifact);
+    }
+
+    public TradingSignal(UUID id,
+                         UUID symbolId,
+                         String ticker,
+                         SignalType type,
+                         Confidence confidence,
+                         Timeframe timeframe,
+                         Instant generatedAt,
+                         BigDecimal stopLossPct,
+                         BigDecimal takeProfitPct,
+                         BigDecimal predictedChangePct,
+                         BigDecimal entryPrice,
+                         BigDecimal targetPrice,
+                         BigDecimal stopLoss,
+                         BigDecimal expectedMovePct,
                          String reasoning,
                          ReasoningStatus reasoningStatus,
                          Instant reasoningGeneratedAt,
@@ -144,6 +187,9 @@ public class TradingSignal {
         this.takeProfitPct = takeProfitPct;
         this.predictedChangePct = predictedChangePct;
         this.entryPrice = entryPrice;
+        this.targetPrice = targetPrice;
+        this.stopLoss = stopLoss;
+        this.expectedMovePct = expectedMovePct;
         this.reasoning = reasoning;
         this.reasoningStatus = reasoningStatus;
         this.reasoningGeneratedAt = reasoningGeneratedAt;
@@ -194,6 +240,18 @@ public class TradingSignal {
         return entryPrice;
     }
 
+    public BigDecimal getTargetPrice() {
+        return targetPrice;
+    }
+
+    public BigDecimal getStopLoss() {
+        return stopLoss;
+    }
+
+    public BigDecimal getExpectedMovePct() {
+        return expectedMovePct;
+    }
+
     public String getReasoning() {
         return reasoning;
     }
@@ -218,6 +276,7 @@ public class TradingSignal {
         return new TradingSignal(
                 id, symbolId, ticker, type, confidence, timeframe, generatedAt,
                 stopLossPct, takeProfitPct, predictedChangePct, entryPrice,
+                targetPrice, stopLoss, expectedMovePct,
                 reasoning, reasoningStatus, reasoningGeneratedAt, artifact);
     }
 
@@ -235,6 +294,6 @@ public class TradingSignal {
 
     @Override
     public String toString() {
-        return "TradingSignal{id=" + id + ", symbolId=" + symbolId + ", ticker=" + ticker + ", type=" + type + ", confidence=" + confidence + ", timeframe=" + timeframe + ", generatedAt=" + generatedAt + ", stopLossPct=" + stopLossPct + ", takeProfitPct=" + takeProfitPct + ", predictedChangePct=" + predictedChangePct + ", entryPrice=" + entryPrice + ", reasoningStatus=" + reasoningStatus + '}';
+        return "TradingSignal{id=" + id + ", symbolId=" + symbolId + ", ticker=" + ticker + ", type=" + type + ", confidence=" + confidence + ", timeframe=" + timeframe + ", generatedAt=" + generatedAt + ", stopLossPct=" + stopLossPct + ", takeProfitPct=" + takeProfitPct + ", predictedChangePct=" + predictedChangePct + ", entryPrice=" + entryPrice + ", targetPrice=" + targetPrice + ", stopLoss=" + stopLoss + ", expectedMovePct=" + expectedMovePct + ", reasoningStatus=" + reasoningStatus + '}';
     }
 }

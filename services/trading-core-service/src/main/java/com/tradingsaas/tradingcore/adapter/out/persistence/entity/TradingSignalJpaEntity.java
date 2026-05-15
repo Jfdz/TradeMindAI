@@ -57,6 +57,15 @@ public class TradingSignalJpaEntity {
     @Column(name = "entry_price", precision = 18, scale = 6)
     private BigDecimal entryPrice;
 
+    @Column(name = "target_price", precision = 18, scale = 6)
+    private BigDecimal targetPrice;
+
+    @Column(name = "stop_loss", precision = 18, scale = 6)
+    private BigDecimal stopLoss;
+
+    @Column(name = "expected_move_pct", precision = 8, scale = 4)
+    private BigDecimal expectedMovePct;
+
     @Column(name = "reasoning", columnDefinition = "TEXT")
     private String reasoning;
 
@@ -110,26 +119,35 @@ public class TradingSignalJpaEntity {
     public TradingSignalJpaEntity(UUID id, UUID symbolId, SignalType signalType, BigDecimal confidence,
                                   Timeframe timeframe, Instant generatedAt,
                                   BigDecimal stopLossPct, BigDecimal takeProfitPct) {
-        this(id, symbolId, null, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, null, null, null, ReasoningStatus.PENDING, null);
+        this(id, symbolId, null, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, null, null, null, null, null, null, ReasoningStatus.PENDING, null);
     }
 
     public TradingSignalJpaEntity(UUID id, UUID symbolId, String ticker, SignalType signalType, BigDecimal confidence,
                                   Timeframe timeframe, Instant generatedAt,
                                   BigDecimal stopLossPct, BigDecimal takeProfitPct, BigDecimal predictedChangePct) {
-        this(id, symbolId, ticker, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, predictedChangePct, null, null, ReasoningStatus.PENDING, null);
+        this(id, symbolId, ticker, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, predictedChangePct, null, null, null, null, null, ReasoningStatus.PENDING, null);
     }
 
     public TradingSignalJpaEntity(UUID id, UUID symbolId, String ticker, SignalType signalType, BigDecimal confidence,
                                   Timeframe timeframe, Instant generatedAt,
                                   BigDecimal stopLossPct, BigDecimal takeProfitPct, BigDecimal predictedChangePct,
                                   BigDecimal entryPrice) {
-        this(id, symbolId, ticker, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, predictedChangePct, entryPrice, null, ReasoningStatus.PENDING, null);
+        this(id, symbolId, ticker, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, predictedChangePct, entryPrice, null, null, null, null, ReasoningStatus.PENDING, null);
     }
 
     public TradingSignalJpaEntity(UUID id, UUID symbolId, String ticker, SignalType signalType, BigDecimal confidence,
                                   Timeframe timeframe, Instant generatedAt,
                                   BigDecimal stopLossPct, BigDecimal takeProfitPct, BigDecimal predictedChangePct,
                                   BigDecimal entryPrice, String reasoning, ReasoningStatus reasoningStatus,
+                                  Instant reasoningGeneratedAt) {
+        this(id, symbolId, ticker, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, predictedChangePct, entryPrice, null, null, null, reasoning, reasoningStatus, reasoningGeneratedAt);
+    }
+
+    public TradingSignalJpaEntity(UUID id, UUID symbolId, String ticker, SignalType signalType, BigDecimal confidence,
+                                  Timeframe timeframe, Instant generatedAt,
+                                  BigDecimal stopLossPct, BigDecimal takeProfitPct, BigDecimal predictedChangePct,
+                                  BigDecimal entryPrice, BigDecimal targetPrice, BigDecimal stopLoss,
+                                  BigDecimal expectedMovePct, String reasoning, ReasoningStatus reasoningStatus,
                                   Instant reasoningGeneratedAt) {
         this.id = id;
         this.symbolId = symbolId;
@@ -142,6 +160,9 @@ public class TradingSignalJpaEntity {
         this.takeProfitPct = takeProfitPct;
         this.predictedChangePct = predictedChangePct;
         this.entryPrice = entryPrice;
+        this.targetPrice = targetPrice;
+        this.stopLoss = stopLoss;
+        this.expectedMovePct = expectedMovePct;
         this.reasoning = reasoning;
         this.reasoningStatus = reasoningStatus;
         this.reasoningGeneratedAt = reasoningGeneratedAt;
@@ -158,6 +179,9 @@ public class TradingSignalJpaEntity {
     public BigDecimal getTakeProfitPct() { return takeProfitPct; }
     public BigDecimal getPredictedChangePct() { return predictedChangePct; }
     public BigDecimal getEntryPrice() { return entryPrice; }
+    public BigDecimal getTargetPrice() { return targetPrice; }
+    public BigDecimal getStopLoss() { return stopLoss; }
+    public BigDecimal getExpectedMovePct() { return expectedMovePct; }
     public String getReasoning() { return reasoning; }
     public ReasoningStatus getReasoningStatus() { return reasoningStatus; }
     public Instant getReasoningGeneratedAt() { return reasoningGeneratedAt; }

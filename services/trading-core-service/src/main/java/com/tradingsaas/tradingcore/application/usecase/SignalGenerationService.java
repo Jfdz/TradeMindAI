@@ -1,5 +1,6 @@
 package com.tradingsaas.tradingcore.application.usecase;
 
+import com.tradingsaas.tradingcore.application.service.SignalMathService;
 import com.tradingsaas.tradingcore.config.RabbitMQConfig;
 import com.tradingsaas.tradingcore.domain.model.AiPrediction;
 import com.tradingsaas.tradingcore.domain.model.SignalType;
@@ -40,6 +41,7 @@ class SignalGenerationService implements GenerateSignalUseCase {
 
     private final TradingSignalRepository tradingSignalRepository;
     private final HistoricalMarketDataPort marketDataPort;
+    private final SignalMathService signalMath;
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
     private final Counter dedupSkipCounter;
@@ -48,11 +50,13 @@ class SignalGenerationService implements GenerateSignalUseCase {
     @Autowired
     SignalGenerationService(TradingSignalRepository tradingSignalRepository,
                             HistoricalMarketDataPort marketDataPort,
+                            SignalMathService signalMath,
                             RabbitTemplate rabbitTemplate,
                             ObjectMapper objectMapper,
                             MeterRegistry meterRegistry) {
         this.tradingSignalRepository = tradingSignalRepository;
         this.marketDataPort = marketDataPort;
+        this.signalMath = signalMath;
         this.rabbitTemplate = rabbitTemplate;
         this.objectMapper = objectMapper;
         this.dedupSkipCounter = Counter.builder("signal_generation_dedup_total")
@@ -65,7 +69,14 @@ class SignalGenerationService implements GenerateSignalUseCase {
 
     SignalGenerationService(TradingSignalRepository tradingSignalRepository,
                             HistoricalMarketDataPort marketDataPort) {
-        this(tradingSignalRepository, marketDataPort, null, null,
+        this(tradingSignalRepository, marketDataPort, new SignalMathService(), null, null,
+                new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+    }
+
+    SignalGenerationService(TradingSignalRepository tradingSignalRepository,
+                            HistoricalMarketDataPort marketDataPort,
+                            SignalMathService signalMath) {
+        this(tradingSignalRepository, marketDataPort, signalMath, null, null,
                 new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
     }
 
@@ -82,6 +93,17 @@ class SignalGenerationService implements GenerateSignalUseCase {
                     prediction.getTicker(), prediction.getSignalType(), entryPrice, existing.get().getId());
             return existing.get();
         }
+        BigDecimal slPct = riskStopLossPct(prediction.getSignalType());
+        BigDecimal tpPct = riskTakeProfitPct(prediction.getSignalType());
+        BigDecimal targetPrice = null;
+        BigDecimal stopLoss = null;
+        BigDecimal expectedMovePct = null;
+        if (entryPrice != null && prediction.getSignalType() != SignalType.HOLD) {
+            targetPrice = signalMath.calculateTargetPrice(prediction.getSignalType(), entryPrice, tpPct);
+            stopLoss = signalMath.calculateStopLoss(prediction.getSignalType(), entryPrice, slPct);
+            expectedMovePct = signalMath.calculateExpectedMovePct(prediction.getSignalType(), entryPrice, targetPrice);
+            signalMath.validatePriceCoherence(prediction.getSignalType(), entryPrice, targetPrice, stopLoss);
+        }
         TradingSignal signal = new TradingSignal(
                 UUID.randomUUID(),
                 symbolId,
@@ -90,10 +112,13 @@ class SignalGenerationService implements GenerateSignalUseCase {
                 prediction.getConfidence(),
                 Timeframe.DAILY,
                 Instant.now(),
-                riskStopLossPct(prediction.getSignalType()),
-                riskTakeProfitPct(prediction.getSignalType()),
+                slPct,
+                tpPct,
                 prediction.getPredictedChangePct(),
-                entryPrice);
+                entryPrice,
+                targetPrice,
+                stopLoss,
+                expectedMovePct);
         try {
             TradingSignal saved = tradingSignalRepository.save(signal);
             publishReasoningRequested(saved);
@@ -122,6 +147,9 @@ class SignalGenerationService implements GenerateSignalUseCase {
             event.put("confidence", signal.getConfidence() != null ? signal.getConfidence().getValue() : null);
             event.put("predictedChangePct", signal.getPredictedChangePct());
             event.put("entryPrice", signal.getEntryPrice());
+            event.put("targetPrice", signal.getTargetPrice());
+            event.put("stopLoss", signal.getStopLoss());
+            event.put("expectedMovePct", signal.getExpectedMovePct());
             // C9 — ai-engine SignalInput requires generated_at. Older
             // messages without it default to message-receive time on
             // the consumer side, but new publishes carry the real value.
