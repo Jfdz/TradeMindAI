@@ -68,7 +68,7 @@ def test_corpus_hallucination_detection_rate_is_one(
     # one expected violation type. Drops here mean the validator regressed
     # on a real rule (or the case was relabelled by mistake).
     report, _ = evaluate(live_cases)
-    assert report.hallucination_detection_rate == 1.0, (
+    assert report.hallucination_detection_rate == pytest.approx(1.0), (
         f"hallucination detection dropped to "
         f"{report.hallucination_detection_rate:.2%}"
     )
@@ -88,16 +88,16 @@ def test_corpus_exercises_all_four_violation_types(
 
 
 def test_jaccard_token_overlap_identical_returns_one():
-    assert jaccard_token_overlap("foo bar baz", "foo bar baz") == 1.0
+    assert jaccard_token_overlap("foo bar baz", "foo bar baz") == pytest.approx(1.0)
 
 
 def test_jaccard_token_overlap_disjoint_returns_zero():
-    assert jaccard_token_overlap("foo bar", "alpha beta") == 0.0
+    assert jaccard_token_overlap("foo bar", "alpha beta") == pytest.approx(0.0)
 
 
 def test_jaccard_token_overlap_is_lowercase_and_punctuation_robust():
     # Punctuation is stripped by \w+; case is normalized.
-    assert jaccard_token_overlap("META at 603.0", "meta AT 603 0") == 1.0
+    assert jaccard_token_overlap("META at 603.0", "meta AT 603 0") == pytest.approx(1.0)
 
 
 def test_jaccard_token_overlap_partial_match():
@@ -162,7 +162,7 @@ def test_accumulate_counts_correct_verdict():
     assert report.expected_pass_cases == 1
     assert report.expected_pass_false_positives == 0
     assert report.token_overlap_count == 1
-    assert report.token_overlap_sum == 0.5
+    assert report.token_overlap_sum == pytest.approx(0.5)
 
 
 def test_accumulate_counts_false_positive():
@@ -217,7 +217,7 @@ def test_accumulate_counts_caught_when_expected_subset_of_actual():
 
 def test_eval_report_metrics_with_empty_input():
     report = EvalReport()
-    assert report.validator_correctness == 0.0
-    assert report.hallucination_detection_rate == 1.0
-    assert report.false_positive_rate == 0.0
+    assert report.validator_correctness == pytest.approx(0.0)
+    assert report.hallucination_detection_rate == pytest.approx(1.0)
+    assert report.false_positive_rate == pytest.approx(0.0)
     assert report.token_overlap_mean is None

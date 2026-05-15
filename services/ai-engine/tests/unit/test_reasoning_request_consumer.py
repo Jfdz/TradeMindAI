@@ -103,12 +103,12 @@ def test_to_signal_input_parses_full_payload():
     signal = _to_signal_input(event)
     assert signal.ticker == "META"
     assert signal.signal_type == "BUY"
-    assert signal.confidence == 0.62
-    assert signal.entry_price == 603.0
-    assert signal.predicted_change_pct == 4.5
-    assert signal.target_price == 627.12
-    assert signal.stop_loss == 590.94
-    assert signal.expected_move_pct == 4.0
+    assert signal.confidence == pytest.approx(0.62)
+    assert signal.entry_price == pytest.approx(603.0)
+    assert signal.predicted_change_pct == pytest.approx(4.5)
+    assert signal.target_price == pytest.approx(627.12)
+    assert signal.stop_loss == pytest.approx(590.94)
+    assert signal.expected_move_pct == pytest.approx(4.0)
     assert signal.generated_at == datetime(2026, 5, 13, 12, 0, 0, tzinfo=timezone.utc)
 
 
@@ -134,7 +134,7 @@ def test_to_signal_input_defaults_generated_at_to_now_when_missing():
     after = datetime.now(tz=timezone.utc)
     assert before <= signal.generated_at <= after
     # Optional fields fall back to safe defaults.
-    assert signal.entry_price == 0.0
+    assert signal.entry_price == pytest.approx(0.0)
     assert signal.predicted_change_pct is None
 
 
@@ -149,7 +149,7 @@ def test_to_signal_input_tolerates_null_optional_fields():
         "generatedAt": None,
     }
     signal = _to_signal_input(event)
-    assert signal.entry_price == 0.0
+    assert signal.entry_price == pytest.approx(0.0)
     assert signal.predicted_change_pct is None
 
 
@@ -254,7 +254,7 @@ async def test_on_message_invokes_use_case_with_parsed_signal(monkeypatch):
     args = use_case.execute.call_args.args
     assert args[0] == "sig-abc"
     assert args[1].ticker == "META"
-    assert args[1].entry_price == 603.0
+    assert args[1].entry_price == pytest.approx(603.0)
 
 
 @pytest.mark.asyncio

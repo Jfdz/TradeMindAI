@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from ai_engine.core.domain.reasoning_output import (
     ReasoningOutcome,
     ReasoningPayload,
@@ -78,13 +80,13 @@ def test_wire_payload_includes_full_facts_snapshot():
     assert snapshot["schemaVersion"] == "v1.0"
     assert snapshot["ticker"] == "META"
     assert "priceFacts" in snapshot
-    assert snapshot["priceFacts"]["close"] == 603.0
-    assert snapshot["priceFacts"]["sma_200"] == 510.0
+    assert snapshot["priceFacts"]["close"] == pytest.approx(603.0)
+    assert snapshot["priceFacts"]["sma_200"] == pytest.approx(510.0)
     assert len(snapshot["news"]) == 1
     assert snapshot["news"][0]["headline"] == "META beats Q1 expectations"
     # Signal facts ride along so audit can replay confidence/entry.
     assert snapshot["signal"]["signalType"] == "BUY"
-    assert snapshot["signal"]["confidence"] == 0.62
+    assert snapshot["signal"]["confidence"] == pytest.approx(0.62)
 
 
 def test_wire_payload_drops_none_fields_from_price_facts_snapshot():
