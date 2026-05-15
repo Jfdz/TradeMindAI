@@ -11,11 +11,15 @@ import com.tradingsaas.tradingcore.domain.model.SignalType;
 import java.math.BigDecimal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -40,10 +44,17 @@ public class PendingReasoningBackfillRunner {
     private static final BigDecimal DEFAULT_STOP_LOSS_PCT = new BigDecimal("2.00");
     private static final BigDecimal DEFAULT_TAKE_PROFIT_PCT = new BigDecimal("4.00");
 
+    // Hard cap on per-sweep work. Each sweep republishes at most this many rows
+    // even when the backlog is larger; the next tick picks up the rest. Bounds
+    // RabbitMQ pressure during recovery from a long outage.
+    private static final int MAX_ROWS_PER_SWEEP = 5_000;
+
     private final TradingSignalJpaRepository jpaRepository;
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
     private final SignalMathService signalMath;
+    private final Counter republishedCounter;
+    private final Counter republishFailedCounter;
     private final boolean enabled;
     private final int batchSize;
     private final Duration olderThan;
@@ -53,6 +64,7 @@ public class PendingReasoningBackfillRunner {
             RabbitTemplate rabbitTemplate,
             ObjectMapper objectMapper,
             SignalMathService signalMath,
+            MeterRegistry meterRegistry,
             @Value("${trading-core.reasoning.backfill-on-boot:true}") boolean enabled,
             @Value("${trading-core.reasoning.backfill-batch-size:200}") int batchSize,
             @Value("${trading-core.reasoning.backfill-older-than:PT1H}") Duration olderThan) {
@@ -63,6 +75,13 @@ public class PendingReasoningBackfillRunner {
         this.enabled = enabled;
         this.batchSize = batchSize;
         this.olderThan = olderThan;
+        this.republishedCounter = Counter.builder("reasoning_backfill_republished_total")
+                .description("Pending reasoning rows republished to the queue")
+                .register(meterRegistry);
+        this.republishFailedCounter = Counter.builder("reasoning_backfill_failed_total")
+                .tags(Tags.of("reason", "publish_error"))
+                .description("Pending reasoning rows that failed to republish")
+                .register(meterRegistry);
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -71,21 +90,57 @@ public class PendingReasoningBackfillRunner {
             log.info("Pending-reasoning backfill disabled by configuration");
             return;
         }
-        Instant cutoff = Instant.now().minus(olderThan);
-        List<TradingSignalJpaEntity> pending = jpaRepository.findByReasoningStatusAndOlderThan(
-                ReasoningStatus.PENDING, cutoff, PageRequest.of(0, batchSize));
-        if (pending.isEmpty()) {
-            log.info("No PENDING reasoning rows older than {} to re-queue", olderThan);
+        runSweep("boot");
+    }
+
+    /**
+     * Periodic reconciler. Catches PENDING rows that landed after boot
+     * (e.g. SignalGenerationService publish failure during a RabbitMQ
+     * blip) and any backlog the boot sweep capped on.
+     *
+     * Default cadence 5 min; override with
+     * {@code trading-core.reasoning.backfill-cron} (Spring cron syntax).
+     */
+    @Scheduled(cron = "${trading-core.reasoning.backfill-cron:0 */5 * * * *}")
+    public void rePublishPendingScheduled() {
+        if (!enabled) {
             return;
         }
+        runSweep("scheduled");
+    }
+
+    private void runSweep(String trigger) {
+        Instant cutoff = Instant.now().minus(olderThan);
         int published = 0;
-        for (TradingSignalJpaEntity entity : pending) {
-            if (publish(entity)) {
-                published++;
+        int seen = 0;
+        int pageIndex = 0;
+        while (seen < MAX_ROWS_PER_SWEEP) {
+            List<TradingSignalJpaEntity> pending = jpaRepository.findByReasoningStatusAndOlderThan(
+                    ReasoningStatus.PENDING, cutoff, PageRequest.of(pageIndex, batchSize));
+            if (pending.isEmpty()) {
+                break;
             }
+            seen += pending.size();
+            for (TradingSignalJpaEntity entity : pending) {
+                if (publish(entity)) {
+                    published++;
+                } else {
+                    republishFailedCounter.increment();
+                }
+            }
+            if (pending.size() < batchSize) {
+                // Last page drained, no need to ask for another.
+                break;
+            }
+            pageIndex++;
         }
-        log.info("Re-queued {} of {} PENDING reasoning rows (older than {})",
-                published, pending.size(), olderThan);
+        if (seen == 0) {
+            log.debug("Pending-reasoning sweep ({}) found no rows older than {}", trigger, olderThan);
+            return;
+        }
+        republishedCounter.increment(published);
+        log.info("Pending-reasoning sweep ({}) re-queued {} of {} rows (cap={}, olderThan={})",
+                trigger, published, seen, MAX_ROWS_PER_SWEEP, olderThan);
     }
 
     private boolean publish(TradingSignalJpaEntity entity) {
