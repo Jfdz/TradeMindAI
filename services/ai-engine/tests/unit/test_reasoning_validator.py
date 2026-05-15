@@ -42,8 +42,8 @@ def test_pass_when_every_decimal_matches_price_facts_within_tolerance():
     assert result.violations == ()
 
 
-def test_pass_when_decimal_is_within_half_percent_relative_tolerance():
-    # close=603.0; 605.99 is +0.495% — inside the 0.5% band.
+def test_pass_when_decimal_is_within_relative_tolerance():
+    # close=603.0; 605.99 is +0.495% — inside the 1% band.
     ctx = build_reasoning_context()
     payload = _payload("Price hovered near 605.99 during the session.")
 
@@ -53,7 +53,7 @@ def test_pass_when_decimal_is_within_half_percent_relative_tolerance():
 
 
 def test_flag_ungrounded_decimal_outside_tolerance():
-    # close=603.0; 700.0 is +16% — outside the 0.5% band.
+    # close=603.0; 700.0 is +16% — outside the 1% band.
     ctx = build_reasoning_context()
     payload = _payload("Resistance at 700.0 looks far away.")
 
@@ -277,3 +277,66 @@ def test_pass_result_has_empty_feedback():
 
     assert result.passed
     assert result.feedback == ""
+
+
+# ---------- Derived-price grounding (target_price / stop_loss) ----------
+
+
+def test_target_price_counts_as_grounded_value():
+    ctx = build_reasoning_context()
+    sig = build_signal_input(target_price=627.12)
+    payload = _payload("Target sits near 627.12 above sma_200 (510.0).")
+
+    result = _VALIDATOR.validate(payload, sig, ctx)
+
+    assert result.passed, f"expected pass, got {result.feedback}"
+
+
+def test_stop_loss_counts_as_grounded_value():
+    ctx = build_reasoning_context()
+    sig = build_signal_input(stop_loss=590.94)
+    payload = _payload("Stop placed at 590.94 below recent support of 580.0.")
+
+    result = _VALIDATOR.validate(payload, sig, ctx)
+
+    assert result.passed, f"expected pass, got {result.feedback}"
+
+
+def test_target_price_within_one_percent_but_outside_tight_band_is_rejected():
+    """Backend-derived prices must round-trip near-exactly; the 1% indicator
+    band does NOT apply to target_price / stop_loss / expected_move_pct.
+    """
+    ctx = build_reasoning_context()
+    sig = build_signal_input(target_price=627.12)
+    # 630.45 is +0.53% off target_price — outside the 0.05% derived-price band.
+    # Picked to also sit >1% away from every <price_facts> indicator
+    # (closest is high_52w=638 at -1.18%) so this is a pure
+    # derived-price tolerance test.
+    payload = _payload("Target around 630.45.")
+
+    result = _VALIDATOR.validate(payload, sig, ctx)
+
+    assert not result.passed
+    assert any(
+        v.type == ValidationViolationType.UNGROUNDED_NUMBER for v in result.violations
+    )
+
+
+def test_ungrounded_price_emits_structured_log(caplog):
+    import logging
+
+    ctx = build_reasoning_context()
+    sig = build_signal_input(entry_price=130.05, target_price=135.252, stop_loss=127.45)
+    payload = _payload("Price 13.35 looks off versus entry 130.05.")
+
+    with caplog.at_level(logging.WARNING, logger="ai_engine.core.domain.reasoning_validation"):
+        result = _VALIDATOR.validate(payload, sig, ctx)
+
+    assert not result.passed
+    assert any(
+        v.type == ValidationViolationType.UNGROUNDED_NUMBER for v in result.violations
+    )
+    matched = [r for r in caplog.records if "reasoning_validator.ungrounded_price" in r.getMessage()]
+    assert matched, "expected ungrounded_price log line not emitted"
+    msg = matched[0].getMessage()
+    assert "mentioned=13.35" in msg

@@ -156,6 +156,15 @@ def _to_signal_input(event: dict[str, Any]) -> SignalInput:
     pct_raw = event.get("predictedChangePct")
     predicted_pct = float(pct_raw) if pct_raw is not None else None
 
+    target_raw = event.get("targetPrice")
+    target_price = float(target_raw) if target_raw is not None else None
+
+    stop_raw = event.get("stopLoss")
+    stop_loss = float(stop_raw) if stop_raw is not None else None
+
+    move_raw = event.get("expectedMovePct")
+    expected_move_pct = float(move_raw) if move_raw is not None else None
+
     return SignalInput(
         ticker=str(event.get("ticker") or ""),
         signal_type=str(event.get("signalType") or "HOLD"),
@@ -163,6 +172,9 @@ def _to_signal_input(event: dict[str, Any]) -> SignalInput:
         entry_price=entry_price,
         predicted_change_pct=predicted_pct,
         generated_at=generated_at,
+        target_price=target_price,
+        stop_loss=stop_loss,
+        expected_move_pct=expected_move_pct,
     )
 
 

@@ -60,6 +60,9 @@ class SignalInput:
     entry_price: float
     predicted_change_pct: float | None
     generated_at: datetime
+    target_price: float | None = None
+    stop_loss: float | None = None
+    expected_move_pct: float | None = None
 
 
 @dataclass(frozen=True, slots=True)

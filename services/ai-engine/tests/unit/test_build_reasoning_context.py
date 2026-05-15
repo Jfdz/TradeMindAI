@@ -132,3 +132,15 @@ def test_execute_news_hours_lower_bound_clamps_to_one():
     client.fetch_reasoning_context.assert_called_once_with(
         "AAPL", news_hours=1, news_limit=1
     )
+
+
+def test_execute_uses_cost_efficient_defaults_when_no_overrides():
+    client = MagicMock()
+    client.fetch_reasoning_context.return_value = ContextResult.available(_sample_context())
+    use_case = BuildReasoningContextUseCase(client)
+
+    use_case.execute("AAPL")
+
+    client.fetch_reasoning_context.assert_called_once_with(
+        "AAPL", news_hours=24, news_limit=4
+    )

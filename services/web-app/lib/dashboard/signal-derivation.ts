@@ -80,8 +80,10 @@ function deriveStatus(generatedAt: string): "NEW" | "LIVE" | "ACTIVE" {
 
 export function deriveSignal(signal: SignalResponse, latestPrice: number | null): FilteredSignal {
   const entry = signal.entryPrice ?? latestPrice;
-  const takeProfit = calculateTakeProfit(signal.type, signal.takeProfitPct, entry);
-  const stopLoss = calculateStopLoss(signal.type, signal.stopLossPct, entry);
+  const takeProfit =
+    signal.targetPrice ?? calculateTakeProfit(signal.type, signal.takeProfitPct, entry);
+  const stopLoss =
+    signal.stopLoss ?? calculateStopLoss(signal.type, signal.stopLossPct, entry);
   const live = isLiveSignal(signal.generatedAt);
 
   return {

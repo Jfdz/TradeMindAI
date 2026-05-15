@@ -86,8 +86,8 @@ def test_fetch_returns_available_outcome_on_200(monkeypatch):
     assert result.context is not None
     assert result.context.schema_version == SCHEMA_VERSION
     assert result.context.ticker == "AAPL"
-    assert result.context.price_facts.close == 173.45
-    assert result.context.price_facts.sma_200 == 158.40
+    assert result.context.price_facts.close == pytest.approx(173.45)
+    assert result.context.price_facts.sma_200 == pytest.approx(158.40)
     assert result.context.price_facts.pct_change_5d is None
     assert len(result.context.news) == 1
     assert result.context.news[0].headline == "Apple Q1 beats estimates"
