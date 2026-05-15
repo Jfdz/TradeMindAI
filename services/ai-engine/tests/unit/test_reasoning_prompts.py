@@ -87,3 +87,22 @@ def test_user_prompt_renders_null_predicted_change():
     )
     prompt = build_user_prompt(sig, _context_with_news())
     assert "predicted_change_pct: null" in prompt
+
+
+def test_user_prompt_renders_derived_prices_when_present():
+    sig = build_signal_input(
+        target_price=627.12,
+        stop_loss=590.94,
+        expected_move_pct=4.0,
+    )
+    prompt = build_user_prompt(sig, _context_with_news())
+    assert "target_price: 627.12" in prompt
+    assert "stop_loss: 590.94" in prompt
+    assert "expected_move_pct: 4.0" in prompt
+
+
+def test_user_prompt_renders_null_derived_prices_when_absent():
+    prompt = build_user_prompt(build_signal_input(), _context_with_news())
+    assert "target_price: null" in prompt
+    assert "stop_loss: null" in prompt
+    assert "expected_move_pct: null" in prompt

@@ -31,6 +31,7 @@ the LLM on retry — see ``GenerateValidatedReasoningUseCase``.
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
@@ -38,6 +39,8 @@ from typing import Iterable
 
 from ai_engine.core.domain.reasoning_context import ReasoningContext
 from ai_engine.core.domain.reasoning_output import ReasoningPayload, SignalInput
+
+logger = logging.getLogger(__name__)
 
 
 class ValidationViolationType(str, Enum):
@@ -157,6 +160,14 @@ class ReasoningValidator:
             if self._matches_any(number, known_values):
                 continue
             reported.add(number)
+            nearest = self._nearest(number, known_values)
+            logger.warning(
+                "event=reasoning_validator.ungrounded_price ticker=%s "
+                "mentioned=%s nearest=%s",
+                signal.ticker,
+                match.group(),
+                "none" if nearest is None else f"{nearest}",
+            )
             yield ValidationViolation(
                 type=ValidationViolationType.UNGROUNDED_NUMBER,
                 detail=(
@@ -203,6 +214,9 @@ class ReasoningValidator:
             pf.resistance,
             signal.entry_price,
             signal.predicted_change_pct,
+            signal.target_price,
+            signal.stop_loss,
+            signal.expected_move_pct,
         ):
             if value is not None:
                 yield float(value)
@@ -216,3 +230,9 @@ class ReasoningValidator:
             elif abs(number - reference) / abs(reference) <= self.NUMERIC_TOLERANCE:
                 return True
         return False
+
+    @staticmethod
+    def _nearest(number: float, known_values: list[float]) -> float | None:
+        if not known_values:
+            return None
+        return min(known_values, key=lambda v: abs(v - number))

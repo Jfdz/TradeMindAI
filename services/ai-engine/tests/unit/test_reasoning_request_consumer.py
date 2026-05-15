@@ -95,6 +95,9 @@ def test_to_signal_input_parses_full_payload():
         "confidence": 0.62,
         "predictedChangePct": 4.5,
         "entryPrice": 603.0,
+        "targetPrice": 627.12,
+        "stopLoss": 590.94,
+        "expectedMovePct": 4.0,
         "generatedAt": "2026-05-13T12:00:00Z",
     }
     signal = _to_signal_input(event)
@@ -103,7 +106,24 @@ def test_to_signal_input_parses_full_payload():
     assert signal.confidence == 0.62
     assert signal.entry_price == 603.0
     assert signal.predicted_change_pct == 4.5
+    assert signal.target_price == 627.12
+    assert signal.stop_loss == 590.94
+    assert signal.expected_move_pct == 4.0
     assert signal.generated_at == datetime(2026, 5, 13, 12, 0, 0, tzinfo=timezone.utc)
+
+
+def test_to_signal_input_defaults_derived_prices_to_none_when_absent():
+    event = {
+        "signalId": "abc",
+        "ticker": "META",
+        "signalType": "BUY",
+        "confidence": 0.62,
+        "entryPrice": 603.0,
+    }
+    signal = _to_signal_input(event)
+    assert signal.target_price is None
+    assert signal.stop_loss is None
+    assert signal.expected_move_pct is None
 
 
 def test_to_signal_input_defaults_generated_at_to_now_when_missing():

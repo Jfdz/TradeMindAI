@@ -277,3 +277,46 @@ def test_pass_result_has_empty_feedback():
 
     assert result.passed
     assert result.feedback == ""
+
+
+# ---------- Derived-price grounding (target_price / stop_loss) ----------
+
+
+def test_target_price_counts_as_grounded_value():
+    ctx = build_reasoning_context()
+    sig = build_signal_input(target_price=627.12)
+    payload = _payload("Target sits near 627.12 above sma_200 (510.0).")
+
+    result = _VALIDATOR.validate(payload, sig, ctx)
+
+    assert result.passed, f"expected pass, got {result.feedback}"
+
+
+def test_stop_loss_counts_as_grounded_value():
+    ctx = build_reasoning_context()
+    sig = build_signal_input(stop_loss=590.94)
+    payload = _payload("Stop placed at 590.94 below recent support of 580.0.")
+
+    result = _VALIDATOR.validate(payload, sig, ctx)
+
+    assert result.passed, f"expected pass, got {result.feedback}"
+
+
+def test_ungrounded_price_emits_structured_log(caplog):
+    import logging
+
+    ctx = build_reasoning_context()
+    sig = build_signal_input(entry_price=130.05, target_price=135.252, stop_loss=127.45)
+    payload = _payload("Price 13.35 looks off versus entry 130.05.")
+
+    with caplog.at_level(logging.WARNING, logger="ai_engine.core.domain.reasoning_validation"):
+        result = _VALIDATOR.validate(payload, sig, ctx)
+
+    assert not result.passed
+    assert any(
+        v.type == ValidationViolationType.UNGROUNDED_NUMBER for v in result.violations
+    )
+    matched = [r for r in caplog.records if "reasoning_validator.ungrounded_price" in r.getMessage()]
+    assert matched, "expected ungrounded_price log line not emitted"
+    msg = matched[0].getMessage()
+    assert "mentioned=13.35" in msg

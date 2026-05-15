@@ -122,6 +122,9 @@ def build_user_prompt(signal: SignalInput, context: ReasoningContext) -> str:
 
     pct = signal.predicted_change_pct
     pct_str = "null" if pct is None else f"{pct}"
+    target_str = "null" if signal.target_price is None else f"{signal.target_price}"
+    stop_str = "null" if signal.stop_loss is None else f"{signal.stop_loss}"
+    move_str = "null" if signal.expected_move_pct is None else f"{signal.expected_move_pct}"
 
     return (
         "<context>\n"
@@ -130,6 +133,9 @@ def build_user_prompt(signal: SignalInput, context: ReasoningContext) -> str:
         f"type: {signal.signal_type}\n"
         f"confidence: {signal.confidence:.2f}\n"
         f"entry_price: {signal.entry_price}\n"
+        f"target_price: {target_str}\n"
+        f"stop_loss: {stop_str}\n"
+        f"expected_move_pct: {move_str}\n"
         f"predicted_change_pct: {pct_str}\n"
         f"generated_at: {signal.generated_at.isoformat()}\n"
         "</signal>\n\n"
