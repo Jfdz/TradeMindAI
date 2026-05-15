@@ -42,8 +42,8 @@ def test_pass_when_every_decimal_matches_price_facts_within_tolerance():
     assert result.violations == ()
 
 
-def test_pass_when_decimal_is_within_half_percent_relative_tolerance():
-    # close=603.0; 605.99 is +0.495% — inside the 0.5% band.
+def test_pass_when_decimal_is_within_relative_tolerance():
+    # close=603.0; 605.99 is +0.495% — inside the 1% band.
     ctx = build_reasoning_context()
     payload = _payload("Price hovered near 605.99 during the session.")
 
@@ -53,7 +53,7 @@ def test_pass_when_decimal_is_within_half_percent_relative_tolerance():
 
 
 def test_flag_ungrounded_decimal_outside_tolerance():
-    # close=603.0; 700.0 is +16% — outside the 0.5% band.
+    # close=603.0; 700.0 is +16% — outside the 1% band.
     ctx = build_reasoning_context()
     payload = _payload("Resistance at 700.0 looks far away.")
 

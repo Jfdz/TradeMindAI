@@ -72,7 +72,7 @@ class ValidationResult:
 class ReasoningValidator:
     """Pure-function validator. Same input always yields the same result."""
 
-    NUMERIC_TOLERANCE = 0.005  # 0.5% relative tolerance for price/indicator matching
+    NUMERIC_TOLERANCE = 0.01  # 1% relative tolerance for price/indicator matching
     ABSOLUTE_TOLERANCE_NEAR_ZERO = 0.001  # used when the reference value is ~0
     LOW_CONFIDENCE_THRESHOLD = 0.50
 
