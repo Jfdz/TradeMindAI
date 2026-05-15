@@ -124,23 +124,55 @@ public class NewsAggregatorService {
         // Lower priority value wins ties — we already sorted providers by priority,
         // so iterate in that order and keep the first occurrence per normalized URL.
         Map<String, NewsItem> byUrl = new LinkedHashMap<>();
+        Map<String, String> providerByUrl = new LinkedHashMap<>();
         List<NewsItem> noUrl = new ArrayList<>();
+        List<String> providerForNoUrl = new ArrayList<>();
         for (CompletableFuture<ProviderResult> f : futures) {
             ProviderResult result = f.getNow(new ProviderResult(null, List.of()));
+            String provider = result.provider() != null ? result.provider().providerName() : "unknown";
             for (NewsItem item : result.items()) {
                 String key = normalizeUrl(item.url());
                 if (key == null) {
                     noUrl.add(item);
+                    providerForNoUrl.add(provider);
                 } else if (!byUrl.containsKey(key)) {
                     byUrl.put(key, item);
+                    providerByUrl.put(key, provider);
                 }
             }
         }
         List<NewsItem> all = new ArrayList<>(byUrl.size() + noUrl.size());
-        all.addAll(byUrl.values());
+        List<String> providers = new ArrayList<>(byUrl.size() + noUrl.size());
+        for (Map.Entry<String, NewsItem> e : byUrl.entrySet()) {
+            all.add(e.getValue());
+            providers.add(providerByUrl.get(e.getKey()));
+        }
         all.addAll(noUrl);
-        all.sort(Comparator.comparing(NewsItem::publishedAt, Comparator.reverseOrder()));
-        return all.size() > limit ? all.subList(0, limit) : List.copyOf(all);
+        providers.addAll(providerForNoUrl);
+        // Stable sort by publishedAt desc — keep the parallel providers list aligned.
+        Integer[] order = new Integer[all.size()];
+        for (int i = 0; i < order.length; i++) order[i] = i;
+        java.util.Arrays.sort(order,
+                (a, b) -> all.get(b).publishedAt().compareTo(all.get(a).publishedAt()));
+        List<NewsItem> sorted = new ArrayList<>(all.size());
+        List<String> sortedProviders = new ArrayList<>(providers.size());
+        for (Integer idx : order) {
+            sorted.add(all.get(idx));
+            sortedProviders.add(providers.get(idx));
+        }
+        int outputSize = Math.min(sorted.size(), limit);
+        for (int i = 0; i < outputSize; i++) {
+            recordImagePresence(sortedProviders.get(i), sorted.get(i).image() != null);
+        }
+        return outputSize == sorted.size() ? List.copyOf(sorted) : List.copyOf(sorted.subList(0, outputSize));
+    }
+
+    private void recordImagePresence(String providerName, boolean present) {
+        Counter.builder("news_aggregator_image_present_total")
+                .tag("provider", providerName)
+                .tag("present", Boolean.toString(present))
+                .register(meterRegistry)
+                .increment();
     }
 
     private static String normalizeUrl(String url) {
