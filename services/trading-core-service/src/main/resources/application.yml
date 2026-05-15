@@ -98,11 +98,13 @@ trading-core:
   reasoning:
     # C9 cutover flag. When `true` (default), the legacy in-process
     # ReasoningGenerationListener consumes signal.reasoning.requested
-    # via Gemini+deterministic fallback. When `false`, ai-engine's
-    # grounded pipeline (Track C) is the sole consumer. Flip to `false`
-    # once staging confirms ai-engine handles the queue cleanly.
+    # via Gemini+deterministic fallback. Default is `false` now that
+    # ai-engine's Track C grounded pipeline owns the queue end-to-end;
+    # leaving both enabled would let RabbitMQ split-deliver messages
+    # between two consumers and silently produce mixed reasoning state
+    # across signals. Set to `true` only for emergency rollback.
     legacy-listener:
-      enabled: ${TRADING_CORE_REASONING_LEGACY_LISTENER_ENABLED:true}
+      enabled: ${TRADING_CORE_REASONING_LEGACY_LISTENER_ENABLED:false}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
   rate-limit:
