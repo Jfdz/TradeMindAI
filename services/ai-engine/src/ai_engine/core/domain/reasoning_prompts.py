@@ -28,9 +28,11 @@ SYSTEM_PROMPT = (
     "\n"
     "HARD RULES — violating any returns refusal=true with an appropriate refusal_reason:\n"
     "\n"
-    "1. NUMBERS: Use ONLY numbers present in <price_facts>. Never invent prices, "
-    "support/resistance levels, percentage changes, or volume figures. Every number "
-    "you cite must appear in the <price_facts> block verbatim.\n"
+    "1. NUMBERS: Use ONLY numbers present in <price_facts> or the deterministic "
+    "fields of <signal> (entry_price, target_price, stop_loss, expected_move_pct, "
+    "predicted_change_pct). Never invent prices, support/resistance levels, "
+    "percentage changes, or volume figures. Every number you cite must appear in "
+    "one of those two blocks verbatim.\n"
     "\n"
     "2. NEWS: Reference news ONLY from <news>. You may quote a headline verbatim; "
     "do not paraphrase facts that are not in the headline. If <news> is empty, do "
@@ -51,8 +53,10 @@ SYSTEM_PROMPT = (
     "\n"
     "6. LENGTH: Reasoning text is at most 400 characters. Be concise.\n"
     "\n"
-    "7. CITATIONS: In price_refs, list the snake_case field names from "
-    "<price_facts> that you used (e.g. [\"sma_200\", \"rsi_14\"]). In news_refs, "
+    "7. CITATIONS: In price_refs, list the snake_case field names you used. "
+    "Names may come from <price_facts> (e.g. \"sma_200\", \"rsi_14\") OR from "
+    "the deterministic fields of <signal> (\"entry_price\", \"target_price\", "
+    "\"stop_loss\", \"expected_move_pct\", \"predicted_change_pct\"). In news_refs, "
     "list the exact URLs of news items you referenced.\n"
     "\n"
     "8. INSUFFICIENT FACTS: If <price_facts> is missing essential fields (close or "
@@ -67,8 +71,11 @@ REASONING_TOOL_SCHEMA = {
     "name": "emit_reasoning",
     "description": (
         "Emit the grounded trading-signal reasoning. Must be called exactly once. "
-        "Every number in `reasoning` must come from <price_facts>; every event from <news>. "
-        "Set refusal=true with refusal_reason if the context cannot ground a faithful reasoning."
+        "Every number in `reasoning` must come from <price_facts> or from the "
+        "deterministic numeric fields of <signal> (entry_price, target_price, "
+        "stop_loss, expected_move_pct, predicted_change_pct); every event from "
+        "<news>. Set refusal=true with refusal_reason if the context cannot "
+        "ground a faithful reasoning."
     ),
     "input_schema": {
         "type": "object",
@@ -82,7 +89,10 @@ REASONING_TOOL_SCHEMA = {
                 "type": "array",
                 "items": {"type": "string"},
                 "description": (
-                    "Snake_case field names from <price_facts> cited in `reasoning`."
+                    "Snake_case field names cited in `reasoning`. Names may come "
+                    "from <price_facts> or from the deterministic numeric fields "
+                    "of <signal> (entry_price, target_price, stop_loss, "
+                    "expected_move_pct, predicted_change_pct)."
                 ),
             },
             "news_refs": {
