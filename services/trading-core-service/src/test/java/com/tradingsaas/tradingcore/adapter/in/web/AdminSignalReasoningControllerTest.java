@@ -68,6 +68,8 @@ class AdminSignalReasoningControllerTest {
         assertEquals(List.of("sma_200", "rsi_14"), body.priceRefs());
         assertEquals(List.of("https://reuters.com/x"), body.newsRefs());
         assertEquals("META", body.factsSnapshot().get("ticker"));
+        assertEquals(Instant.parse("2026-05-13T12:00:00Z"), body.signalGeneratedAt());
+        assertEquals(0, new BigDecimal("603.0").compareTo(body.entryPrice()));
     }
 
     @Test
@@ -88,6 +90,28 @@ class AdminSignalReasoningControllerTest {
         assertEquals(null, body.factsSnapshot());
         assertEquals("Price 603.0 above sma_200 (510.0).", body.reasoning());
         assertEquals(ReasoningStatus.READY, body.reasoningStatus());
+        // signalGeneratedAt populated regardless of artifact presence.
+        assertEquals(Instant.parse("2026-05-13T12:00:00Z"), body.signalGeneratedAt());
+    }
+
+    @Test
+    void surfacesPartialArtifactFieldsWhenOutcomeIsNull() {
+        UUID signalId = UUID.randomUUID();
+        ReasoningArtifact partial = new ReasoningArtifact(
+                null, "anthropic_oauth", "claude-haiku-4-5", 0, null,
+                null, null, null, null, null);
+        when(repository.findById(signalId))
+                .thenReturn(Optional.of(signalWithArtifact(signalId, partial)));
+
+        ResponseEntity<ReasoningAuditResponse> response = controller.getReasoningAudit(signalId);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        ReasoningAuditResponse body = response.getBody();
+        assertNotNull(body);
+        assertEquals(null, body.outcome());
+        assertEquals("anthropic_oauth", body.provider());
+        assertEquals("claude-haiku-4-5", body.modelVersion());
+        assertEquals(Integer.valueOf(0), body.retryCount());
     }
 
     @Test
