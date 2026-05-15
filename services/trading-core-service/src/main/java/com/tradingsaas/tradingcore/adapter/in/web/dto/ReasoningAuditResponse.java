@@ -3,6 +3,7 @@ package com.tradingsaas.tradingcore.adapter.in.web.dto;
 import com.tradingsaas.tradingcore.domain.model.ReasoningArtifact;
 import com.tradingsaas.tradingcore.domain.model.ReasoningStatus;
 import com.tradingsaas.tradingcore.domain.model.TradingSignal;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,11 @@ public record ReasoningAuditResponse(
         ReasoningStatus reasoningStatus,
         String reasoning,
         Instant reasoningGeneratedAt,
+        Instant signalGeneratedAt,
+        BigDecimal entryPrice,
+        BigDecimal targetPrice,
+        BigDecimal stopLoss,
+        BigDecimal expectedMovePct,
         String outcome,
         String provider,
         String modelVersion,
@@ -43,6 +49,11 @@ public record ReasoningAuditResponse(
                 signal.getReasoningStatus(),
                 signal.getReasoning(),
                 signal.getReasoningGeneratedAt(),
+                signal.getGeneratedAt(),
+                signal.getEntryPrice(),
+                signal.getTargetPrice(),
+                signal.getStopLoss(),
+                signal.getExpectedMovePct(),
                 a == null ? null : a.outcome(),
                 a == null ? null : a.provider(),
                 a == null ? null : a.modelVersion(),

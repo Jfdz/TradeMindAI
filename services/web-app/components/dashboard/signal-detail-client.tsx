@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 import { SignalChart } from "@/components/dashboard/signal-chart";
+import { apiClient } from "@/lib/api-client";
 import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
 import { StockLogo } from "@/components/ui/stock-logo";
@@ -66,9 +67,11 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
     queryKey: ["logos", signal?.symbol ? [signal.symbol] : []],
     queryFn: async () => {
       if (!signal) return {};
-      const res = await fetch(`/api/stocks/logos?tickers=${encodeURIComponent(signal.symbol)}`);
-      if (!res.ok) return {};
-      return res.json() as Promise<Record<string, string | null>>;
+      // Client-side apiClient path (session Bearer) — same proven
+      // mechanism as useStockLogos. The old /api/stocks/logos server
+      // route never authenticated and returned all-null.
+      const logo = await apiClient.getCompanyLogo(signal.symbol);
+      return { [signal.symbol]: logo };
     },
     enabled: !!signal,
     staleTime: 60 * 60 * 1000,

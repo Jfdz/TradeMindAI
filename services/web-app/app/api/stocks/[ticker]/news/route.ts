@@ -1,19 +1,21 @@
-import { getServerSession } from "next-auth";
+import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
 import { fetchTickerNewsForView } from "@/lib/enrichment-client";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ ticker: string }> },
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
+  // getToken (raw JWT) reliably yields the accessToken in App Router
+  // route handlers; getServerSession() did not, leaving every proxied
+  // enrichment call unauthenticated.
+  const jwt = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+  if (!jwt) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const weeksAgo = Number(request.nextUrl.searchParams.get("weeksAgo") ?? "0");
-  const token = (session as { accessToken?: string })?.accessToken;
+  const token = typeof jwt.accessToken === "string" ? jwt.accessToken : undefined;
   const { ticker } = await params;
 
   const now = new Date();
