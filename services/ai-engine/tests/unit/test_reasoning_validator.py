@@ -302,6 +302,26 @@ def test_stop_loss_counts_as_grounded_value():
     assert result.passed, f"expected pass, got {result.feedback}"
 
 
+def test_target_price_within_one_percent_but_outside_tight_band_is_rejected():
+    """Backend-derived prices must round-trip near-exactly; the 1% indicator
+    band does NOT apply to target_price / stop_loss / expected_move_pct.
+    """
+    ctx = build_reasoning_context()
+    sig = build_signal_input(target_price=627.12)
+    # 630.45 is +0.53% off target_price — outside the 0.05% derived-price band.
+    # Picked to also sit >1% away from every <price_facts> indicator
+    # (closest is high_52w=638 at -1.18%) so this is a pure
+    # derived-price tolerance test.
+    payload = _payload("Target around 630.45.")
+
+    result = _VALIDATOR.validate(payload, sig, ctx)
+
+    assert not result.passed
+    assert any(
+        v.type == ValidationViolationType.UNGROUNDED_NUMBER for v in result.violations
+    )
+
+
 def test_ungrounded_price_emits_structured_log(caplog):
     import logging
 
