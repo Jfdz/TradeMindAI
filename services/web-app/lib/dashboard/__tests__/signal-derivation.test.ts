@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildSignalMarker } from "../signal-derivation";
+import { buildSignalMarker, deriveSignal } from "../signal-derivation";
 import type { DashboardCandle, FilteredSignal } from "../dashboard-api";
+import type { SignalResponse } from "@/lib/api-client";
 
 function makeCandle(year: number, month: number, day: number): DashboardCandle {
   return { time: { year, month, day }, open: 100, high: 105, low: 95, close: 102, volume: 1_000_000 };
@@ -60,5 +61,40 @@ describe("buildSignalMarker", () => {
 
   it("empty candles returns null", () => {
     expect(buildSignalMarker(makeSignal("BUY"), [])).toBeNull();
+  });
+});
+
+function makeApiSignal(overrides: Partial<SignalResponse> = {}): SignalResponse {
+  return {
+    id: "sig-1",
+    symbol: "AAPL",
+    type: "BUY",
+    timeframe: "1D",
+    confidence: 0.8,
+    entryPrice: 100,
+    takeProfitPct: 5,
+    stopLossPct: 3,
+    predictedChangePct: 4,
+    reasoning: "test",
+    reasoningStatus: "READY",
+    generatedAt: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+describe("deriveSignal", () => {
+  it("prefers backend-provided targetPrice and stopLoss over frontend math", () => {
+    const signal = makeApiSignal({ targetPrice: 110.5, stopLoss: 98.25 });
+    const derived = deriveSignal(signal, 100);
+    expect(derived.takeProfit).toBe(110.5);
+    expect(derived.stopLoss).toBe(98.25);
+  });
+
+  it("falls back to frontend math when backend fields are absent", () => {
+    const signal = makeApiSignal();
+    const derived = deriveSignal(signal, 100);
+    // 100 * (1 + 5/100) = 105; 100 * (1 - 3/100) = 97
+    expect(derived.takeProfit).toBe(105);
+    expect(derived.stopLoss).toBe(97);
   });
 });

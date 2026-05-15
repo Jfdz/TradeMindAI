@@ -23,8 +23,8 @@ class BuildReasoningContextUseCase:
     def __init__(
         self,
         trading_core_client: TradingCoreClient,
-        news_hours: int = 48,
-        news_limit: int = 8,
+        news_hours: int = 24,
+        news_limit: int = 4,
     ):
         self._client = trading_core_client
         self._news_hours = max(1, min(news_hours, 168))

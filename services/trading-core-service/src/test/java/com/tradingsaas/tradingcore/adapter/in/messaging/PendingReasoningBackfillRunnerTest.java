@@ -59,7 +59,7 @@ class PendingReasoningBackfillRunnerTest {
                         entity("TSLA", SignalType.SELL, 0.42),
                         entity("NVDA", SignalType.BUY, 0.78)));
 
-        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, true, 200, Duration.ofHours(1))
+        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), true, 200, Duration.ofHours(1))
                 .rePublishPendingOnBoot();
 
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
@@ -78,14 +78,14 @@ class PendingReasoningBackfillRunnerTest {
         when(repo.findByReasoningStatusAndOlderThan(any(), any(), any()))
                 .thenReturn(List.of());
 
-        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, true, 200, Duration.ofHours(1))
+        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), true, 200, Duration.ofHours(1))
                 .rePublishPendingOnBoot();
 
         verifyNoInteractions(rabbit);
     }
 
     @Test void skipsEntirelyWhenDisabled() {
-        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, false, 200, Duration.ofHours(1))
+        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), false, 200, Duration.ofHours(1))
                 .rePublishPendingOnBoot();
 
         verifyNoInteractions(repo);
@@ -104,7 +104,7 @@ class PendingReasoningBackfillRunnerTest {
                 .when(rabbit).convertAndSend(anyString(), anyString());
 
         // First call succeeds, second throws, third should still be attempted.
-        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, true, 200, Duration.ofHours(1))
+        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), true, 200, Duration.ofHours(1))
                 .rePublishPendingOnBoot();
 
         verify(rabbit, times(3))
@@ -115,7 +115,7 @@ class PendingReasoningBackfillRunnerTest {
         when(repo.findByReasoningStatusAndOlderThan(any(), any(), any()))
                 .thenReturn(List.of(entity("AAPL", SignalType.BUY, 0.65)));
 
-        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, true, 50, Duration.ofHours(1))
+        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), true, 50, Duration.ofHours(1))
                 .rePublishPendingOnBoot();
 
         ArgumentCaptor<Pageable> pageCaptor = ArgumentCaptor.forClass(Pageable.class);
@@ -129,7 +129,7 @@ class PendingReasoningBackfillRunnerTest {
                 .thenReturn(List.of());
 
         Instant before = Instant.now();
-        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, true, 200, Duration.ofMinutes(30))
+        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), true, 200, Duration.ofMinutes(30))
                 .rePublishPendingOnBoot();
         Instant after = Instant.now();
 
@@ -146,7 +146,7 @@ class PendingReasoningBackfillRunnerTest {
         when(repo.findByReasoningStatusAndOlderThan(any(), any(), any()))
                 .thenReturn(List.of(row));
 
-        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, true, 200, Duration.ofHours(1))
+        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), true, 200, Duration.ofHours(1))
                 .rePublishPendingOnBoot();
 
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);

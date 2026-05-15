@@ -4,8 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tradingsaas.tradingcore.adapter.out.persistence.TradingSignalJpaRepository;
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.TradingSignalJpaEntity;
+import com.tradingsaas.tradingcore.application.service.SignalMathService;
 import com.tradingsaas.tradingcore.config.RabbitMQConfig;
 import com.tradingsaas.tradingcore.domain.model.ReasoningStatus;
+import com.tradingsaas.tradingcore.domain.model.SignalType;
+import java.math.BigDecimal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -34,9 +37,13 @@ public class PendingReasoningBackfillRunner {
 
     private static final Logger log = LoggerFactory.getLogger(PendingReasoningBackfillRunner.class);
 
+    private static final BigDecimal DEFAULT_STOP_LOSS_PCT = new BigDecimal("2.00");
+    private static final BigDecimal DEFAULT_TAKE_PROFIT_PCT = new BigDecimal("4.00");
+
     private final TradingSignalJpaRepository jpaRepository;
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
+    private final SignalMathService signalMath;
     private final boolean enabled;
     private final int batchSize;
     private final Duration olderThan;
@@ -45,12 +52,14 @@ public class PendingReasoningBackfillRunner {
             TradingSignalJpaRepository jpaRepository,
             RabbitTemplate rabbitTemplate,
             ObjectMapper objectMapper,
+            SignalMathService signalMath,
             @Value("${trading-core.reasoning.backfill-on-boot:true}") boolean enabled,
             @Value("${trading-core.reasoning.backfill-batch-size:200}") int batchSize,
             @Value("${trading-core.reasoning.backfill-older-than:PT1H}") Duration olderThan) {
         this.jpaRepository = jpaRepository;
         this.rabbitTemplate = rabbitTemplate;
         this.objectMapper = objectMapper;
+        this.signalMath = signalMath;
         this.enabled = enabled;
         this.batchSize = batchSize;
         this.olderThan = olderThan;
@@ -81,6 +90,7 @@ public class PendingReasoningBackfillRunner {
 
     private boolean publish(TradingSignalJpaEntity entity) {
         try {
+            healDerivedPricesIfMissing(entity);
             Map<String, Object> event = new LinkedHashMap<>();
             event.put("signalId", entity.getId().toString());
             event.put("ticker", entity.getTicker());
@@ -88,6 +98,9 @@ public class PendingReasoningBackfillRunner {
             event.put("confidence", entity.getConfidence());
             event.put("predictedChangePct", entity.getPredictedChangePct());
             event.put("entryPrice", entity.getEntryPrice());
+            event.put("targetPrice", entity.getTargetPrice());
+            event.put("stopLoss", entity.getStopLoss());
+            event.put("expectedMovePct", entity.getExpectedMovePct());
             // C9 — ai-engine consumer needs generated_at to build SignalInput.
             event.put("generatedAt",
                     entity.getGeneratedAt() != null ? entity.getGeneratedAt().toString() : null);
@@ -101,6 +114,44 @@ public class PendingReasoningBackfillRunner {
             log.warn("Failed to publish backfill event for signal {}: {}", entity.getId(), e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Pre-V21 rows have null target_price/stop_loss/expected_move_pct. Without
+     * healing, requeued reasonings reach ai-engine with an empty grounded pool
+     * for the new fields and the validator cannot enforce them. Compute on the
+     * fly using stored entry_price + risk pcts and persist before publishing.
+     */
+    private void healDerivedPricesIfMissing(TradingSignalJpaEntity entity) {
+        if (entity.getSignalType() == null || entity.getSignalType() == SignalType.HOLD) {
+            return;
+        }
+        if (entity.getEntryPrice() == null) {
+            return;
+        }
+        if (entity.getTargetPrice() != null
+                && entity.getStopLoss() != null
+                && entity.getExpectedMovePct() != null) {
+            return;
+        }
+        BigDecimal slPct = entity.getStopLossPct() != null
+                ? entity.getStopLossPct() : DEFAULT_STOP_LOSS_PCT;
+        BigDecimal tpPct = entity.getTakeProfitPct() != null
+                ? entity.getTakeProfitPct() : DEFAULT_TAKE_PROFIT_PCT;
+        BigDecimal target = signalMath.calculateTargetPrice(
+                entity.getSignalType(), entity.getEntryPrice(), tpPct);
+        BigDecimal stop = signalMath.calculateStopLoss(
+                entity.getSignalType(), entity.getEntryPrice(), slPct);
+        BigDecimal move = signalMath.calculateExpectedMovePct(
+                entity.getSignalType(), entity.getEntryPrice(), target);
+        signalMath.validatePriceCoherence(
+                entity.getSignalType(), entity.getEntryPrice(), target, stop);
+        entity.setTargetPrice(target);
+        entity.setStopLoss(stop);
+        entity.setExpectedMovePct(move);
+        jpaRepository.save(entity);
+        log.info("backfill-runner: healed derived prices for signal id={} ticker={}",
+                entity.getId(), entity.getTicker());
     }
 
 }

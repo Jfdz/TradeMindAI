@@ -39,6 +39,9 @@ export type SignalResponse = {
   takeProfitPct?: number | null;
   predictedChangePct?: number | null;
   entryPrice?: number | null;
+  targetPrice?: number | null;
+  stopLoss?: number | null;
+  expectedMovePct?: number | null;
   reasoning?: string | null;
   reasoningStatus?: ReasoningStatus | null;
   reasoningGeneratedAt?: string | null;

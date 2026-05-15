@@ -71,7 +71,7 @@ def test_generate_passes_pinned_request_shape_to_sdk():
     call = fake_sdk.messages.create.call_args.kwargs
     assert call["model"] == "claude-haiku-4-5"
     assert call["temperature"] == 0.2
-    assert call["max_tokens"] == 600
+    assert call["max_tokens"] == 350
     assert call["tool_choice"] == {"type": "tool", "name": "emit_reasoning"}
     # Exactly one tool, and it is our emit_reasoning schema.
     assert len(call["tools"]) == 1

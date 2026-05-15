@@ -40,7 +40,7 @@ public class ReasoningContextController {
     private static final Logger log = LoggerFactory.getLogger(ReasoningContextController.class);
     static final int DEFAULT_NEWS_HOURS = 48;
     static final int DEFAULT_NEWS_LIMIT = 8;
-    static final int MAX_NEWS_LIMIT = 25;
+    static final int MAX_NEWS_LIMIT = 10;
 
     private final MarketDataServiceAdapter marketDataAdapter;
     private final EnrichmentServiceAdapter enrichmentAdapter;

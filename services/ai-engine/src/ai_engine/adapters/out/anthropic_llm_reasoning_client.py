@@ -8,7 +8,9 @@ Bearer token (Claude Max subscription, temporary) or with an API key
 Design pins:
   - Model: claude-haiku-4-5 (Jan 2026, $1/$5 per 1M tokens).
   - temperature: 0.2 (low variance for production reliability).
-  - max_tokens: 600 (forces concise reasoning; bounds runaway cost).
+  - max_tokens: 350 (tight cap; reasonings are <=400 chars so 350 output
+    tokens is plenty and cuts per-call cost roughly in half vs the C4
+    initial 600).
   - tool_choice forces exactly one emit_reasoning call — no free text.
   - Prompt caching: OFF in C4 (system prompt < Haiku 4.5's 4096-token
     minimum cacheable prefix; the marker would be silently ignored).
@@ -43,7 +45,7 @@ class AnthropicLlmReasoningClient:
     PROVIDER_NAME = "anthropic"
     DEFAULT_MODEL = "claude-haiku-4-5"
     TEMPERATURE = 0.2
-    MAX_TOKENS = 600
+    MAX_TOKENS = 350
 
     def __init__(self, client: "Anthropic", model: str = DEFAULT_MODEL):
         self._client = client

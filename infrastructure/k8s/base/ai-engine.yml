@@ -31,13 +31,13 @@ spec:
           env:
             - name: APP_ENV
               value: production
-            - name: CLAUDE_CODE_OAUTH_TOKEN
+            - name: ANTHROPIC_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: anthropic-credentials
-                  key: CLAUDE_CODE_OAUTH_TOKEN
+                  key: ANTHROPIC_API_KEY
             - name: LLM_PROVIDER
-              value: anthropic_oauth
+              value: anthropic_api_key
             - name: TRADING_CORE_SERVICE_URL
               value: http://trading-core-service.trading-saas.svc.cluster.local:8082
             - name: TRADING_CORE_INTERNAL_SECRET
