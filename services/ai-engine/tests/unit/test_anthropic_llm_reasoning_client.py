@@ -26,7 +26,10 @@ def _response(blocks: list, stop_reason: str = "tool_use") -> MagicMock:
     response.content = blocks
     response.stop_reason = stop_reason
     response.usage = MagicMock(
-        input_tokens=100, output_tokens=50, cache_read_input_tokens=0
+        input_tokens=100,
+        output_tokens=50,
+        cache_read_input_tokens=0,
+        cache_creation_input_tokens=0,
     )
     return response
 
@@ -73,11 +76,16 @@ def test_generate_passes_pinned_request_shape_to_sdk():
     assert call["temperature"] == 0.2
     assert call["max_tokens"] == 350
     assert call["tool_choice"] == {"type": "tool", "name": "emit_reasoning"}
-    # Exactly one tool, and it is our emit_reasoning schema.
+    # Exactly one tool, and it is our emit_reasoning schema with the
+    # cache_control breakpoint wired in.
     assert len(call["tools"]) == 1
     assert call["tools"][0]["name"] == "emit_reasoning"
-    # System prompt is sent as a plain string (no cache_control).
-    assert isinstance(call["system"], str)
+    assert call["tools"][0]["cache_control"] == {"type": "ephemeral"}
+    # System prompt is sent as a list of blocks with cache_control on the
+    # only block so the cacheable prefix is well-defined.
+    assert isinstance(call["system"], list)
+    assert call["system"][0]["type"] == "text"
+    assert call["system"][0]["cache_control"] == {"type": "ephemeral"}
 
 
 def test_generate_returns_refused_by_llm_when_refusal_true():
@@ -192,3 +200,7 @@ def test_generate_records_usage_in_raw_response():
     usage = result.raw_response["usage"]
     assert usage["input_tokens"] == 100
     assert usage["output_tokens"] == 50
+    # Cache telemetry surfaced so cost dashboards can compute the hit ratio
+    # the day the cacheable prefix grows past Haiku 4.5's 4096-token minimum.
+    assert "cache_read_input_tokens" in usage
+    assert "cache_creation_input_tokens" in usage
