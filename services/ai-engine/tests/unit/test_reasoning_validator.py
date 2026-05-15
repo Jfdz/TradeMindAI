@@ -101,6 +101,60 @@ def test_entry_price_counts_as_grounded_value():
     assert result.passed
 
 
+def test_confidence_counts_as_grounded_value():
+    # The model is shown `confidence: 0.6200` in the <signal> block, so citing
+    # 0.62 in the rationale must ground against signal.confidence.
+    ctx = build_reasoning_context()
+    sig = build_signal_input(confidence=0.62)
+    payload = _payload(
+        "Setup at confidence 0.62 with close at 603.0 above sma_200 (510.0)."
+    )
+
+    result = _VALIDATOR.validate(payload, sig, ctx)
+
+    assert result.passed, f"expected pass, got {result.feedback}"
+
+
+def test_confidence_grounds_when_cited_at_two_decimal_precision():
+    # Raw confidence 0.4321 is shown to the LLM as 0.4321 (`.4f` precision);
+    # if the model trims to 0.43 the validator must still ground it under the
+    # 1% indicator band: |0.43 - 0.4321| / 0.4321 ~ 0.49%.
+    ctx = build_reasoning_context()
+    sig = build_signal_input(confidence=0.4321)
+    payload = _payload(
+        "Tentative read: confidence 0.43 with price 603.0 hugging sma_200 (510.0)."
+    )
+
+    result = _VALIDATOR.validate(payload, sig, ctx)
+
+    assert result.passed, f"expected pass, got {result.feedback}"
+
+
+def test_invented_percentage_outside_any_field_is_rejected():
+    # Regression: model invents a "4.73%" move when no field in <price_facts>
+    # or <signal> carries 4.73 within tolerance — must be flagged.
+    ctx = build_reasoning_context()
+    sig = build_signal_input(
+        entry_price=240.60,
+        predicted_change_pct=1.5,
+        target_price=250.224,
+        stop_loss=235.788,
+        expected_move_pct=4.0,
+    )
+    payload = _payload(
+        "Tentative BUY targeting 4.73% upside; sma_200 at 510.0 still supports."
+    )
+
+    result = _VALIDATOR.validate(payload, sig, ctx)
+
+    assert not result.passed
+    assert any(
+        v.type == ValidationViolationType.UNGROUNDED_NUMBER
+        and "4.73" in v.detail
+        for v in result.violations
+    )
+
+
 # ---------- Rule 2: news URL grounding ----------
 
 

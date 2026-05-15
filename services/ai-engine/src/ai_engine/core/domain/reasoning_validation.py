@@ -8,10 +8,12 @@ against the same `PriceFacts` + `news` + `SignalInput` the LLM saw.
 Four rules, all deterministic and side-effect free:
 
   1. **Ungrounded number** — every decimal token in `payload.text` must
-     fall within 0.5% of some non-null numeric field in `price_facts`
-     or `signal.entry_price` / `signal.predicted_change_pct`. Integer
-     tokens are ignored (they are typically counts like "5 days", not
-     prices).
+     fall within the 1% indicator band of some non-null numeric field in
+     `price_facts`, `signal.entry_price`, `signal.predicted_change_pct`,
+     or `signal.confidence`; or within the tight 0.05% band around a
+     backend-derived value (`target_price`, `stop_loss`,
+     `expected_move_pct`). Integer tokens are ignored (they are typically
+     counts like "5 days", not prices).
 
   2. **Ungrounded news URL** — every URL in `payload.news_refs` must
      match one of `context.news[*].url` byte-for-byte.
@@ -234,6 +236,7 @@ class ReasoningValidator:
             pf.resistance,
             signal.entry_price,
             signal.predicted_change_pct,
+            signal.confidence,
         ):
             if value is not None:
                 yield float(value)
