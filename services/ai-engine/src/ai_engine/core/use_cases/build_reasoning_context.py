@@ -67,10 +67,25 @@ class BuildReasoningContextUseCase:
                 list(ctx.errors),
             )
         else:
+            news_count = len(ctx.news)
+            images_present = sum(1 for n in ctx.news if getattr(n, "image", None))
             logger.info(
-                "event=reasoning_context.available ticker=%s news_count=%d errors=%s",
+                "event=reasoning_context.available ticker=%s news_count=%d "
+                "images_present=%d errors=%s",
                 normalized,
-                len(ctx.news),
+                news_count,
+                images_present,
                 list(ctx.errors),
             )
+            # If the entire grounded news set is image-less, the AI Decision
+            # Card on the user-facing dashboard will fall back to its
+            # text-only layout. Surface this as a structured warning so
+            # operators can correlate UX regressions with upstream provider
+            # gaps before users notice.
+            if images_present == 0:
+                logger.warning(
+                    "event=reasoning_context.news_no_images ticker=%s news_count=%d",
+                    normalized,
+                    news_count,
+                )
         return result
