@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
+import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
 import { fetchProfile } from "@/lib/enrichment-client";
 
 /**
@@ -10,17 +9,20 @@ import { fetchProfile } from "@/lib/enrichment-client";
  * API key — there is a single Secret on market-data, a single cache,
  * and a single retry policy.
  *
+ * Primary callers now use the client-side apiClient path; this route
+ * is retained as a server-side fallback and is fixed to use getToken
+ * (the App Router-reliable JWT accessor) — getServerSession did not
+ * surface the custom accessToken, which 401'd every upstream call.
+ *
  * Returns `{ TICKER: logoUrl | null }` for every requested ticker.
- * The component side (StockLogo) already falls back to initials when
- * the URL is missing, so this route never throws — upstream failures
- * surface as `null` per ticker.
+ * StockLogo falls back to initials when the URL is missing.
  */
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
+  const jwt = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+  if (!jwt) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const token = (session as { accessToken?: string })?.accessToken;
+  const token = typeof jwt.accessToken === "string" ? jwt.accessToken : undefined;
 
   const tickers = (request.nextUrl.searchParams.get("tickers") ?? "")
     .split(",")
