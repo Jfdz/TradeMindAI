@@ -59,7 +59,7 @@ class PendingReasoningBackfillRunnerTest {
                         entity("TSLA", SignalType.SELL, 0.42),
                         entity("NVDA", SignalType.BUY, 0.78)));
 
-        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), true, 200, Duration.ofHours(1))
+        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), new io.micrometer.core.instrument.simple.SimpleMeterRegistry(), true, 200, Duration.ofHours(1))
                 .rePublishPendingOnBoot();
 
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
@@ -78,14 +78,14 @@ class PendingReasoningBackfillRunnerTest {
         when(repo.findByReasoningStatusAndOlderThan(any(), any(), any()))
                 .thenReturn(List.of());
 
-        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), true, 200, Duration.ofHours(1))
+        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), new io.micrometer.core.instrument.simple.SimpleMeterRegistry(), true, 200, Duration.ofHours(1))
                 .rePublishPendingOnBoot();
 
         verifyNoInteractions(rabbit);
     }
 
     @Test void skipsEntirelyWhenDisabled() {
-        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), false, 200, Duration.ofHours(1))
+        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), new io.micrometer.core.instrument.simple.SimpleMeterRegistry(), false, 200, Duration.ofHours(1))
                 .rePublishPendingOnBoot();
 
         verifyNoInteractions(repo);
@@ -104,7 +104,7 @@ class PendingReasoningBackfillRunnerTest {
                 .when(rabbit).convertAndSend(anyString(), anyString());
 
         // First call succeeds, second throws, third should still be attempted.
-        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), true, 200, Duration.ofHours(1))
+        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), new io.micrometer.core.instrument.simple.SimpleMeterRegistry(), true, 200, Duration.ofHours(1))
                 .rePublishPendingOnBoot();
 
         verify(rabbit, times(3))
@@ -115,7 +115,7 @@ class PendingReasoningBackfillRunnerTest {
         when(repo.findByReasoningStatusAndOlderThan(any(), any(), any()))
                 .thenReturn(List.of(entity("AAPL", SignalType.BUY, 0.65)));
 
-        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), true, 50, Duration.ofHours(1))
+        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), new io.micrometer.core.instrument.simple.SimpleMeterRegistry(), true, 50, Duration.ofHours(1))
                 .rePublishPendingOnBoot();
 
         ArgumentCaptor<Pageable> pageCaptor = ArgumentCaptor.forClass(Pageable.class);
@@ -129,7 +129,7 @@ class PendingReasoningBackfillRunnerTest {
                 .thenReturn(List.of());
 
         Instant before = Instant.now();
-        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), true, 200, Duration.ofMinutes(30))
+        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), new io.micrometer.core.instrument.simple.SimpleMeterRegistry(), true, 200, Duration.ofMinutes(30))
                 .rePublishPendingOnBoot();
         Instant after = Instant.now();
 
@@ -146,7 +146,7 @@ class PendingReasoningBackfillRunnerTest {
         when(repo.findByReasoningStatusAndOlderThan(any(), any(), any()))
                 .thenReturn(List.of(row));
 
-        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), true, 200, Duration.ofHours(1))
+        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper, new com.tradingsaas.tradingcore.application.service.SignalMathService(), new io.micrometer.core.instrument.simple.SimpleMeterRegistry(), true, 200, Duration.ofHours(1))
                 .rePublishPendingOnBoot();
 
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
@@ -164,5 +164,57 @@ class PendingReasoningBackfillRunnerTest {
         assertThat(parsed.get("generatedAt"))
                 .as("generatedAt must be ISO-8601 stringified Instant")
                 .isInstanceOf(String.class);
+    }
+
+    @Test void paginatesUntilLastShortPage() {
+        // batchSize=2 with two full pages followed by a single trailing row
+        // proves the sweep keeps asking until it sees a short page.
+        TradingSignalJpaEntity a = entity("AAPL", SignalType.BUY, 0.65);
+        TradingSignalJpaEntity b = entity("TSLA", SignalType.BUY, 0.65);
+        TradingSignalJpaEntity c = entity("NVDA", SignalType.BUY, 0.65);
+        TradingSignalJpaEntity d = entity("MSFT", SignalType.BUY, 0.65);
+        TradingSignalJpaEntity e = entity("META", SignalType.BUY, 0.65);
+        when(repo.findByReasoningStatusAndOlderThan(any(), any(), any()))
+                .thenReturn(List.of(a, b))
+                .thenReturn(List.of(c, d))
+                .thenReturn(List.of(e));
+
+        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper,
+                new com.tradingsaas.tradingcore.application.service.SignalMathService(),
+                new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
+                true, 2, Duration.ofHours(1))
+                .rePublishPendingOnBoot();
+
+        verify(rabbit, times(5))
+                .convertAndSend(eq(RabbitMQConfig.REASONING_QUEUE), anyString());
+        // Three repo calls = page 0, page 1, page 2 (short, terminates loop).
+        verify(repo, times(3))
+                .findByReasoningStatusAndOlderThan(eq(ReasoningStatus.PENDING),
+                        any(Instant.class), any(Pageable.class));
+    }
+
+    @Test void scheduledSweepRunsTheSameWorkAsBootSweep() {
+        when(repo.findByReasoningStatusAndOlderThan(any(), any(), any()))
+                .thenReturn(List.of(entity("AAPL", SignalType.BUY, 0.65)));
+
+        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper,
+                new com.tradingsaas.tradingcore.application.service.SignalMathService(),
+                new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
+                true, 200, Duration.ofHours(1))
+                .rePublishPendingScheduled();
+
+        verify(rabbit, times(1))
+                .convertAndSend(eq(RabbitMQConfig.REASONING_QUEUE), anyString());
+    }
+
+    @Test void scheduledSweepIsNoOpWhenDisabled() {
+        new PendingReasoningBackfillRunner(repo, rabbit, objectMapper,
+                new com.tradingsaas.tradingcore.application.service.SignalMathService(),
+                new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
+                false, 200, Duration.ofHours(1))
+                .rePublishPendingScheduled();
+
+        verifyNoInteractions(rabbit);
+        verifyNoInteractions(repo);
     }
 }
