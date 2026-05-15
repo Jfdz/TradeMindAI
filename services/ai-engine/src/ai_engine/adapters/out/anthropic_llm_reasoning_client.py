@@ -12,8 +12,13 @@ Design pins:
     tokens is plenty and cuts per-call cost roughly in half vs the C4
     initial 600).
   - tool_choice forces exactly one emit_reasoning call — no free text.
-  - Prompt caching: OFF in C4 (system prompt < Haiku 4.5's 4096-token
-    minimum cacheable prefix; the marker would be silently ignored).
+  - Prompt caching: cache_control breakpoint sent on system + tools. Today
+    the system prompt + tool schema is ~700 tokens, below Haiku 4.5's
+    4096-token minimum cacheable prefix, so the API silently ignores the
+    marker and no cache hit fires (cache_read_input_tokens stays 0).
+    Telemetry surfaces cache_read_input_tokens + cache_creation_input_tokens
+    so the day the prompt grows past the minimum (e.g. when few-shot
+    examples land), caching activates with no code change.
 """
 
 from __future__ import annotations
@@ -68,12 +73,26 @@ class AnthropicLlmReasoningClient:
                 f"{user_prompt}"
             )
         try:
+            # Cache the deterministic prefix (system + tool schema). Today
+            # this prefix is under Haiku 4.5's 4096-token minimum so the
+            # marker is silently ignored; it ships pre-wired so the cache
+            # activates automatically once the prefix grows past the minimum.
+            cached_tool_schema = {
+                **REASONING_TOOL_SCHEMA,
+                "cache_control": {"type": "ephemeral"},
+            }
             response = self._client.messages.create(
                 model=self._model,
                 max_tokens=self.MAX_TOKENS,
                 temperature=self.TEMPERATURE,
-                system=SYSTEM_PROMPT,
-                tools=[REASONING_TOOL_SCHEMA],
+                system=[
+                    {
+                        "type": "text",
+                        "text": SYSTEM_PROMPT,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ],
+                tools=[cached_tool_schema],
                 tool_choice={"type": "tool", "name": "emit_reasoning"},
                 messages=[{"role": "user", "content": user_prompt}],
             )
@@ -108,6 +127,9 @@ class AnthropicLlmReasoningClient:
                     "output_tokens": getattr(usage, "output_tokens", None),
                     "cache_read_input_tokens": getattr(
                         usage, "cache_read_input_tokens", None
+                    ),
+                    "cache_creation_input_tokens": getattr(
+                        usage, "cache_creation_input_tokens", None
                     ),
                 }
                 if usage is not None
