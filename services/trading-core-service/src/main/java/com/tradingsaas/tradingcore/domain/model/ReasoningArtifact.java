@@ -2,7 +2,6 @@ package com.tradingsaas.tradingcore.domain.model;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * Audit artifact produced by ai-engine for one reasoning attempt.
@@ -17,6 +16,13 @@ import java.util.Objects;
  * changes to the ai-engine schema do not require a new migration. The
  * fixed-column fields (outcome, provider, model, retry, refusal) are the
  * audit anchor that should never change shape.
+ *
+ * <p>{@code outcome} is non-null when the artifact was written via the C6
+ * ingest endpoint (validated by {@code SignalReasoningController} at the
+ * wire boundary). It can be {@code null} when the artifact is reconstructed
+ * from a DB row whose {@code reasoning_outcome} column was cleared (e.g.
+ * operator-issued reset to re-run reasoning) but whose provider/model/snapshot
+ * metadata remains. Downstream consumers must null-check.
  */
 public record ReasoningArtifact(
         String outcome,
@@ -31,7 +37,6 @@ public record ReasoningArtifact(
         Map<String, Object> rawAudit) {
 
     public ReasoningArtifact {
-        Objects.requireNonNull(outcome, "outcome must not be null");
         if (retryCount < 0) {
             throw new IllegalArgumentException("retryCount must not be negative");
         }

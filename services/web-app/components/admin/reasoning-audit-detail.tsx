@@ -18,7 +18,34 @@ function outcomeClass(outcome: string | null): string {
   return "text-red";
 }
 
+function badge(audit: ReasoningAudit): { text: string; className: string } {
+  if (audit.outcome) {
+    return { text: audit.outcome, className: outcomeClass(audit.outcome) };
+  }
+  if (audit.reasoningStatus === "PENDING") {
+    return { text: "awaiting reasoning", className: "text-text-2" };
+  }
+  if (audit.reasoningStatus) {
+    return { text: audit.reasoningStatus.toLowerCase(), className: "text-text-2" };
+  }
+  return { text: "no artifact", className: "text-text-2" };
+}
+
+function formatPrice(value: number | null): string {
+  return value != null ? `$${value.toFixed(2)}` : "—";
+}
+
+function formatPct(value: number | null): string {
+  return value != null ? `${value.toFixed(2)}%` : "—";
+}
+
 export function ReasoningAuditDetail({ audit }: { audit: ReasoningAudit }) {
+  const b = badge(audit);
+  const hasPricing =
+    audit.entryPrice != null
+    || audit.targetPrice != null
+    || audit.stopLoss != null
+    || audit.expectedMovePct != null;
   return (
     <article className="space-y-5 text-sm">
       <header className="space-y-1">
@@ -29,9 +56,7 @@ export function ReasoningAuditDetail({ audit }: { audit: ReasoningAudit }) {
               signal {audit.signalId.slice(0, 8)}…
             </span>
           </h2>
-          <span className={`text-xs font-medium uppercase ${outcomeClass(audit.outcome)}`}>
-            {audit.outcome ?? "no artifact"}
-          </span>
+          <span className={`text-xs font-medium uppercase ${b.className}`}>{b.text}</span>
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-text-2 sm:grid-cols-4">
           <MetaCell label="Status" value={audit.reasoningStatus} />
@@ -41,9 +66,21 @@ export function ReasoningAuditDetail({ audit }: { audit: ReasoningAudit }) {
             label="Retry"
             value={audit.retryCount != null ? String(audit.retryCount) : null}
           />
-          <MetaCell label="Generated" value={formatTimestamp(audit.reasoningGeneratedAt)} />
+          <MetaCell label="Signal generated" value={formatTimestamp(audit.signalGeneratedAt)} />
+          <MetaCell label="Reasoning generated" value={formatTimestamp(audit.reasoningGeneratedAt)} />
         </div>
       </header>
+
+      {hasPricing && (
+        <Section title="Pricing">
+          <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+            <PriceCell label="Entry" value={formatPrice(audit.entryPrice)} />
+            <PriceCell label="Target" value={formatPrice(audit.targetPrice)} />
+            <PriceCell label="Stop" value={formatPrice(audit.stopLoss)} />
+            <PriceCell label="Expected move" value={formatPct(audit.expectedMovePct)} />
+          </div>
+        </Section>
+      )}
 
       <Section title="Reasoning text">
         {audit.reasoning ? (
@@ -116,6 +153,15 @@ function MetaCell({ label, value }: { label: string; value: string | null | unde
     <div>
       <div className="uppercase tracking-wide">{label}</div>
       <div className="text-text-1">{value || "—"}</div>
+    </div>
+  );
+}
+
+function PriceCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="uppercase tracking-wide text-text-2">{label}</div>
+      <div className="text-text-1">{value}</div>
     </div>
   );
 }
