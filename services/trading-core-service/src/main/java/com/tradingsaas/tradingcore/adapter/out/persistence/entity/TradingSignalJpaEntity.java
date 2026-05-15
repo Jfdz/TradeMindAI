@@ -200,6 +200,9 @@ public class TradingSignalJpaEntity {
     public void setReasoning(String reasoning) { this.reasoning = reasoning; }
     public void setReasoningStatus(ReasoningStatus reasoningStatus) { this.reasoningStatus = reasoningStatus; }
     public void setReasoningGeneratedAt(Instant reasoningGeneratedAt) { this.reasoningGeneratedAt = reasoningGeneratedAt; }
+    public void setTargetPrice(BigDecimal targetPrice) { this.targetPrice = targetPrice; }
+    public void setStopLoss(BigDecimal stopLoss) { this.stopLoss = stopLoss; }
+    public void setExpectedMovePct(BigDecimal expectedMovePct) { this.expectedMovePct = expectedMovePct; }
 
     public void setReasoningOutcome(String reasoningOutcome) { this.reasoningOutcome = reasoningOutcome; }
     public void setReasoningProvider(String reasoningProvider) { this.reasoningProvider = reasoningProvider; }

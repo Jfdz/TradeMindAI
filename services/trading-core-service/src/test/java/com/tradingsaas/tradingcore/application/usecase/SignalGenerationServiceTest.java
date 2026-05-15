@@ -158,7 +158,9 @@ class SignalGenerationServiceTest {
                 new Confidence(new BigDecimal("0.70")), Timeframe.DAILY,
                 Instant.parse("2026-04-17T08:00:00Z"),
                 new BigDecimal("2.00"), new BigDecimal("4.00"),
-                new BigDecimal("2.30"), new BigDecimal("450.00"));
+                new BigDecimal("2.30"), new BigDecimal("450.00"),
+                new BigDecimal("468.000000"), new BigDecimal("441.000000"),
+                new BigDecimal("4.0000"));
         RecordingRepository repository = new RecordingRepository(existing);
         SignalGenerationService service = new SignalGenerationService(
                 repository, new StubMarketDataPort(Map.of("NVDA", new BigDecimal("450.00"))));
@@ -167,6 +169,38 @@ class SignalGenerationServiceTest {
 
         assertEquals(existing.getId(), generated.getId());
         assertEquals(0, repository.saveCallCount);
+    }
+
+    @Test
+    void selfHealsDerivedPricesWhenExistingSignalHasNulls() {
+        UUID symbolId = UUID.fromString("99999999-9999-9999-9999-999999999999");
+        AiPrediction prediction = new AiPrediction(
+                "NVDA",
+                SignalType.BUY,
+                new Confidence(new BigDecimal("0.70")),
+                new BigDecimal("2.30"),
+                List.of(),
+                Instant.parse("2026-04-17T10:00:00Z"));
+
+        // Legacy (pre-V21) row with null derived prices.
+        TradingSignal legacy = new TradingSignal(
+                UUID.fromString("cccccccc-cccc-cccc-cccc-cccccccccccc"),
+                symbolId, "NVDA", SignalType.BUY,
+                new Confidence(new BigDecimal("0.70")), Timeframe.DAILY,
+                Instant.parse("2026-04-17T08:00:00Z"),
+                new BigDecimal("2.00"), new BigDecimal("4.00"),
+                new BigDecimal("2.30"), new BigDecimal("450.00"));
+        RecordingRepository repository = new RecordingRepository(legacy);
+        SignalGenerationService service = new SignalGenerationService(
+                repository, new StubMarketDataPort(Map.of("NVDA", new BigDecimal("450.00"))));
+
+        TradingSignal generated = service.generate(symbolId, prediction);
+
+        assertEquals(legacy.getId(), generated.getId());
+        assertEquals(1, repository.saveCallCount);
+        assertEquals(0, generated.getTargetPrice().compareTo(new BigDecimal("468.000000")));
+        assertEquals(0, generated.getStopLoss().compareTo(new BigDecimal("441.000000")));
+        assertEquals(0, generated.getExpectedMovePct().compareTo(new BigDecimal("4.0000")));
     }
 
     @Test

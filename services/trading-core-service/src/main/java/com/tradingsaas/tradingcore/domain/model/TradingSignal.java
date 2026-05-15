@@ -272,6 +272,16 @@ public class TradingSignal {
      * Returns a copy of this signal with the given reasoning artifact attached.
      * Used by the C6 internal endpoint after ai-engine emits the artifact.
      */
+    public TradingSignal withDerivedPrices(BigDecimal targetPrice,
+                                           BigDecimal stopLoss,
+                                           BigDecimal expectedMovePct) {
+        return new TradingSignal(
+                id, symbolId, ticker, type, confidence, timeframe, generatedAt,
+                stopLossPct, takeProfitPct, predictedChangePct, entryPrice,
+                targetPrice, stopLoss, expectedMovePct,
+                reasoning, reasoningStatus, reasoningGeneratedAt, reasoningArtifact);
+    }
+
     public TradingSignal withReasoningArtifact(ReasoningArtifact artifact) {
         return new TradingSignal(
                 id, symbolId, ticker, type, confidence, timeframe, generatedAt,
