@@ -88,6 +88,9 @@ public class PendingReasoningBackfillRunner {
             event.put("confidence", entity.getConfidence());
             event.put("predictedChangePct", entity.getPredictedChangePct());
             event.put("entryPrice", entity.getEntryPrice());
+            event.put("targetPrice", entity.getTargetPrice());
+            event.put("stopLoss", entity.getStopLoss());
+            event.put("expectedMovePct", entity.getExpectedMovePct());
             // C9 — ai-engine consumer needs generated_at to build SignalInput.
             event.put("generatedAt",
                     entity.getGeneratedAt() != null ? entity.getGeneratedAt().toString() : null);
