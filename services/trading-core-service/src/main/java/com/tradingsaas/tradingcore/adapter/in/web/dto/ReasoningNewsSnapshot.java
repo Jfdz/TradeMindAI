@@ -49,12 +49,32 @@ public record ReasoningNewsSnapshot(
         if (headline == null && url == null) {
             return null;
         }
+        // Headline/url/source/publishedAt come from news[0] — the LLM's
+        // grounded primary item. The image, however, is allowed to come
+        // from the first news entry that actually carries one (typically
+        // Finnhub when news[0] was Yahoo without a thumbnail). This keeps
+        // the audit trail consistent while still surfacing a hero image
+        // on the AI Decision Card whenever any grounded item has one.
+        String imageUrl = firstNonBlankImage(list);
         return new ReasoningNewsSnapshot(
                 headline,
                 url,
-                stringOrNull(first.get("image")),
+                imageUrl,
                 stringOrNull(first.get("source")),
                 stringOrNull(first.get("published_at")));
+    }
+
+    private static String firstNonBlankImage(List<?> news) {
+        for (Object raw : news) {
+            if (!(raw instanceof Map<?, ?> item)) {
+                continue;
+            }
+            String candidate = stringOrNull(item.get("image"));
+            if (candidate != null) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     private static String stringOrNull(Object value) {
