@@ -70,7 +70,7 @@ function replaceFieldNames(text: string): string {
   for (const key of FIELD_KEYS) {
     // Word-boundary match on the snake_case token so substrings inside
     // other words are left alone.
-    const re = new RegExp(`\\b${key}\\b`, "g");
+    const re = new RegExp(String.raw`\b${key}\b`, "g");
     out = out.replace(re, FIELD_NAME_MAP[key]);
   }
   return out;

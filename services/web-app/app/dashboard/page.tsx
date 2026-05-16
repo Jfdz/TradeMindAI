@@ -6,17 +6,19 @@ import { useSession } from "next-auth/react";
 import { useCallback, useMemo, useState } from "react";
 
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
-import { RecentDecisionsCarousel } from "@/components/dashboard/recent-decisions-carousel";
+import { AiDecisionCard } from "@/components/dashboard/ai-decision-card";
 import { LiveSignalsStrip } from "@/components/dashboard/live-signals-strip";
 import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
 import { LiveLed } from "@/components/ui/live-led";
+import { StockLogo } from "@/components/ui/stock-logo";
 import type { DashboardCandle, EnrichedHolding, FilteredSignal } from "@/lib/dashboard/dashboard-api";
 import { fetchDashboardPageData } from "@/lib/dashboard/client-data";
 import { useAgeOutToast } from "@/lib/dashboard/use-age-out-toast";
 import { useStockLogos } from "@/lib/dashboard/use-stock-logos";
 import { buildSignalMarker } from "@/lib/dashboard/signal-derivation";
 import { signedTone, TONE_NEUTRAL } from "@/lib/dashboard/format";
+import { formatConfidence } from "@/lib/signal-utils";
 import { cn } from "@/lib/utils";
 
 const EMPTY_SIGNALS: FilteredSignal[] = [];
@@ -378,11 +380,21 @@ export default function DashboardHomePage() {
           <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Live signals</div>
           <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">Recent AI decisions</h3>
 
-          <RecentDecisionsCarousel
-            signals={signals}
-            signalLogos={signalLogos}
-            typeBadgeClass={getSignalTypeStyle}
-          />
+          <div className="mt-6 space-y-4">
+            {signals.slice(0, 4).map((signal) => (
+              <AiDecisionCard
+                key={signal.id}
+                signal={signal}
+                logoUrl={signalLogos?.[signal.symbol]}
+                typeBadgeClass={getSignalTypeStyle(signal.type)}
+              />
+            ))}
+            {signals.length === 0 ? (
+              <div className="rounded-[20px] border border-dashed border-border bg-bg-2 px-4 py-6 text-sm text-text-2">
+                No signals returned by the backend yet.
+              </div>
+            ) : null}
+          </div>
         </article>
       </section>
 

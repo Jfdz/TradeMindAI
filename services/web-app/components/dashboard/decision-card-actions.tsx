@@ -25,9 +25,9 @@ function directionClass(type: FilteredSignal["type"]): string {
 }
 
 type Props = {
-  signal: FilteredSignal;
-  newsUrl?: string | null;
-  articleLabel?: string;
+  readonly signal: FilteredSignal;
+  readonly newsUrl?: string | null;
+  readonly articleLabel?: string;
 };
 
 export function DecisionCardActions({ signal, newsUrl, articleLabel }: Props) {
