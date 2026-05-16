@@ -35,7 +35,7 @@ export function AISignalSection({ ticker }: Props) {
 
   if (status === "pending") {
     return (
-      <div className="rounded-xl border border-cyan-500/30 bg-card p-4 shadow-[0_0_20px_rgba(6,182,212,0.08)] space-y-3">
+      <div className="space-y-3 rounded-xl border border-cyan-500/30 bg-card p-4 shadow-[0_0_20px_rgba(6,182,212,0.08)]">
         <div className="h-4 w-32 animate-pulse rounded-full bg-muted" />
         <div className="h-16 animate-pulse rounded-lg bg-muted" />
       </div>
@@ -47,12 +47,10 @@ export function AISignalSection({ ticker }: Props) {
   if (!signal) {
     return (
       <div className="rounded-xl border border-cyan-500/30 bg-card p-4 shadow-[0_0_20px_rgba(6,182,212,0.08)]">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Today's live signal
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Today&apos;s live signal
         </h3>
-        <p className="mt-3 text-sm text-muted-foreground">
-          No active prediction for {ticker}.
-        </p>
+        <p className="mt-3 text-sm text-muted-foreground">No active prediction for {ticker}.</p>
       </div>
     );
   }
@@ -60,10 +58,10 @@ export function AISignalSection({ ticker }: Props) {
   const live = Date.now() - new Date(signal.generatedAt).getTime() < 1000 * 60 * 60 * 24;
 
   return (
-    <div className="rounded-xl border border-cyan-500/30 bg-card p-4 shadow-[0_0_20px_rgba(6,182,212,0.08)] space-y-3">
+    <div className="space-y-3 rounded-xl border border-cyan-500/30 bg-card p-4 shadow-[0_0_20px_rgba(6,182,212,0.08)]">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-semibold text-cyan-400 uppercase tracking-wider">
-          Today's live signal
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-cyan-400">
+          Today&apos;s live signal
         </h3>
         <div className="flex items-center gap-2">
           <SignalBadge type={signal.type} />
@@ -75,17 +73,18 @@ export function AISignalSection({ ticker }: Props) {
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div className="rounded-lg bg-muted/50 p-2">
           <p className="text-muted-foreground">Confidence</p>
-          <p className="font-mono font-semibold mt-0.5">{formatConfidence(signal.confidence)}</p>
+          <p className="mt-0.5 font-mono font-semibold">{formatConfidence(signal.confidence)}</p>
         </div>
         <div className="rounded-lg bg-muted/50 p-2">
           <p className="text-muted-foreground">Timeframe</p>
-          <p className="font-mono font-semibold mt-0.5">{signal.timeframe}</p>
+          <p className="mt-0.5 font-mono font-semibold">{signal.timeframe}</p>
         </div>
         {signal.predictedChangePct != null && (
           <div className="rounded-lg bg-muted/50 p-2">
             <p className="text-muted-foreground">Predicted Δ</p>
-            <p className={`font-mono font-semibold mt-0.5 ${signal.predictedChangePct >= 0 ? "text-green-400" : "text-red-400"}`}>
-              {signal.predictedChangePct >= 0 ? "+" : ""}{signal.predictedChangePct.toFixed(2)}%
+            <p className={`mt-0.5 font-mono font-semibold ${signal.predictedChangePct >= 0 ? "text-green-400" : "text-red-400"}`}>
+              {signal.predictedChangePct >= 0 ? "+" : ""}
+              {signal.predictedChangePct.toFixed(2)}%
             </p>
           </div>
         )}

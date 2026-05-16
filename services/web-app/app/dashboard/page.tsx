@@ -11,14 +11,12 @@ import { LiveSignalsStrip } from "@/components/dashboard/live-signals-strip";
 import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
 import { LiveLed } from "@/components/ui/live-led";
-import { StockLogo } from "@/components/ui/stock-logo";
 import type { DashboardCandle, EnrichedHolding, FilteredSignal } from "@/lib/dashboard/dashboard-api";
 import { fetchDashboardPageData } from "@/lib/dashboard/client-data";
 import { useAgeOutToast } from "@/lib/dashboard/use-age-out-toast";
 import { useStockLogos } from "@/lib/dashboard/use-stock-logos";
 import { buildSignalMarker } from "@/lib/dashboard/signal-derivation";
 import { signedTone, TONE_NEUTRAL } from "@/lib/dashboard/format";
-import { formatConfidence } from "@/lib/signal-utils";
 import { cn } from "@/lib/utils";
 
 const EMPTY_SIGNALS: FilteredSignal[] = [];
