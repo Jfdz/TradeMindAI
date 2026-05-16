@@ -48,7 +48,7 @@ export function AISignalSection({ ticker }: Props) {
     return (
       <div className="rounded-xl border border-cyan-500/30 bg-card p-4 shadow-[0_0_20px_rgba(6,182,212,0.08)]">
         <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          AI Signal
+          Today's live signal
         </h3>
         <p className="mt-3 text-sm text-muted-foreground">
           No active prediction for {ticker}.
@@ -63,7 +63,7 @@ export function AISignalSection({ ticker }: Props) {
     <div className="rounded-xl border border-cyan-500/30 bg-card p-4 shadow-[0_0_20px_rgba(6,182,212,0.08)] space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-semibold text-cyan-400 uppercase tracking-wider">
-          AI Signal
+          Today's live signal
         </h3>
         <div className="flex items-center gap-2">
           <SignalBadge type={signal.type} />
