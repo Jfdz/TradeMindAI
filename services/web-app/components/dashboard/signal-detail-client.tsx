@@ -270,7 +270,7 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className={`font-mono text-2xl font-bold ${colorClass}`}>{label}</div>
-                    <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">Expected move (model output)</div>
+                    <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">Expected move</div>
                   </div>
                   <div className="flex-1 max-w-[140px]">
                     <div
