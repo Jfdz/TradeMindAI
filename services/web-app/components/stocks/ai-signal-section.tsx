@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { apiClient, type SignalResponse } from "@/lib/api-client";
+import { formatPredictedChange } from "@/lib/signal-utils";
 
 type Props = {
   readonly ticker: string;
@@ -79,15 +80,15 @@ export function AISignalSection({ ticker }: Props) {
           <p className="text-muted-foreground">Timeframe</p>
           <p className="mt-0.5 font-mono font-semibold">{signal.timeframe}</p>
         </div>
-        {signal.predictedChangePct != null && (
-          <div className="rounded-lg bg-muted/50 p-2">
-            <p className="text-muted-foreground">Predicted Δ</p>
-            <p className={`mt-0.5 font-mono font-semibold ${signal.predictedChangePct >= 0 ? "text-green-400" : "text-red-400"}`}>
-              {signal.predictedChangePct >= 0 ? "+" : ""}
-              {signal.predictedChangePct.toFixed(2)}%
-            </p>
-          </div>
-        )}
+        {signal.predictedChangePct != null && (() => {
+          const { label, colorClass } = formatPredictedChange(signal.predictedChangePct, signal.type);
+          return (
+            <div className="rounded-lg bg-muted/50 p-2">
+              <p className="text-muted-foreground">Expected move</p>
+              <p className={`font-mono font-semibold mt-0.5 ${colorClass}`}>{label}</p>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
