@@ -1,8 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import Image from "next/image";
-import { useEffect, useState } from "react";
 import type { NewsItemResponse } from "@/lib/enrichment-client";
 import { hasOwnImage } from "@/lib/enrichment/news-image-filter";
 
@@ -30,6 +30,9 @@ function formatDate(iso: string): string {
 }
 
 export function NewsFeed({ ticker }: Props) {
+  const [hasLoadedMore, setHasLoadedMore] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
     useInfiniteQuery({
       queryKey: ["news", ticker],
@@ -37,8 +40,6 @@ export function NewsFeed({ ticker }: Props) {
       getNextPageParam: (_last, pages) => pages.length,
       initialPageParam: 0,
     });
-
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const articles = data?.pages.flat() ?? [];
   const filtered = articles.filter((item) => hasOwnImage(item.image));
@@ -120,9 +121,9 @@ export function NewsFeed({ ticker }: Props) {
           </div>
         </a>
       ))}
-      {canLoadMore && (
+      {canLoadMore && !hasLoadedMore && (
         <button
-          onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+          onClick={() => { setVisibleCount((count) => count + PAGE_SIZE); setHasLoadedMore(true); }}
           disabled={isFetchingNextPage}
           className="w-full rounded-xl border bg-card py-2 text-sm text-muted-foreground hover:bg-accent/50 transition-colors disabled:opacity-50"
         >

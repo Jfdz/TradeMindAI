@@ -72,10 +72,9 @@ export default async function StockDetailPage({ params }: Props) {
           <FundamentalsPanel profile={profile} />
           <AnalystRecommendationsBar recommendations={recommendations} />
           <PeersList peers={peers} />
+          <AISignalSection ticker={ticker} />
         </aside>
       </div>
-
-      <AISignalSection ticker={ticker} />
     </main>
   );
 }
