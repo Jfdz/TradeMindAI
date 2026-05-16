@@ -14,38 +14,18 @@ const signal: SignalResponse = {
 };
 
 describe("scrubReasoningText", () => {
-  it("replaces snake_case field names with friendly labels", () => {
-    expect(scrubReasoningText("sits below sma_200 at 163.478225", signal)).toBe(
-      "sits below 200-day average at 163.48 $",
-    );
+  // ceil(43.21) = 44 — ceiling rule wins; see format.ts formatConfidencePct.
+  it.each([
+    ["replaces snake_case field names with friendly labels", "sits below sma_200 at 163.478225", "sits below 200-day average at 163.48 $"],
+    ["renders confidence as ceiling integer percent", "with confidence 0.4321", "with confidence 44 %"],
+    ["leaves RSI raw — 0–100 indicator, not a percent", "RSI at 43.1629 suggests momentum", "RSI at 43.1629 suggests momentum"],
+    ["keeps ungoverned numbers verbatim (grounded facts)", "the move spans 12 sessions", "the move spans 12 sessions"],
+    ["maps price-context field and ceilings its value", "target_price 627.121", "target 627.13 $"],
+  ] as const)("%s", (_label, input, expected) => {
+    expect(scrubReasoningText(input, signal)).toBe(expected);
   });
 
-  it("renders confidence as a ceiling integer percent", () => {
-    // ceil(43.21) = 44 — ceiling rule wins over the plan's 43 example.
-    expect(scrubReasoningText("with confidence 0.4321", signal)).toBe(
-      "with confidence 44 %",
-    );
-  });
-
-  it("leaves RSI raw — it is a 0–100 indicator, not a percent", () => {
-    expect(scrubReasoningText("RSI at 43.1629 suggests momentum", signal)).toBe(
-      "RSI at 43.1629 suggests momentum",
-    );
-  });
-
-  it("keeps ungoverned numbers verbatim (grounded facts)", () => {
-    expect(scrubReasoningText("the move spans 12 sessions", signal)).toBe(
-      "the move spans 12 sessions",
-    );
-  });
-
-  it("maps a price-context field and ceilings its value", () => {
-    expect(scrubReasoningText("target_price 627.121", signal)).toBe(
-      "target 627.13 $",
-    );
-  });
-
-  it("returns an empty string for null/undefined input", () => {
+  it("returns empty string for null/undefined input", () => {
     expect(scrubReasoningText(null, signal)).toBe("");
     expect(scrubReasoningText(undefined, signal)).toBe("");
   });
