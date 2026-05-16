@@ -146,26 +146,29 @@ function SignalsContent() {
                     {filteredSignals.map((signal, index) => (
                       <tr
                         key={signal.id}
-                        className={cn("transition hover:bg-white/[0.025]", index % 2 === 0 ? "bg-white/[0.012]" : "")}
+                        className={cn(
+                          "relative cursor-pointer transition hover:bg-white/[0.025]",
+                          index % 2 === 0 ? "bg-white/[0.012]" : "",
+                        )}
                       >
                         <td className="border-t border-border px-4 py-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <Link href={`/dashboard/stocks/${signal.symbol}`} className="group flex items-center gap-2">
-                              <StockLogo ticker={signal.symbol} logoUrl={signalLogos?.[signal.symbol]} size={24} />
-                              <div>
-                                <div className="font-display text-base font-semibold tracking-[-0.03em] text-white group-hover:text-cyan transition-colors">
-                                  {signal.symbol}
-                                </div>
-                                <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">{signal.age}</div>
+                          <Link
+                            href={`/dashboard/signals/${signal.id}`}
+                            aria-label={`Open ${signal.symbol} signal detail`}
+                            className="absolute inset-0 z-0"
+                          />
+                          <Link
+                            href={`/dashboard/stocks/${signal.symbol}`}
+                            className="group relative z-10 inline-flex items-center gap-2"
+                          >
+                            <StockLogo ticker={signal.symbol} logoUrl={signalLogos?.[signal.symbol]} size={24} />
+                            <div>
+                              <div className="font-display text-base font-semibold tracking-[-0.03em] text-white group-hover:text-cyan transition-colors">
+                                {signal.symbol}
                               </div>
-                            </Link>
-                            <Link
-                              href={`/dashboard/signals/${signal.id}`}
-                              className="shrink-0 rounded-full border border-cyan/30 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-cyan transition hover:border-cyan/60 hover:bg-cyan/[0.08]"
-                            >
-                              Detail →
-                            </Link>
-                          </div>
+                              <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">{signal.age}</div>
+                            </div>
+                          </Link>
                         </td>
                         <td className="border-t border-border px-4 py-4">
                           <span className={cn("rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]", pickSignalBadgeClass(signal.type))}>

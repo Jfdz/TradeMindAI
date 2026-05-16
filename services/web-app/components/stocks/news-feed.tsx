@@ -2,7 +2,11 @@
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import type { NewsItemResponse } from "@/lib/enrichment-client";
+import { hasOwnImage } from "@/lib/enrichment/news-image-filter";
+
+const PAGE_SIZE = 5;
 
 type Props = {
   readonly ticker: string;
@@ -34,7 +38,26 @@ export function NewsFeed({ ticker }: Props) {
       initialPageParam: 0,
     });
 
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
   const articles = data?.pages.flat() ?? [];
+  const filtered = articles.filter((item) => hasOwnImage(item.image));
+  const visible = filtered.slice(0, visibleCount);
+  const canLoadMore = visibleCount < filtered.length || (hasNextPage ?? false);
+
+  // The image filter shrinks each fetched week; a week can yield < PAGE_SIZE
+  // usable items. Keep pulling older weeks until we have enough to satisfy the
+  // current reveal target (or pages run out). Runs on mount and after each
+  // "Load more" so the button never dead-clicks.
+  useEffect(() => {
+    if (
+      filtered.length < visibleCount &&
+      hasNextPage &&
+      !isFetchingNextPage
+    ) {
+      void fetchNextPage();
+    }
+  }, [filtered.length, visibleCount, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   if (status === "pending") {
     return (
@@ -57,9 +80,17 @@ export function NewsFeed({ ticker }: Props) {
     );
   }
 
+  if (filtered.length === 0 && !hasNextPage && !isFetchingNextPage) {
+    return (
+      <div className="rounded-xl border bg-card p-6 text-center text-sm text-muted-foreground">
+        No news with images available.
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
-      {articles.map((item) => (
+      {visible.map((item) => (
         <a
           key={item.id}
           href={item.url ?? "#"}
@@ -89,9 +120,9 @@ export function NewsFeed({ ticker }: Props) {
           </div>
         </a>
       ))}
-      {hasNextPage && (
+      {canLoadMore && (
         <button
-          onClick={() => fetchNextPage()}
+          onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
           disabled={isFetchingNextPage}
           className="w-full rounded-xl border bg-card py-2 text-sm text-muted-foreground hover:bg-accent/50 transition-colors disabled:opacity-50"
         >
