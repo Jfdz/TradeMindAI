@@ -9,6 +9,7 @@ import type {
   AdminSignalSummary,
   ReasoningAudit,
 } from "@/lib/admin/reasoning-audit-types";
+import { formatPredictedChange } from "@/lib/signal-utils";
 
 const PAGE_SIZE = 25;
 
@@ -103,6 +104,7 @@ export function ReasoningAuditExplorer() {
                 <th className="px-3 py-2">Ticker</th>
                 <th className="px-3 py-2">Type</th>
                 <th className="px-3 py-2">Confidence</th>
+                <th className="px-3 py-2">Expected move</th>
                 <th className="px-3 py-2">Status</th>
                 <th className="px-3 py-2">Outcome</th>
                 <th className="px-3 py-2">Retry</th>
@@ -206,6 +208,10 @@ function SignalRow({
     minute: "2-digit",
   });
   const typeClass = row.signalType === "BUY" ? "text-green" : row.signalType === "SELL" ? "text-red" : "text-gold";
+  const expectedMove =
+    row.predictedChangePct != null
+      ? formatPredictedChange(row.predictedChangePct, row.signalType)
+      : null;
   return (
     <tr
       onClick={onSelect}
@@ -215,6 +221,9 @@ function SignalRow({
       <td className="px-3 py-2 font-medium text-text-1">{row.ticker ?? "—"}</td>
       <td className={`px-3 py-2 font-medium ${typeClass}`}>{row.signalType}</td>
       <td className="px-3 py-2 text-text-1">{confidence}</td>
+      <td className={`px-3 py-2 font-mono ${expectedMove?.colorClass ?? "text-text-2"}`}>
+        {expectedMove?.label ?? "—"}
+      </td>
       <td className="px-3 py-2 text-text-2">{row.reasoningStatus}</td>
       <td className="px-3 py-2 text-text-2">{row.reasoningOutcome ?? "—"}</td>
       <td className="px-3 py-2 text-text-2">
