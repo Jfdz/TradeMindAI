@@ -50,8 +50,13 @@ test.describe("stock-detail", () => {
   test("renders company header with ticker", async ({ page }) => {
     await page.goto("/dashboard/stocks/AAPL");
     await expect(page.locator("body")).not.toContainText("Application error");
+    // h1 shows company name when SSR profile loads, or ticker when backend unavailable.
+    // The subtitle <p> always contains the raw ticker — assert that instead.
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({
+      timeout: 10_000,
+    });
     await expect(
-      page.getByRole("heading", { name: "AAPL", level: 1 }),
+      page.locator("p").filter({ hasText: /AAPL/ }).first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 
