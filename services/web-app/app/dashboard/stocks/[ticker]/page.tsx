@@ -9,7 +9,6 @@ import { EarningsBadge } from "@/components/stocks/earnings-badge";
 import { FundamentalsPanel } from "@/components/stocks/fundamentals-panel";
 import { NewsFeed } from "@/components/stocks/news-feed";
 import { PeersList } from "@/components/stocks/peers-list";
-import { ReasoningNewsList } from "@/components/stocks/reasoning-news-list";
 import { TradingViewAdvancedChart } from "@/components/stocks/tradingview-advanced-chart";
 import { TradingViewAttribution } from "@/components/stocks/tradingview-attribution";
 import {
@@ -62,7 +61,6 @@ export default async function StockDetailPage({ params }: Props) {
 
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         <section className="min-w-0 space-y-3">
-          <ReasoningNewsList ticker={ticker} />
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             News
           </h2>
