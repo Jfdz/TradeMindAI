@@ -80,7 +80,9 @@ describe("LiveSignalsStrip", () => {
     expect(html).toContain("3 live");
   });
 
-  it("renders cmd-K hint", () => {
+  it("renders an open-detail link for the active signal, not a cmd-K hint", () => {
+    // C2.3 — the ⌘K keyboard-hint pill was replaced with a link to the
+    // active signal's stock-detail page.
     const signals = [makeSignal("1", "AAPL", "BUY", true)];
     const html = renderToStaticMarkup(
       React.createElement(LiveSignalsStrip, {
@@ -89,7 +91,9 @@ describe("LiveSignalsStrip", () => {
         onSignalChange: vi.fn(),
       })
     );
-    expect(html).toContain("⌘K");
+    expect(html).not.toContain("⌘K");
+    expect(html).toContain("Open detail");
+    expect(html).toContain("/dashboard/stocks/AAPL");
   });
 
   it("renders null when signals array is empty", () => {

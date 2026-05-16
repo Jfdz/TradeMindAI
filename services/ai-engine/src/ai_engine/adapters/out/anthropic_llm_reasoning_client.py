@@ -12,13 +12,17 @@ Design pins:
     tokens is plenty and cuts per-call cost roughly in half vs the C4
     initial 600).
   - tool_choice forces exactly one emit_reasoning call — no free text.
-  - Prompt caching: cache_control breakpoint sent on system + tools. Today
-    the system prompt + tool schema is ~700 tokens, below Haiku 4.5's
-    4096-token minimum cacheable prefix, so the API silently ignores the
-    marker and no cache hit fires (cache_read_input_tokens stays 0).
-    Telemetry surfaces cache_read_input_tokens + cache_creation_input_tokens
-    so the day the prompt grows past the minimum (e.g. when few-shot
-    examples land), caching activates with no code change.
+  - Prompt caching: NOT wired. An earlier attempt sent `system` as a
+    cache_control block list; in production that request shape triggered
+    Anthropic 400 "messages: text content blocks must be non-empty" and
+    broke reasoning generation. Caching was a no-op anyway — the
+    system+tool prefix (~700 tokens) is far below Haiku 4.5's 4096-token
+    minimum cacheable prefix, so the marker was always silently ignored.
+    `system` is therefore sent as a plain string (the long-stable C4
+    shape). Revisit caching only once the prefix genuinely exceeds 4096
+    tokens, and validate the request shape against the live API first.
+    Cache usage counters are still captured in the audit blob so the
+    metric is ready if/when caching is correctly re-introduced.
 """
 
 from __future__ import annotations
@@ -73,26 +77,19 @@ class AnthropicLlmReasoningClient:
                 f"{user_prompt}"
             )
         try:
-            # Cache the deterministic prefix (system + tool schema). Today
-            # this prefix is under Haiku 4.5's 4096-token minimum so the
-            # marker is silently ignored; it ships pre-wired so the cache
-            # activates automatically once the prefix grows past the minimum.
-            cached_tool_schema = {
-                **REASONING_TOOL_SCHEMA,
-                "cache_control": {"type": "ephemeral"},
-            }
+            # `system` as a plain string and tools without cache_control —
+            # the long-stable C4 request shape. The cache_control block-list
+            # form caused Anthropic 400 "messages: text content blocks must
+            # be non-empty" in production while delivering zero benefit
+            # (prefix below Haiku's 4096-token cache minimum). Do not
+            # reintroduce caching here without validating the exact request
+            # shape against the live API.
             response = self._client.messages.create(
                 model=self._model,
                 max_tokens=self.MAX_TOKENS,
                 temperature=self.TEMPERATURE,
-                system=[
-                    {
-                        "type": "text",
-                        "text": SYSTEM_PROMPT,
-                        "cache_control": {"type": "ephemeral"},
-                    }
-                ],
-                tools=[cached_tool_schema],
+                system=SYSTEM_PROMPT,
+                tools=[REASONING_TOOL_SCHEMA],
                 tool_choice={"type": "tool", "name": "emit_reasoning"},
                 messages=[{"role": "user", "content": user_prompt}],
             )

@@ -81,3 +81,24 @@ export function formatSignedMoneyOrDash(value: number | null | undefined): strin
 export function formatPercentOrDash(value: number | null | undefined, digits = 1): string {
   return orDash(value, (v) => `${v.toFixed(digits)}%`);
 }
+
+/**
+ * Spec-driven price formatter (C2.1): ceiling to 2 dp, suffix `$`.
+ *
+ * Differs from {@link formatMoney} (which prefixes `$140.42`). Used in the
+ * signal-detail / rationale contexts where the product spec asks for the
+ * trailing-symbol form `140.42 $`. Rounding is ceiling ("redondear a la
+ * alza siempre") — see EXECUTION_PLAN.md open-clarification #1.
+ */
+export function formatPriceUSD(value: number | null | undefined): string {
+  if (value == null) return "—";
+  const cents = Math.ceil(value * 100) / 100;
+  return `${cents.toFixed(2)} $`;
+}
+
+/** Confidence as a ceiling integer percent with suffix, e.g. `43 %`. */
+export function formatConfidencePct(value: number | null | undefined): string {
+  if (value == null) return "—";
+  const pct = Math.ceil(value * 100);
+  return `${pct} %`;
+}

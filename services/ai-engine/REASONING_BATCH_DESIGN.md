@@ -238,3 +238,19 @@ telemetry that backfill-driven runs dominate cost.**
   `reasoning_batch_outcome_total` (counter).
 - Operator runbook section in this doc describing how to inspect a stuck
   batch row.
+
+## Prompt caching — deferred (C1.6)
+
+The C1 cost pass shrank `SYSTEM_PROMPT` (~88 → ~50 tokens) and the tool
+schema (~488 → ~200 tokens). The cacheable prefix is now ~250 tokens —
+still far below Haiku 4.5's 4096-token minimum, so any `cache_control`
+marker stays a no-op. **Do not pad the prompt artificially to cross the
+threshold** — padding costs the tokens caching would save.
+
+Revisit caching only when the frozen prefix legitimately exceeds 4096
+tokens, which happens when the C8 eval corpus contributes few-shot
+examples. At that point: add one `cache_control: {type: "ephemeral"}`
+breakpoint after the last frozen block (system prompt + tool schema +
+few-shot set), keep the per-request `<context>` user message uncached,
+and verify `cache_read_input_tokens > 0` in `reasoning_raw_audit.usage`
+before claiming the saving.
