@@ -78,16 +78,16 @@ def test_generate_passes_pinned_request_shape_to_sdk():
     assert call["temperature"] == pytest.approx(0.2)
     assert call["max_tokens"] == 350
     assert call["tool_choice"] == {"type": "tool", "name": "emit_reasoning"}
-    # Exactly one tool, and it is our emit_reasoning schema with the
-    # cache_control breakpoint wired in.
+    # Exactly one tool, plain emit_reasoning schema. NO cache_control —
+    # the block/cache_control request shape caused Anthropic 400
+    # "text content blocks must be non-empty" in prod and never
+    # activated caching (prefix < Haiku 4096-token minimum).
     assert len(call["tools"]) == 1
     assert call["tools"][0]["name"] == "emit_reasoning"
-    assert call["tools"][0]["cache_control"] == {"type": "ephemeral"}
-    # System prompt is sent as a list of blocks with cache_control on the
-    # only block so the cacheable prefix is well-defined.
-    assert isinstance(call["system"], list)
-    assert call["system"][0]["type"] == "text"
-    assert call["system"][0]["cache_control"] == {"type": "ephemeral"}
+    assert "cache_control" not in call["tools"][0]
+    # System prompt is sent as a plain string (long-stable C4 shape).
+    assert isinstance(call["system"], str)
+    assert call["system"]
 
 
 def test_generate_returns_refused_by_llm_when_refusal_true():
