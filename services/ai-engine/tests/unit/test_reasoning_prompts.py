@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 from ai_engine.core.domain.reasoning_context import ReasoningContext
@@ -47,6 +48,28 @@ def test_tool_schema_disallows_additional_properties():
 
 def test_tool_schema_caps_reasoning_at_400_chars():
     assert REASONING_TOOL_SCHEMA["input_schema"]["properties"]["reasoning"]["maxLength"] == 400
+
+
+def test_refusal_reason_uses_type_union_not_anyof():
+    # C1.2 — anyOf[{string},{null}] compacted to type:["string","null"].
+    rr = REASONING_TOOL_SCHEMA["input_schema"]["properties"]["refusal_reason"]
+    assert rr["type"] == ["string", "null"]
+    assert "anyOf" not in rr
+
+
+def test_prompt_and_schema_stay_within_token_budget():
+    # C1.7 — drift guard. Caveman-terse prompt + compacted schema must
+    # not creep back toward the verbose originals (~88 / ~488 tokens).
+    assert len(SYSTEM_PROMPT) < 1500
+    assert len(json.dumps(REASONING_TOOL_SCHEMA)) < 1200
+
+
+def test_user_prompt_news_block_is_indexed_with_url_map():
+    # C1.3 — compact indexed list + a separate news_urls map keeps the
+    # validator's URL grounding intact while dropping per-line verbosity.
+    prompt = build_user_prompt(build_signal_input(), _context_with_news())
+    assert "[1] META beats Q1 expectations (Reuters, 2026-05-12)" in prompt
+    assert "news_urls: [1] https://reuters.com/x" in prompt
 
 
 def test_user_prompt_includes_all_signal_fields():

@@ -24,95 +24,56 @@ from ai_engine.core.domain.reasoning_output import SignalInput
 # auditing line length, because the prompt is part of the C6 reasoning
 # snapshot and any silent character drift makes audits noisy.
 SYSTEM_PROMPT = (
-    "You are a constrained writer of trading-signal reasonings for retail investors.\n"
+    "Trading-signal reasoning writer for retail investors. Tool-only output.\n"
     "\n"
-    "HARD RULES — violating any returns refusal=true with an appropriate refusal_reason:\n"
+    "HARD RULES — any violation: refusal=true + refusal_reason.\n"
+    "1 NUMBERS: only digits from <price_facts> or <signal> deterministic fields "
+    "(confidence, entry_price, target_price, stop_loss, expected_move_pct, "
+    "predicted_change_pct). Verbatim. No round/approximate/restate. No match -> "
+    "omit, use words.\n"
+    "2 NEWS: only from <news>. Quote headlines verbatim. Empty -> no events.\n"
+    "3 CONFIDENCE: confidence<0.50 -> text must contain literal 'low confidence', "
+    "'low-confidence', 'tentative', or 'speculative'. No paraphrase. Never "
+    "'balanced'/'strong'/'clear'.\n"
+    "4 NO INVENTED EVENTS: no acquisition/partnership/earnings/lawsuit/regulatory "
+    "absent from <news>.\n"
+    "5 NO ABSOLUTES: no 'definitely', 'guaranteed', 'certain', 'sure thing', "
+    "'will rise', 'will fall'. Hedge ('suggests', 'may', 'could').\n"
+    "6 LENGTH: <=400 chars.\n"
+    "7 CITATIONS: price_refs = snake_case field names used (e.g. sma_200, "
+    "rsi_14, confidence). news_refs = exact URLs from the <news> news_urls list.\n"
+    "8 INSUFFICIENT FACTS: close or sma_200 null -> refusal=true, "
+    "refusal_reason='insufficient_facts'.\n"
     "\n"
-    "1. NUMBERS: Use ONLY numbers present in <price_facts> or the deterministic "
-    "fields of <signal> (confidence, entry_price, target_price, stop_loss, "
-    "expected_move_pct, predicted_change_pct). Never invent prices, "
-    "support/resistance levels, percentage changes, or volume figures. Every "
-    "number you cite must appear in one of those two blocks verbatim — do NOT "
-    "round, approximate, or restate to fewer decimals. If a number you want to "
-    "mention is not present in those blocks, OMIT it and rephrase qualitatively "
-    "(e.g. \"modest upside\" instead of \"4.7%\").\n"
-    "\n"
-    "2. NEWS: Reference news ONLY from <news>. You may quote a headline verbatim; "
-    "do not paraphrase facts that are not in the headline. If <news> is empty, do "
-    "not mention specific events.\n"
-    "\n"
-    "3. CONFIDENCE: If signal.confidence < 0.50, you MUST include at least one "
-    "of these literal tokens in your reasoning text: \"low confidence\", "
-    "\"low-confidence\", \"tentative\", or \"speculative\". Synonyms or "
-    "paraphrases are NOT accepted. Never call the setup \"balanced\", "
-    "\"strong\", or \"clear\".\n"
-    "\n"
-    "4. NO INVENTED EVENTS: Do NOT mention acquisitions, partnerships, earnings "
-    "beats, lawsuits, regulatory actions, or any corporate event that is absent "
-    "from <news>.\n"
-    "\n"
-    "5. NO ABSOLUTES: Do NOT use words like \"definitely\", \"guaranteed\", "
-    "\"certain\", \"sure thing\", \"will rise\", \"will fall\". This is a "
-    "probabilistic forecast — use hedged language (\"suggests\", \"indicates\", "
-    "\"may\", \"could\").\n"
-    "\n"
-    "6. LENGTH: Reasoning text is at most 400 characters. Be concise.\n"
-    "\n"
-    "7. CITATIONS: In price_refs, list the snake_case field names you used. "
-    "Names may come from <price_facts> (e.g. \"sma_200\", \"rsi_14\") OR from "
-    "the deterministic fields of <signal> (\"confidence\", \"entry_price\", "
-    "\"target_price\", \"stop_loss\", \"expected_move_pct\", "
-    "\"predicted_change_pct\"). In news_refs, list the exact URLs of news items "
-    "you referenced.\n"
-    "\n"
-    "8. INSUFFICIENT FACTS: If <price_facts> is missing essential fields (close or "
-    "sma_200 is null), return refusal=true with refusal_reason=\"insufficient_facts\".\n"
-    "\n"
-    "OUTPUT FORMAT: Call the emit_reasoning tool exactly once. Never write free "
-    "text outside the tool call. The tool call is the only valid response shape."
+    "Call emit_reasoning exactly once. No free text."
 )
 
 
 REASONING_TOOL_SCHEMA = {
     "name": "emit_reasoning",
-    "description": (
-        "Emit the grounded trading-signal reasoning. Must be called exactly once. "
-        "Every number in `reasoning` must come from <price_facts> or from the "
-        "deterministic numeric fields of <signal> (confidence, entry_price, "
-        "target_price, stop_loss, expected_move_pct, predicted_change_pct); "
-        "every event from <news>. Set refusal=true with refusal_reason if the "
-        "context cannot ground a faithful reasoning."
-    ),
+    "description": "Emit grounded trading-signal reasoning. Call exactly once.",
     "input_schema": {
         "type": "object",
         "properties": {
             "reasoning": {
                 "type": "string",
                 "maxLength": 400,
-                "description": "Plain-English reasoning. Empty string when refusal=true.",
+                "description": "Reasoning text. Empty when refusal=true.",
             },
             "price_refs": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": (
-                    "Snake_case field names cited in `reasoning`. Names may come "
-                    "from <price_facts> or from the deterministic numeric fields "
-                    "of <signal> (confidence, entry_price, target_price, "
-                    "stop_loss, expected_move_pct, predicted_change_pct)."
-                ),
+                "description": "snake_case field names cited.",
             },
             "news_refs": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "URLs of news items from <news> cited in `reasoning`.",
+                "description": "Exact <news> URLs cited.",
             },
             "refusal": {"type": "boolean"},
             "refusal_reason": {
-                "anyOf": [{"type": "string"}, {"type": "null"}],
-                "description": (
-                    "Required when refusal=true. Examples: 'insufficient_facts', "
-                    "'no_news_for_borderline_confidence', 'cannot_ground'."
-                ),
+                "type": ["string", "null"],
+                "description": "Required when refusal=true.",
             },
         },
         "required": ["reasoning", "refusal"],
@@ -129,10 +90,14 @@ def build_user_prompt(signal: SignalInput, context: ReasoningContext) -> str:
     """
     pf = context.price_facts
     if context.news:
-        news_lines = "\n".join(
-            f"- {n.published_at} | {n.source or 'unknown'} | {n.headline} | {n.url}"
-            for n in context.news
+        items = "\n".join(
+            f"[{i}] {n.headline} ({n.source or 'unknown'}, {n.published_at[:10]})"
+            for i, n in enumerate(context.news, start=1)
         )
+        urls = "  ".join(
+            f"[{i}] {n.url}" for i, n in enumerate(context.news, start=1)
+        )
+        news_lines = f"{items}\nnews_urls: {urls}"
     else:
         news_lines = "(no recent news in window)"
 

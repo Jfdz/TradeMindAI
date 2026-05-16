@@ -38,9 +38,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReasoningContextController {
 
     private static final Logger log = LoggerFactory.getLogger(ReasoningContextController.class);
-    static final int DEFAULT_NEWS_HOURS = 48;
-    static final int DEFAULT_NEWS_LIMIT = 8;
-    static final int MAX_NEWS_LIMIT = 10;
+    // C1.5 — token-cost cap. ai-engine's BuildReasoningContextUseCase
+    // already requests 24h/4 items; these defaults + hard MAX bound any
+    // caller that omits the params so the LLM prompt can't balloon.
+    static final int DEFAULT_NEWS_HOURS = 24;
+    static final int DEFAULT_NEWS_LIMIT = 4;
+    static final int MAX_NEWS_LIMIT = 4;
 
     private final MarketDataServiceAdapter marketDataAdapter;
     private final EnrichmentServiceAdapter enrichmentAdapter;
@@ -58,8 +61,8 @@ public class ReasoningContextController {
     @GetMapping("/{ticker}")
     public ResponseEntity<ReasoningContextResponse> getReasoningContext(
             @PathVariable String ticker,
-            @RequestParam(defaultValue = "48") int newsHours,
-            @RequestParam(defaultValue = "8") int newsLimit) {
+            @RequestParam(defaultValue = "24") int newsHours,
+            @RequestParam(defaultValue = "4") int newsLimit) {
 
         int hours = Math.max(1, Math.min(newsHours, 7 * 24));
         int limit = Math.max(1, Math.min(newsLimit, MAX_NEWS_LIMIT));

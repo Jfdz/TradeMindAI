@@ -1,4 +1,4 @@
-"""Tests for GenerateValidatedReasoningUseCase — the C5 retry orchestrator."""
+"""Tests for GenerateValidatedReasoningUseCase — C5 orchestrator, retry budget 0 (C1.4)."""
 
 from __future__ import annotations
 
@@ -53,40 +53,14 @@ def test_returns_first_result_when_validation_passes_immediately():
     llm.generate.assert_called_once()  # no retry
 
 
-def test_retries_with_feedback_when_first_payload_fails_validation():
+def test_failed_first_validation_refuses_immediately_without_retry():
+    # C1.4 — retry budget 0: a failed first validation is final, no
+    # second LLM call. retry_count stays 0 on the persisted artifact.
     ctx = build_reasoning_context()
     context_uc = MagicMock()
     context_uc.execute.return_value = ContextResult.available(ctx)
     llm = MagicMock()
-    # First call fails validation, second succeeds.
-    llm.generate.side_effect = [
-        ReasoningResult.generated(_ungrounded_payload()),
-        ReasoningResult.generated(_grounded_payload()),
-    ]
-
-    result = GenerateValidatedReasoningUseCase(
-        context_uc, llm, ReasoningValidator()
-    ).execute(build_signal_input())
-
-    assert result.outcome == ReasoningOutcome.GENERATED
-    assert llm.generate.call_count == 2
-    # Retry must include validator_feedback.
-    second_call_kwargs = llm.generate.call_args_list[1].kwargs
-    assert "validator_feedback" in second_call_kwargs
-    feedback = second_call_kwargs["validator_feedback"]
-    assert feedback  # non-empty
-    assert "ungrounded_number" in feedback or "forbidden_absolute_word" in feedback
-
-
-def test_returns_refused_by_validator_when_retry_also_fails_validation():
-    ctx = build_reasoning_context()
-    context_uc = MagicMock()
-    context_uc.execute.return_value = ContextResult.available(ctx)
-    llm = MagicMock()
-    llm.generate.side_effect = [
-        ReasoningResult.generated(_ungrounded_payload()),
-        ReasoningResult.generated(_ungrounded_payload()),
-    ]
+    llm.generate.return_value = ReasoningResult.generated(_ungrounded_payload())
 
     result = GenerateValidatedReasoningUseCase(
         context_uc, llm, ReasoningValidator()
@@ -95,7 +69,10 @@ def test_returns_refused_by_validator_when_retry_also_fails_validation():
     assert result.outcome == ReasoningOutcome.REFUSED_BY_VALIDATOR
     assert result.refusal_reason is not None
     assert "ungrounded_number" in result.refusal_reason
-    assert llm.generate.call_count == 2
+    assert result.retry_count == 0
+    llm.generate.assert_called_once()  # no retry
+    # Validator feedback is never forwarded — there is no second call.
+    assert "validator_feedback" not in llm.generate.call_args.kwargs
 
 
 def test_propagates_llm_refusal_on_first_call_without_retry():
@@ -113,22 +90,21 @@ def test_propagates_llm_refusal_on_first_call_without_retry():
     llm.generate.assert_called_once()
 
 
-def test_propagates_llm_refusal_on_retry_when_validator_feedback_returns_refusal():
+def test_grounded_first_payload_generates_with_retry_count_zero():
+    # Happy path explicitly pins retry_count == 0 on the artifact.
     ctx = build_reasoning_context()
     context_uc = MagicMock()
     context_uc.execute.return_value = ContextResult.available(ctx)
     llm = MagicMock()
-    llm.generate.side_effect = [
-        ReasoningResult.generated(_ungrounded_payload()),
-        ReasoningResult.refused_by_llm("insufficient_facts"),
-    ]
+    llm.generate.return_value = ReasoningResult.generated(_grounded_payload())
 
     result = GenerateValidatedReasoningUseCase(
         context_uc, llm, ReasoningValidator()
     ).execute(build_signal_input())
 
-    assert result.outcome == ReasoningOutcome.REFUSED_BY_LLM
-    assert llm.generate.call_count == 2
+    assert result.outcome == ReasoningOutcome.GENERATED
+    assert result.retry_count == 0
+    llm.generate.assert_called_once()
 
 
 def test_propagates_llm_error_without_retry():
@@ -181,35 +157,26 @@ def test_retry_does_not_fire_when_context_has_no_news_but_payload_grounded():
     llm.generate.assert_called_once()
 
 
-def test_news_ref_validation_drives_retry():
+def test_ungrounded_news_url_refuses_immediately_without_retry():
     news = (build_news_item(url="https://reuters.com/x"),)
     ctx = build_reasoning_context(news=news)
     context_uc = MagicMock()
     context_uc.execute.return_value = ContextResult.available(ctx)
     llm = MagicMock()
-    llm.generate.side_effect = [
-        ReasoningResult.generated(
-            ReasoningPayload(
-                text="Price 603.0 above sma_200 (510.0). Steady trend.",
-                price_refs=(),
-                news_refs=("https://hallucinated.example.com/article",),
-            )
-        ),
-        ReasoningResult.generated(
-            ReasoningPayload(
-                text="Price 603.0 above sma_200 (510.0). Steady trend.",
-                price_refs=(),
-                news_refs=("https://reuters.com/x",),  # corrected on retry
-            )
-        ),
-    ]
+    llm.generate.return_value = ReasoningResult.generated(
+        ReasoningPayload(
+            text="Price 603.0 above sma_200 (510.0). Steady trend.",
+            price_refs=(),
+            news_refs=("https://hallucinated.example.com/article",),
+        )
+    )
 
     result = GenerateValidatedReasoningUseCase(
         context_uc, llm, ReasoningValidator()
     ).execute(build_signal_input())
 
-    assert result.outcome == ReasoningOutcome.GENERATED
-    assert llm.generate.call_count == 2
-    # The feedback handed to the retry must reference the URL violation.
-    feedback = llm.generate.call_args_list[1].kwargs["validator_feedback"]
-    assert "ungrounded_news_url" in feedback
+    assert result.outcome == ReasoningOutcome.REFUSED_BY_VALIDATOR
+    assert result.refusal_reason is not None
+    assert "ungrounded_news_url" in result.refusal_reason
+    assert result.retry_count == 0
+    llm.generate.assert_called_once()
