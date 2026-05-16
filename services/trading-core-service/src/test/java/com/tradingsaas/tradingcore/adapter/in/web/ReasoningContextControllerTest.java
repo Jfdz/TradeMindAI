@@ -40,7 +40,11 @@ class ReasoningContextControllerTest {
     @Test
     void returnsCombinedContextOn200() {
         when(marketData.fetchPriceFacts("AAPL")).thenReturn(Optional.of(sampleFacts()));
-        when(enrichment.fetchAggregatedTickerNews(eq("AAPL"), any(Instant.class), eq(NOW), eq(8)))
+        // C1.5 — controller clamps limit to MAX_NEWS_LIMIT (now 4). The
+        // request still passes 8; the stub must match the clamped value.
+        when(enrichment.fetchAggregatedTickerNews(
+                        eq("AAPL"), any(Instant.class), eq(NOW),
+                        eq(ReasoningContextController.MAX_NEWS_LIMIT)))
                 .thenReturn(List.of(sampleNews()));
 
         ResponseEntity<ReasoningContextResponse> response =

@@ -1,8 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import type { NewsItemResponse } from "@/lib/enrichment-client";
+import { hasOwnImage } from "@/lib/enrichment/news-image-filter";
+
+const PAGE_SIZE = 5;
+const CARD_CHROME =
+  "rounded-xl border border-cyan-500/30 bg-card shadow-[0_0_20px_rgba(6,182,212,0.08)]";
 
 type Props = {
   readonly ticker: string;
@@ -26,6 +32,9 @@ function formatDate(iso: string): string {
 }
 
 export function NewsFeed({ ticker }: Props) {
+  const [hasLoadedMore, setHasLoadedMore] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
     useInfiniteQuery({
       queryKey: ["news", ticker],
@@ -35,6 +44,23 @@ export function NewsFeed({ ticker }: Props) {
     });
 
   const articles = data?.pages.flat() ?? [];
+  const filtered = articles.filter((item) => hasOwnImage(item.image));
+  const visible = filtered.slice(0, visibleCount);
+  const canLoadMore = visibleCount < filtered.length || (hasNextPage ?? false);
+
+  // The image filter shrinks each fetched week; a week can yield < PAGE_SIZE
+  // usable items. Keep pulling older weeks until we have enough to satisfy the
+  // current reveal target (or pages run out). Runs on mount and after each
+  // "Load more" so the button never dead-clicks.
+  useEffect(() => {
+    if (
+      filtered.length < visibleCount &&
+      hasNextPage &&
+      !isFetchingNextPage
+    ) {
+      void fetchNextPage();
+    }
+  }, [filtered.length, visibleCount, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   if (status === "pending") {
     return (
@@ -42,7 +68,7 @@ export function NewsFeed({ ticker }: Props) {
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={`news-skeleton-${i}`}
-            className="h-24 animate-pulse rounded-xl bg-card"
+            className={`h-24 animate-pulse ${CARD_CHROME}`}
           />
         ))}
       </div>
@@ -51,21 +77,29 @@ export function NewsFeed({ ticker }: Props) {
 
   if (status === "error" || articles.length === 0) {
     return (
-      <div className="rounded-xl border bg-card p-6 text-center text-sm text-muted-foreground">
+      <div className={`${CARD_CHROME} p-6 text-center text-sm text-muted-foreground`}>
         No news available.
+      </div>
+    );
+  }
+
+  if (filtered.length === 0 && !hasNextPage && !isFetchingNextPage) {
+    return (
+      <div className={`${CARD_CHROME} p-6 text-center text-sm text-muted-foreground`}>
+        No news with images available.
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
-      {articles.map((item) => (
+      {visible.map((item) => (
         <a
           key={item.id}
           href={item.url ?? "#"}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex gap-3 rounded-xl border bg-card p-3 hover:bg-accent/50 transition-colors"
+          className={`${CARD_CHROME} flex gap-3 p-3 transition-colors hover:border-cyan-400/60 hover:bg-accent/50`}
         >
           {item.image && (
             <div className="relative hidden sm:block h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
@@ -89,11 +123,11 @@ export function NewsFeed({ ticker }: Props) {
           </div>
         </a>
       ))}
-      {hasNextPage && (
+      {canLoadMore && !hasLoadedMore && (
         <button
-          onClick={() => fetchNextPage()}
+          onClick={() => { setVisibleCount((count) => count + PAGE_SIZE); setHasLoadedMore(true); }}
           disabled={isFetchingNextPage}
-          className="w-full rounded-xl border bg-card py-2 text-sm text-muted-foreground hover:bg-accent/50 transition-colors disabled:opacity-50"
+          className={`${CARD_CHROME} w-full py-2 text-sm text-muted-foreground transition-colors hover:border-cyan-400/60 hover:bg-accent/50 disabled:opacity-50`}
         >
           {isFetchingNextPage ? "Loading…" : "Load more"}
         </button>

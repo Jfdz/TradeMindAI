@@ -5,6 +5,8 @@ import com.tradingsaas.tradingcore.domain.model.Confidence;
 import com.tradingsaas.tradingcore.domain.model.ReasoningArtifact;
 import com.tradingsaas.tradingcore.domain.model.ReasoningStatus;
 import com.tradingsaas.tradingcore.domain.model.TradingSignal;
+import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -23,6 +25,9 @@ public class TradingSignalEntityMapper {
                 signal.getTakeProfitPct(),
                 signal.getPredictedChangePct(),
                 signal.getEntryPrice(),
+                signal.getTargetPrice(),
+                signal.getStopLoss(),
+                signal.getExpectedMovePct(),
                 signal.getReasoning(),
                 signal.getReasoningStatus() != null ? signal.getReasoningStatus() : ReasoningStatus.PENDING,
                 signal.getReasoningGeneratedAt());
@@ -43,6 +48,9 @@ public class TradingSignalEntityMapper {
                 entity.getTakeProfitPct(),
                 entity.getPredictedChangePct(),
                 entity.getEntryPrice(),
+                entity.getTargetPrice(),
+                entity.getStopLoss(),
+                entity.getExpectedMovePct(),
                 entity.getReasoning(),
                 entity.getReasoningStatus(),
                 entity.getReasoningGeneratedAt(),
@@ -82,7 +90,22 @@ public class TradingSignalEntityMapper {
     }
 
     private ReasoningArtifact extractArtifact(TradingSignalJpaEntity entity) {
-        if (entity.getReasoningOutcome() == null) {
+        List<String> priceRefs = entity.getReasoningPriceRefs();
+        List<String> newsRefs = entity.getReasoningNewsRefs();
+        List<Map<String, Object>> violations = entity.getReasoningValidatorViolations();
+        // retry_count excluded: column is NOT NULL DEFAULT 0, so every row would
+        // qualify and the "no artifact at all" path would never fire.
+        boolean anyField =
+                entity.getReasoningOutcome() != null
+             || entity.getReasoningProvider() != null
+             || entity.getReasoningModelVersion() != null
+             || entity.getReasoningRefusalReason() != null
+             || entity.getReasoningFactsSnapshot() != null
+             || (priceRefs != null && !priceRefs.isEmpty())
+             || (newsRefs != null && !newsRefs.isEmpty())
+             || (violations != null && !violations.isEmpty())
+             || entity.getReasoningRawAudit() != null;
+        if (!anyField) {
             return null;
         }
         return new ReasoningArtifact(
@@ -92,9 +115,9 @@ public class TradingSignalEntityMapper {
                 entity.getReasoningRetryCount(),
                 entity.getReasoningRefusalReason(),
                 entity.getReasoningFactsSnapshot(),
-                entity.getReasoningPriceRefs(),
-                entity.getReasoningNewsRefs(),
-                entity.getReasoningValidatorViolations(),
+                priceRefs,
+                newsRefs,
+                violations,
                 entity.getReasoningRawAudit());
     }
 }

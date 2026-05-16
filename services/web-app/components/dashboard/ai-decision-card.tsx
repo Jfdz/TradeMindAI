@@ -3,9 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { DecisionCardActions } from "@/components/dashboard/decision-card-actions";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { formatAge } from "@/lib/dashboard/signal-derivation";
 import { formatConfidence } from "@/lib/signal-utils";
+import { scrubReasoningText } from "@/lib/signal-reasoning-format";
 import type { FilteredSignal } from "@/lib/dashboard/dashboard-api";
 import { cn } from "@/lib/utils";
 
@@ -75,7 +77,7 @@ export function AiDecisionCard({ signal, logoUrl, typeBadgeClass }: Props) {
           typeBadgeClass={typeBadgeClass}
         />
         {news?.headline && (
-          <NewsFooter news={news} />
+          <NewsFooter signal={signal} news={news} />
         )}
       </div>
     );
@@ -128,7 +130,7 @@ export function AiDecisionCard({ signal, logoUrl, typeBadgeClass }: Props) {
         )}
         {signal.reasoning && (
           <p className="line-clamp-2 text-xs leading-relaxed text-text-2">
-            {signal.reasoning}
+            {scrubReasoningText(signal.reasoning, signal)}
           </p>
         )}
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-text-2">
@@ -184,7 +186,9 @@ function DefaultBody({ signal, logoUrl, typeBadgeClass }: Props) {
         </div>
         <div>
           <span className="text-text-3">Reasoning</span>
-          <div className="mt-1 line-clamp-2 text-text-1">{signal.reasoning}</div>
+          <div className="mt-1 line-clamp-2 text-text-1">
+            {scrubReasoningText(signal.reasoning, signal)}
+          </div>
         </div>
       </div>
     </>
@@ -192,28 +196,28 @@ function DefaultBody({ signal, logoUrl, typeBadgeClass }: Props) {
 }
 
 function NewsFooter({
+  signal,
   news,
-}: {
+}: Readonly<{
+  signal: FilteredSignal;
   news: NonNullable<FilteredSignal["reasoningNews"]>;
-}) {
+}>) {
+  // C5.2 — never render an orphan "Grounded in" with nothing under it.
   if (!news.url && !news.headline) return null;
   return (
-    <div className="mt-3 flex items-start justify-between gap-3 border-t border-border pt-3 text-xs">
-      <p className="line-clamp-2 text-text-2">
-        <span className="uppercase tracking-[0.18em] text-text-3">Grounded in </span>
-        <span className="text-text-1">{news.headline ?? "news article"}</span>
-      </p>
-      {news.url && (
-        <a
-          href={news.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="shrink-0 rounded-full bg-cyan/15 px-2.5 py-1 uppercase tracking-[0.18em] text-cyan hover:text-cyan-bright"
-        >
-          {sourceLabel(news)} ↗
-        </a>
+    <div className="mt-3 space-y-2 border-t border-border pt-3 text-xs">
+      {news.headline && (
+        <p className="line-clamp-2 text-text-2">
+          <span className="uppercase tracking-[0.18em] text-text-3">Grounded in </span>
+          <span className="text-text-1">{news.headline}</span>
+        </p>
       )}
+      {/* C5.1 — direction pill + article link grouped on the left. */}
+      <DecisionCardActions
+        signal={signal}
+        newsUrl={news.url}
+        articleLabel={sourceLabel(news)}
+      />
     </div>
   );
 }

@@ -151,6 +151,8 @@ public class YahooRssNewsAdapter implements NewsProviderPort {
         private String description;
         private String pubDate;
         private String sourceName;
+        private String thumbnailUrl;
+        private int thumbnailWidth;
 
         @Override
         public void startElement(String uri, String localName, String qName, Attributes attributes) {
@@ -162,6 +164,47 @@ public class YahooRssNewsAdapter implements NewsProviderPort {
                 description = null;
                 pubDate = null;
                 sourceName = null;
+                thumbnailUrl = null;
+                thumbnailWidth = -1;
+                return;
+            }
+            if (!inItem) {
+                return;
+            }
+            // Yahoo Finance items publish images via three optional elements.
+            // Capture the URL whenever any of them appears; prefer the highest
+            // declared width when multiple media:thumbnail entries exist.
+            switch (qName) {
+                case "media:thumbnail", "thumbnail" -> {
+                    String url = attributes.getValue("url");
+                    if (url != null && !url.isBlank()) {
+                        int width = parseIntOrDefault(attributes.getValue("width"), 0);
+                        if (thumbnailUrl == null || width > thumbnailWidth) {
+                            thumbnailUrl = url.trim();
+                            thumbnailWidth = width;
+                        }
+                    }
+                }
+                case "media:content", "content" -> {
+                    String url = attributes.getValue("url");
+                    String medium = attributes.getValue("medium");
+                    String type = attributes.getValue("type");
+                    boolean looksLikeImage = "image".equalsIgnoreCase(medium)
+                            || (type != null && type.toLowerCase(Locale.ROOT).startsWith("image/"));
+                    if (url != null && !url.isBlank() && looksLikeImage && thumbnailUrl == null) {
+                        thumbnailUrl = url.trim();
+                    }
+                }
+                case "enclosure" -> {
+                    String url = attributes.getValue("url");
+                    String type = attributes.getValue("type");
+                    if (url != null && !url.isBlank() && type != null
+                            && type.toLowerCase(Locale.ROOT).startsWith("image/")
+                            && thumbnailUrl == null) {
+                        thumbnailUrl = url.trim();
+                    }
+                }
+                default -> { /* no-op */ }
             }
         }
 
@@ -196,13 +239,24 @@ public class YahooRssNewsAdapter implements NewsProviderPort {
                                     sourceName != null ? sourceName : "Yahoo Finance",
                                     description,
                                     link,
-                                    null));
+                                    thumbnailUrl));
                         }
                     }
                 }
                 default -> {}
             }
             buffer.setLength(0);
+        }
+
+        private static int parseIntOrDefault(String value, int fallback) {
+            if (value == null || value.isBlank()) {
+                return fallback;
+            }
+            try {
+                return Integer.parseInt(value.trim());
+            } catch (NumberFormatException e) {
+                return fallback;
+            }
         }
 
         private static Instant parsePubDate(String value) {

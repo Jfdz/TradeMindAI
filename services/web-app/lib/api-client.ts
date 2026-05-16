@@ -39,6 +39,9 @@ export type SignalResponse = {
   takeProfitPct?: number | null;
   predictedChangePct?: number | null;
   entryPrice?: number | null;
+  targetPrice?: number | null;
+  stopLoss?: number | null;
+  expectedMovePct?: number | null;
   reasoning?: string | null;
   reasoningStatus?: ReasoningStatus | null;
   reasoningGeneratedAt?: string | null;
@@ -299,6 +302,26 @@ export const apiClient = {
 
   async getSignal(signalId: string): Promise<SignalResponse> {
     return requestJson<SignalResponse>(`/api/v1/signals/${signalId}`);
+  },
+
+  /**
+   * Company logo URL via the same proven client-side auth path the rest
+   * of the dashboard uses (browser → public API with the session Bearer).
+   * Returns null on any failure so the StockLogo component falls back to
+   * its initials chip. Deliberately NOT routed through a Next server
+   * handler — the server-side getServerSession proxy does not surface
+   * the accessToken in App Router route handlers, which is why logos
+   * were universally blank.
+   */
+  async getCompanyLogo(ticker: string): Promise<string | null> {
+    try {
+      const profile = await requestJson<{ logo: string | null }>(
+        `/api/v1/enrichment/profile/${encodeURIComponent(ticker)}`
+      );
+      return profile?.logo ?? null;
+    } catch {
+      return null;
+    }
   },
 
   async getLatestPrice(ticker: string): Promise<MarketPriceResponse | null> {

@@ -132,3 +132,68 @@ def test_execute_news_hours_lower_bound_clamps_to_one():
     client.fetch_reasoning_context.assert_called_once_with(
         "AAPL", news_hours=1, news_limit=1
     )
+
+
+def test_execute_uses_cost_efficient_defaults_when_no_overrides():
+    client = MagicMock()
+    client.fetch_reasoning_context.return_value = ContextResult.available(_sample_context())
+    use_case = BuildReasoningContextUseCase(client)
+
+    use_case.execute("AAPL")
+
+    client.fetch_reasoning_context.assert_called_once_with(
+        "AAPL", news_hours=24, news_limit=4
+    )
+
+
+def test_execute_warns_when_news_set_has_no_images(caplog):
+    import logging
+
+    # Sample context's news[0] has no image — perfect for this assertion.
+    client = MagicMock()
+    client.fetch_reasoning_context.return_value = ContextResult.available(_sample_context())
+    use_case = BuildReasoningContextUseCase(client)
+
+    with caplog.at_level(
+        logging.WARNING, logger="ai_engine.core.use_cases.build_reasoning_context"
+    ):
+        use_case.execute("AAPL")
+
+    matched = [
+        r for r in caplog.records
+        if "reasoning_context.news_no_images" in r.getMessage()
+    ]
+    assert matched, "expected reasoning_context.news_no_images warning"
+
+
+def test_execute_does_not_warn_when_at_least_one_news_item_has_image(caplog):
+    import logging
+
+    base = _sample_context()
+    news_with_image = (
+        NewsItem(
+            id=42, headline="Apple Q1 beats", published_at="2026-05-12T10:00:00Z",
+            url="https://example.com/a", source="Reuters",
+            image="https://img.example.com/a.png",
+        ),
+    )
+    ctx = ReasoningContext(
+        schema_version=base.schema_version,
+        ticker=base.ticker,
+        generated_at=base.generated_at,
+        price_facts=base.price_facts,
+        news=news_with_image,
+        errors=base.errors,
+    )
+    client = MagicMock()
+    client.fetch_reasoning_context.return_value = ContextResult.available(ctx)
+    use_case = BuildReasoningContextUseCase(client)
+
+    with caplog.at_level(
+        logging.WARNING, logger="ai_engine.core.use_cases.build_reasoning_context"
+    ):
+        use_case.execute("AAPL")
+
+    assert not any(
+        "reasoning_context.news_no_images" in r.getMessage() for r in caplog.records
+    )

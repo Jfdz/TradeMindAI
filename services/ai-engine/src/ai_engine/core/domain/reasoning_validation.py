@@ -8,10 +8,12 @@ against the same `PriceFacts` + `news` + `SignalInput` the LLM saw.
 Four rules, all deterministic and side-effect free:
 
   1. **Ungrounded number** — every decimal token in `payload.text` must
-     fall within 0.5% of some non-null numeric field in `price_facts`
-     or `signal.entry_price` / `signal.predicted_change_pct`. Integer
-     tokens are ignored (they are typically counts like "5 days", not
-     prices).
+     fall within the 1% indicator band of some non-null numeric field in
+     `price_facts`, `signal.entry_price`, `signal.predicted_change_pct`,
+     or `signal.confidence`; or within the tight 0.05% band around a
+     backend-derived value (`target_price`, `stop_loss`,
+     `expected_move_pct`). Integer tokens are ignored (they are typically
+     counts like "5 days", not prices).
 
   2. **Ungrounded news URL** — every URL in `payload.news_refs` must
      match one of `context.news[*].url` byte-for-byte.
@@ -31,6 +33,7 @@ the LLM on retry — see ``GenerateValidatedReasoningUseCase``.
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
@@ -38,6 +41,8 @@ from typing import Iterable
 
 from ai_engine.core.domain.reasoning_context import ReasoningContext
 from ai_engine.core.domain.reasoning_output import ReasoningPayload, SignalInput
+
+logger = logging.getLogger(__name__)
 
 
 class ValidationViolationType(str, Enum):
@@ -69,8 +74,15 @@ class ValidationResult:
 class ReasoningValidator:
     """Pure-function validator. Same input always yields the same result."""
 
-    NUMERIC_TOLERANCE = 0.005  # 0.5% relative tolerance for price/indicator matching
+    NUMERIC_TOLERANCE = 0.01  # 1% relative tolerance for price/indicator matching
     ABSOLUTE_TOLERANCE_NEAR_ZERO = 0.001  # used when the reference value is ~0
+    # Backend-derived execution levels (target_price, stop_loss, expected_move_pct)
+    # are computed deterministically by SignalMathService and must round-trip
+    # exactly. Allow a tight cents-level band to tolerate display rounding
+    # ("135.25" vs stored 135.252000) but nothing wider — that's the whole point
+    # of having the math live in the backend.
+    DERIVED_PRICE_TOLERANCE = 0.0005  # 0.05% relative
+    DERIVED_PRICE_ABS_TOLERANCE = 0.005  # 0.005 absolute fallback near zero
     LOW_CONFIDENCE_THRESHOLD = 0.50
 
     # Decimal numbers only (e.g. "510.00", "58.3", "2.04"). Integer-only tokens
@@ -145,7 +157,9 @@ class ReasoningValidator:
         signal: SignalInput,
         context: ReasoningContext,
     ) -> Iterable[ValidationViolation]:
-        known_values = list(self._collect_numeric_facts(signal, context))
+        indicator_values = list(self._collect_indicator_facts(signal, context))
+        derived_values = list(self._collect_derived_prices(signal))
+        all_values = indicator_values + derived_values
         reported: set[float] = set()
         for match in self._NUMBER_RE.finditer(text):
             try:
@@ -154,15 +168,28 @@ class ReasoningValidator:
                 continue
             if number in reported:
                 continue
-            if self._matches_any(number, known_values):
+            # Two-tier match: backend-derived levels must round-trip near
+            # exactly; indicator/price facts get the wider 1% band.
+            if self._matches_derived(number, derived_values):
+                continue
+            if self._matches_any(number, indicator_values):
                 continue
             reported.add(number)
+            nearest = self._nearest(number, all_values)
+            logger.warning(
+                "event=reasoning_validator.ungrounded_price ticker=%s "
+                "mentioned=%s nearest=%s",
+                signal.ticker,
+                match.group(),
+                "none" if nearest is None else f"{nearest}",
+            )
             yield ValidationViolation(
                 type=ValidationViolationType.UNGROUNDED_NUMBER,
                 detail=(
                     f"number {match.group()} is not within "
-                    f"{self.NUMERIC_TOLERANCE * 100:.1f}% of any value in "
-                    f"<price_facts> or <signal>"
+                    f"{self.NUMERIC_TOLERANCE * 100:.1f}% of any indicator or "
+                    f"within {self.DERIVED_PRICE_TOLERANCE * 100:.2f}% of any "
+                    f"backend-derived target/stop value"
                 ),
             )
 
@@ -181,9 +208,15 @@ class ReasoningValidator:
             )
 
     @staticmethod
-    def _collect_numeric_facts(
+    def _collect_indicator_facts(
         signal: SignalInput, context: ReasoningContext
     ) -> Iterable[float]:
+        """Market indicators + the noisy/probabilistic signal fields.
+
+        Eligible for the wider 1% tolerance band — these come from upstream
+        with inherent rounding (sma_200 truncated to two decimals, rsi_14
+        floored to one, model-predicted pct quantized at training time).
+        """
         pf = context.price_facts
         for value in (
             pf.close,
@@ -203,10 +236,23 @@ class ReasoningValidator:
             pf.resistance,
             signal.entry_price,
             signal.predicted_change_pct,
+            signal.confidence,
         ):
             if value is not None:
                 yield float(value)
         yield float(pf.volume)
+
+    @staticmethod
+    def _collect_derived_prices(signal: SignalInput) -> Iterable[float]:
+        """Backend-derived execution levels.
+
+        SignalMathService produces these deterministically; the validator
+        accepts only a near-exact (0.05%) match to a stored value so the
+        LLM cannot drift the cited target/stop without being caught.
+        """
+        for value in (signal.target_price, signal.stop_loss, signal.expected_move_pct):
+            if value is not None:
+                yield float(value)
 
     def _matches_any(self, number: float, known_values: list[float]) -> bool:
         for reference in known_values:
@@ -216,3 +262,18 @@ class ReasoningValidator:
             elif abs(number - reference) / abs(reference) <= self.NUMERIC_TOLERANCE:
                 return True
         return False
+
+    def _matches_derived(self, number: float, derived_values: list[float]) -> bool:
+        for reference in derived_values:
+            if abs(reference) < 1e-9:
+                if abs(number - reference) <= self.DERIVED_PRICE_ABS_TOLERANCE:
+                    return True
+            elif abs(number - reference) / abs(reference) <= self.DERIVED_PRICE_TOLERANCE:
+                return True
+        return False
+
+    @staticmethod
+    def _nearest(number: float, known_values: list[float]) -> float | None:
+        if not known_values:
+            return None
+        return min(known_values, key=lambda v: abs(v - number))

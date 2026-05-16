@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 import { SignalChart } from "@/components/dashboard/signal-chart";
+import { apiClient } from "@/lib/api-client";
 import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
 import { StockLogo } from "@/components/ui/stock-logo";
@@ -12,6 +13,7 @@ import { fetchSignalDetailData } from "@/lib/dashboard/client-data";
 import { deriveSignal } from "@/lib/dashboard/signal-derivation";
 import type { ChartCandle, ChartMarker } from "@/lib/dashboard/signals";
 import { formatPredictedChange } from "@/lib/signal-utils";
+import { scrubReasoningText } from "@/lib/signal-reasoning-format";
 
 type SignalDetailClientProps = {
   signalId: string;
@@ -66,9 +68,11 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
     queryKey: ["logos", signal?.symbol ? [signal.symbol] : []],
     queryFn: async () => {
       if (!signal) return {};
-      const res = await fetch(`/api/stocks/logos?tickers=${encodeURIComponent(signal.symbol)}`);
-      if (!res.ok) return {};
-      return res.json() as Promise<Record<string, string | null>>;
+      // Client-side apiClient path (session Bearer) — same proven
+      // mechanism as useStockLogos. The old /api/stocks/logos server
+      // route never authenticated and returned all-null.
+      const logo = await apiClient.getCompanyLogo(signal.symbol);
+      return { [signal.symbol]: logo };
     },
     enabled: !!signal,
     staleTime: 60 * 60 * 1000,
@@ -102,7 +106,7 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
       (signal.reasoningStatus === "READY" || signal.reasoningStatus === "FALLBACK") &&
       signal.reasoning
     ) {
-      return signal.reasoning;
+      return scrubReasoningText(signal.reasoning, signal);
     }
 
     const predicted = signal.predictedChangePct ?? 0;
@@ -203,7 +207,7 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
 
         <article className="rounded-[24px] border border-border bg-bg-1/80 p-6 shadow-glow">
           <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Signal summary</div>
-          <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">TradeMind rationale</h3>
+          <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">Why this signal</h3>
 
           <div className="mt-6 space-y-4">
             <div className="rounded-2xl border border-border bg-bg-2 p-4">

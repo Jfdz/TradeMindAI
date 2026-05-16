@@ -114,6 +114,11 @@ spec:
                   name: llm-credentials
                   key: groq-api-key
                   optional: true
+            # Track C cutover: ai-engine owns the reasoning queue.
+            # Explicitly disable the legacy Gemini listener to prevent
+            # split-brain delivery between the two consumers.
+            - name: TRADING_CORE_REASONING_LEGACY_LISTENER_ENABLED
+              value: "false"
           envFrom:
             - configMapRef:
                 name: trading-core-service-config

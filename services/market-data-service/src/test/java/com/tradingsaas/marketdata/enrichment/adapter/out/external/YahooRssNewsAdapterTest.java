@@ -7,6 +7,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -180,5 +181,134 @@ class YahooRssNewsAdapterTest {
         List<NewsItem> items = adapter.fetchMarketNews("general", 10);
         assertNotNull(items);
         assertEquals(0, items.size());
+    }
+
+    @Test
+    void extractsImageFromMediaThumbnailAndPicksLargestWidth() {
+        String rss = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+                  <channel>
+                    <item>
+                      <title>Thumbnail item</title>
+                      <link>https://example.com/a</link>
+                      <pubDate>Mon, 12 May 2026 14:00:00 GMT</pubDate>
+                      <media:thumbnail url="https://img.example.com/small.jpg" width="80" height="60"/>
+                      <media:thumbnail url="https://img.example.com/large.jpg" width="640" height="480"/>
+                    </item>
+                  </channel>
+                </rss>
+                """;
+        stubFor(get(urlPathEqualTo("/rss/2.0/headline"))
+                .willReturn(aResponse().withStatus(200).withBody(rss)));
+
+        List<NewsItem> items = adapter.fetchTickerNews(
+                "AAPL",
+                Instant.parse("2026-01-01T00:00:00Z"),
+                Instant.parse("2026-12-31T00:00:00Z"),
+                10);
+
+        assertEquals(1, items.size());
+        assertEquals("https://img.example.com/large.jpg", items.get(0).image());
+    }
+
+    @Test
+    void extractsImageFromMediaContentWithImageMedium() {
+        String rss = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+                  <channel>
+                    <item>
+                      <title>media:content item</title>
+                      <link>https://example.com/b</link>
+                      <pubDate>Mon, 12 May 2026 14:00:00 GMT</pubDate>
+                      <media:content url="https://img.example.com/c.jpg" medium="image"/>
+                    </item>
+                  </channel>
+                </rss>
+                """;
+        stubFor(get(urlPathEqualTo("/rss/2.0/headline"))
+                .willReturn(aResponse().withStatus(200).withBody(rss)));
+
+        List<NewsItem> items = adapter.fetchTickerNews(
+                "AAPL",
+                Instant.parse("2026-01-01T00:00:00Z"),
+                Instant.parse("2026-12-31T00:00:00Z"),
+                10);
+
+        assertEquals(1, items.size());
+        assertEquals("https://img.example.com/c.jpg", items.get(0).image());
+    }
+
+    @Test
+    void extractsImageFromEnclosureWithImageMimeType() {
+        String rss = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <rss version="2.0">
+                  <channel>
+                    <item>
+                      <title>enclosure item</title>
+                      <link>https://example.com/c</link>
+                      <pubDate>Mon, 12 May 2026 14:00:00 GMT</pubDate>
+                      <enclosure url="https://img.example.com/d.jpg" type="image/jpeg" length="1024"/>
+                    </item>
+                  </channel>
+                </rss>
+                """;
+        stubFor(get(urlPathEqualTo("/rss/2.0/headline"))
+                .willReturn(aResponse().withStatus(200).withBody(rss)));
+
+        List<NewsItem> items = adapter.fetchTickerNews(
+                "AAPL",
+                Instant.parse("2026-01-01T00:00:00Z"),
+                Instant.parse("2026-12-31T00:00:00Z"),
+                10);
+
+        assertEquals(1, items.size());
+        assertEquals("https://img.example.com/d.jpg", items.get(0).image());
+    }
+
+    @Test
+    void leavesImageNullWhenNoThumbnailElementsPresent() {
+        stubFor(get(urlPathEqualTo("/rss/2.0/headline"))
+                .willReturn(aResponse().withStatus(200).withBody(SAMPLE_RSS)));
+
+        List<NewsItem> items = adapter.fetchTickerNews(
+                "AAPL",
+                Instant.parse("2026-01-01T00:00:00Z"),
+                Instant.parse("2026-12-31T00:00:00Z"),
+                10);
+
+        assertEquals(2, items.size());
+        assertNull(items.get(0).image());
+        assertNull(items.get(1).image());
+    }
+
+    @Test
+    void ignoresEnclosureWithNonImageMimeType() {
+        String rss = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <rss version="2.0">
+                  <channel>
+                    <item>
+                      <title>audio enclosure</title>
+                      <link>https://example.com/e</link>
+                      <pubDate>Mon, 12 May 2026 14:00:00 GMT</pubDate>
+                      <enclosure url="https://podcast.example.com/x.mp3" type="audio/mpeg" length="4096"/>
+                    </item>
+                  </channel>
+                </rss>
+                """;
+        stubFor(get(urlPathEqualTo("/rss/2.0/headline"))
+                .willReturn(aResponse().withStatus(200).withBody(rss)));
+
+        List<NewsItem> items = adapter.fetchTickerNews(
+                "AAPL",
+                Instant.parse("2026-01-01T00:00:00Z"),
+                Instant.parse("2026-12-31T00:00:00Z"),
+                10);
+
+        assertEquals(1, items.size());
+        assertNull(items.get(0).image());
     }
 }

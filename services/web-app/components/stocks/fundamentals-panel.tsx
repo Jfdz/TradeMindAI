@@ -4,6 +4,9 @@ type Props = {
   readonly profile: CompanyProfileResponse | null;
 };
 
+const CARD_CHROME =
+  "rounded-xl border border-cyan-500/30 bg-card shadow-[0_0_20px_rgba(6,182,212,0.08)]";
+
 function formatMarketCap(cap: number): string {
   if (cap >= 1e12) return `$${(cap / 1e12).toFixed(2)}T`;
   if (cap >= 1e9) return `$${(cap / 1e9).toFixed(2)}B`;
@@ -24,8 +27,8 @@ export function FundamentalsPanel({ profile }: Props) {
   if (!rows.length) return null;
 
   return (
-    <div className="rounded-xl border bg-card p-4 space-y-3">
-      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+    <div className={`${CARD_CHROME} space-y-3 p-4`}>
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-cyan-400">
         Fundamentals
       </h3>
       <dl className="space-y-1.5">

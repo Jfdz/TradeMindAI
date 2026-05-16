@@ -1,4 +1,4 @@
-"""End-to-end orchestrator for C5: grounded context → LLM → validator → retry once.
+"""End-to-end orchestrator for C5: grounded context → LLM → validator (no retry).
 
 Composition over `BuildReasoningContextUseCase` (C3c) + `LlmReasoningPort` (C4)
 + `ReasoningValidator` (C5). Behavior:
@@ -6,11 +6,10 @@ Composition over `BuildReasoningContextUseCase` (C3c) + `LlmReasoningPort` (C4)
   1. Build the reasoning context. If outcome != AVAILABLE → REFUSED_NO_FACTS.
   2. Call the LLM. If outcome != GENERATED → propagate as-is.
   3. Validate the payload. If pass → GENERATED with retry=0.
-  4. Otherwise call the LLM once more with the validator feedback. If
-     this call's outcome != GENERATED → propagate that result.
-  5. Validate the second payload. If pass → GENERATED with retry=1.
-  6. Otherwise → REFUSED_BY_VALIDATOR carrying the second feedback and
-     the structured violations (so C6 audit can replay which rules tripped).
+  4. Otherwise → REFUSED_BY_VALIDATOR with retry=0, carrying the feedback
+     and structured violations (so C6 audit can replay which rules tripped).
+     Retry budget is 0 (C1.4): a single failed validation is final — no
+     second LLM call.
 
 Never raises. Every failure mode is a `ReasoningOutcome` variant.
 
@@ -54,7 +53,7 @@ class GenerationOutcome:
 
 
 class GenerateValidatedReasoningUseCase:
-    """Generate → validate → retry-once → final outcome."""
+    """Generate → validate → final outcome (no retry, C1.4)."""
 
     def __init__(
         self,
@@ -107,56 +106,26 @@ class GenerateValidatedReasoningUseCase:
             )
             return GenerationOutcome(result=first, context=ctx)
 
-        logger.info(
-            "event=validated_reasoning.validation_failed ticker=%s "
+        # C1.4 — retry budget is 0. A failed first validation is final:
+        # persist REFUSED_BY_VALIDATOR immediately instead of spending a
+        # second LLM call. Halves worst-case token cost; the C2 frontend
+        # already renders a fallback for non-GENERATED rows.
+        logger.warning(
+            "event=validated_reasoning.refused_by_validator ticker=%s "
             "violations=%d retry=0",
             signal.ticker,
             len(validation.violations),
         )
-        second = self._llm.generate(
-            signal, ctx, validator_feedback=validation.feedback
-        )
-        if second.outcome != ReasoningOutcome.GENERATED:
-            logger.info(
-                "event=validated_reasoning.retry_refused ticker=%s outcome=%s retry=1",
-                signal.ticker,
-                second.outcome.value,
-            )
-            # Tag the result with retry=1 so the persisted artifact reflects
-            # that the LLM was actually called twice.
-            return GenerationOutcome(
-                result=dataclasses.replace(second, retry_count=1),
-                context=ctx,
-            )
-
-        assert second.payload is not None
-        validation2 = self._validator.validate(second.payload, signal, ctx)
-        if validation2.passed:
-            logger.info(
-                "event=validated_reasoning.generated ticker=%s retry=1",
-                signal.ticker,
-            )
-            return GenerationOutcome(
-                result=dataclasses.replace(second, retry_count=1),
-                context=ctx,
-            )
-
-        logger.warning(
-            "event=validated_reasoning.refused_by_validator ticker=%s "
-            "violations=%d retry=1",
-            signal.ticker,
-            len(validation2.violations),
-        )
         violations_payload = tuple(
             {"type": v.type.value, "detail": v.detail}
-            for v in validation2.violations
+            for v in validation.violations
         )
         refused_result = ReasoningResult.refused_by_validator(
-            reason=validation2.feedback,
-            raw_response=second.raw_response,
+            reason=validation.feedback,
+            raw_response=first.raw_response,
             violations=violations_payload,
         )
         return GenerationOutcome(
-            result=dataclasses.replace(refused_result, retry_count=1),
+            result=dataclasses.replace(refused_result, retry_count=0),
             context=ctx,
         )

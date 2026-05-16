@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { ArrowRightIcon } from "@/components/site/icons";
 import type { FilteredSignal } from "@/lib/dashboard/dashboard-api";
 import { formatConfidence } from "@/lib/signal-utils";
 import { cn } from "@/lib/utils";
@@ -182,9 +184,16 @@ export function LiveSignalsStrip({ signals, selectedSignalId, onSignalChange }: 
           <span className="h-1.5 w-1.5 rounded-full bg-cyan animate-pulse-soft" />
           {signals.length} live
         </span>
-        <kbd className="hidden md:inline-flex items-center gap-1 rounded-md border border-border bg-bg-2 px-2 py-1 font-mono text-[10px] tracking-[0.1em] uppercase text-text-3">
-          ⌘K
-        </kbd>
+        {/* C2.3 — replaced the ⌘K keyboard-hint pill with an open-detail link. */}
+        {active && (
+          <Link
+            href={`/dashboard/stocks/${active.symbol}`}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-2 px-2.5 py-1 font-mono text-[10px] tracking-[0.1em] uppercase text-text-2 transition hover:border-border-strong hover:text-white"
+          >
+            Open detail
+            <ArrowRightIcon className="h-3 w-3" />
+          </Link>
+        )}
       </div>
 
       {open && (

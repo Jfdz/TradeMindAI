@@ -27,18 +27,18 @@ import java.util.stream.Collectors;
  * Legacy in-process reasoning consumer (Gemini + deterministic fallback).
  *
  * <p>Gated behind {@code trading-core.reasoning.legacy-listener.enabled}
- * (default {@code true}). Once ai-engine's grounded pipeline (Track C)
- * is verified in staging, ops flips the flag to {@code false} and ai-engine
- * becomes the sole consumer of the reasoning queue. Keeping the class
- * (instead of deleting) provides a one-flag rollback path if the new
- * pipeline regresses.
+ * (default {@code false}). ai-engine's Track C grounded pipeline owns the
+ * reasoning queue end-to-end; this listener is retained as a one-flag
+ * emergency rollback path. Enabling both consumers simultaneously is a
+ * split-brain bug — RabbitMQ would distribute messages across both,
+ * producing mixed (validated vs Gemini-fallback) reasoning artifacts.
  */
 @Component
 @ConditionalOnProperty(
         prefix = "trading-core.reasoning",
         name = "legacy-listener.enabled",
         havingValue = "true",
-        matchIfMissing = true)
+        matchIfMissing = false)
 public class ReasoningGenerationListener {
 
     private static final Logger log = LoggerFactory.getLogger(ReasoningGenerationListener.class);

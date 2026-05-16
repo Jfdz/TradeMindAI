@@ -8,10 +8,21 @@ Bearer token (Claude Max subscription, temporary) or with an API key
 Design pins:
   - Model: claude-haiku-4-5 (Jan 2026, $1/$5 per 1M tokens).
   - temperature: 0.2 (low variance for production reliability).
-  - max_tokens: 600 (forces concise reasoning; bounds runaway cost).
+  - max_tokens: 350 (tight cap; reasonings are <=400 chars so 350 output
+    tokens is plenty and cuts per-call cost roughly in half vs the C4
+    initial 600).
   - tool_choice forces exactly one emit_reasoning call — no free text.
-  - Prompt caching: OFF in C4 (system prompt < Haiku 4.5's 4096-token
-    minimum cacheable prefix; the marker would be silently ignored).
+  - Prompt caching: NOT wired. An earlier attempt sent `system` as a
+    cache_control block list; in production that request shape triggered
+    Anthropic 400 "messages: text content blocks must be non-empty" and
+    broke reasoning generation. Caching was a no-op anyway — the
+    system+tool prefix (~700 tokens) is far below Haiku 4.5's 4096-token
+    minimum cacheable prefix, so the marker was always silently ignored.
+    `system` is therefore sent as a plain string (the long-stable C4
+    shape). Revisit caching only once the prefix genuinely exceeds 4096
+    tokens, and validate the request shape against the live API first.
+    Cache usage counters are still captured in the audit blob so the
+    metric is ready if/when caching is correctly re-introduced.
 """
 
 from __future__ import annotations
@@ -43,7 +54,7 @@ class AnthropicLlmReasoningClient:
     PROVIDER_NAME = "anthropic"
     DEFAULT_MODEL = "claude-haiku-4-5"
     TEMPERATURE = 0.2
-    MAX_TOKENS = 600
+    MAX_TOKENS = 350
 
     def __init__(self, client: "Anthropic", model: str = DEFAULT_MODEL):
         self._client = client
@@ -66,6 +77,13 @@ class AnthropicLlmReasoningClient:
                 f"{user_prompt}"
             )
         try:
+            # `system` as a plain string and tools without cache_control —
+            # the long-stable C4 request shape. The cache_control block-list
+            # form caused Anthropic 400 "messages: text content blocks must
+            # be non-empty" in production while delivering zero benefit
+            # (prefix below Haiku's 4096-token cache minimum). Do not
+            # reintroduce caching here without validating the exact request
+            # shape against the live API.
             response = self._client.messages.create(
                 model=self._model,
                 max_tokens=self.MAX_TOKENS,
@@ -106,6 +124,9 @@ class AnthropicLlmReasoningClient:
                     "output_tokens": getattr(usage, "output_tokens", None),
                     "cache_read_input_tokens": getattr(
                         usage, "cache_read_input_tokens", None
+                    ),
+                    "cache_creation_input_tokens": getattr(
+                        usage, "cache_creation_input_tokens", None
                     ),
                 }
                 if usage is not None

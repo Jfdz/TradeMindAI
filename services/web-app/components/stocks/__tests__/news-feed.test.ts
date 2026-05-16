@@ -49,6 +49,30 @@ describe("NewsFeed", () => {
 
     expect(typeof NewsFeed).toBe("function");
   });
+
+  it("filters out imageless items and caps the first view at 5", async () => {
+    const { hasOwnImage } = await import(
+      "../../../lib/enrichment/news-image-filter"
+    );
+
+    const articles = [
+      { image: "https://cdn.example.com/a.jpg" },
+      { image: null },
+      { image: "" },
+      { image: "https://s.yimg.com/rz/stage/p/yahoo_finance_en-US_h_p_finance_2.png" },
+      { image: "https://cdn.example.com/b.jpg" },
+      { image: "https://cdn.example.com/c.jpg" },
+      { image: "https://cdn.example.com/d.jpg" },
+      { image: "https://cdn.example.com/e.jpg" },
+      { image: "https://cdn.example.com/f.jpg" },
+    ];
+
+    const filtered = articles.filter((item) => hasOwnImage(item.image));
+    expect(filtered).toHaveLength(6);
+
+    const firstView = filtered.slice(0, 5);
+    expect(firstView).toHaveLength(5);
+  });
 });
 
 describe("AISignalSection", () => {

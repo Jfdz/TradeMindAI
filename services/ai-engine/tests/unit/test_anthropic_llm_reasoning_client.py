@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
+
 from ai_engine.adapters.out.anthropic_llm_reasoning_client import (
     AnthropicLlmReasoningClient,
 )
@@ -26,7 +28,10 @@ def _response(blocks: list, stop_reason: str = "tool_use") -> MagicMock:
     response.content = blocks
     response.stop_reason = stop_reason
     response.usage = MagicMock(
-        input_tokens=100, output_tokens=50, cache_read_input_tokens=0
+        input_tokens=100,
+        output_tokens=50,
+        cache_read_input_tokens=0,
+        cache_creation_input_tokens=0,
     )
     return response
 
@@ -70,14 +75,19 @@ def test_generate_passes_pinned_request_shape_to_sdk():
 
     call = fake_sdk.messages.create.call_args.kwargs
     assert call["model"] == "claude-haiku-4-5"
-    assert call["temperature"] == 0.2
-    assert call["max_tokens"] == 600
+    assert call["temperature"] == pytest.approx(0.2)
+    assert call["max_tokens"] == 350
     assert call["tool_choice"] == {"type": "tool", "name": "emit_reasoning"}
-    # Exactly one tool, and it is our emit_reasoning schema.
+    # Exactly one tool, plain emit_reasoning schema. NO cache_control —
+    # the block/cache_control request shape caused Anthropic 400
+    # "text content blocks must be non-empty" in prod and never
+    # activated caching (prefix < Haiku 4096-token minimum).
     assert len(call["tools"]) == 1
     assert call["tools"][0]["name"] == "emit_reasoning"
-    # System prompt is sent as a plain string (no cache_control).
+    assert "cache_control" not in call["tools"][0]
+    # System prompt is sent as a plain string (long-stable C4 shape).
     assert isinstance(call["system"], str)
+    assert call["system"]
 
 
 def test_generate_returns_refused_by_llm_when_refusal_true():
@@ -192,3 +202,7 @@ def test_generate_records_usage_in_raw_response():
     usage = result.raw_response["usage"]
     assert usage["input_tokens"] == 100
     assert usage["output_tokens"] == 50
+    # Cache telemetry surfaced so cost dashboards can compute the hit ratio
+    # the day the cacheable prefix grows past Haiku 4.5's 4096-token minimum.
+    assert "cache_read_input_tokens" in usage
+    assert "cache_creation_input_tokens" in usage

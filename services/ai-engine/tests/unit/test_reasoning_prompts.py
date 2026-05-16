@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 from ai_engine.core.domain.reasoning_context import ReasoningContext
@@ -49,6 +50,28 @@ def test_tool_schema_caps_reasoning_at_400_chars():
     assert REASONING_TOOL_SCHEMA["input_schema"]["properties"]["reasoning"]["maxLength"] == 400
 
 
+def test_refusal_reason_uses_type_union_not_anyof():
+    # C1.2 — anyOf[{string},{null}] compacted to type:["string","null"].
+    rr = REASONING_TOOL_SCHEMA["input_schema"]["properties"]["refusal_reason"]
+    assert rr["type"] == ["string", "null"]
+    assert "anyOf" not in rr
+
+
+def test_prompt_and_schema_stay_within_token_budget():
+    # C1.7 — drift guard. Caveman-terse prompt + compacted schema must
+    # not creep back toward the verbose originals (~88 / ~488 tokens).
+    assert len(SYSTEM_PROMPT) < 1500
+    assert len(json.dumps(REASONING_TOOL_SCHEMA)) < 1200
+
+
+def test_user_prompt_news_block_is_indexed_with_url_map():
+    # C1.3 — compact indexed list + a separate news_urls map keeps the
+    # validator's URL grounding intact while dropping per-line verbosity.
+    prompt = build_user_prompt(build_signal_input(), _context_with_news())
+    assert "[1] META beats Q1 expectations (Reuters, 2026-05-12)" in prompt
+    assert "news_urls: [1] https://reuters.com/x" in prompt
+
+
 def test_user_prompt_includes_all_signal_fields():
     prompt = build_user_prompt(build_signal_input(), _context_with_news())
     assert "ticker: META" in prompt
@@ -87,3 +110,22 @@ def test_user_prompt_renders_null_predicted_change():
     )
     prompt = build_user_prompt(sig, _context_with_news())
     assert "predicted_change_pct: null" in prompt
+
+
+def test_user_prompt_renders_derived_prices_when_present():
+    sig = build_signal_input(
+        target_price=627.12,
+        stop_loss=590.94,
+        expected_move_pct=4.0,
+    )
+    prompt = build_user_prompt(sig, _context_with_news())
+    assert "target_price: 627.12" in prompt
+    assert "stop_loss: 590.94" in prompt
+    assert "expected_move_pct: 4.0" in prompt
+
+
+def test_user_prompt_renders_null_derived_prices_when_absent():
+    prompt = build_user_prompt(build_signal_input(), _context_with_news())
+    assert "target_price: null" in prompt
+    assert "stop_loss: null" in prompt
+    assert "expected_move_pct: null" in prompt

@@ -68,3 +68,24 @@ npm test                  # Vitest unit tests for middleware, auth, and api-clie
 ```bash
 docker build -t web-app .
 ```
+
+## Troubleshooting — stock logos and news thumbnails
+
+Both surface types proxy through trading-core → market-data → Finnhub
+(no `FINNHUB_API_KEY` on the web-app pod). If logos drop to initials or
+the AI Decision Card never shows a hero news image:
+
+1. Verify `/api/stocks/logos?tickers=AAPL` returns
+   `{"AAPL": "https://static2.finnhub.io/..."}` rather than
+   `{"AAPL": null}`. A `null` here means the upstream chain failed —
+   debug in market-data per its README.
+2. Verify `/api/stocks/AAPL` (the SSR enrichment route) returns
+   `profile.logo` non-null. Same upstream chain, different proxy
+   entrypoint.
+3. AI Decision Card without a hero image means the underlying signal's
+   `reasoning_artifact.factsSnapshot.news[*]` has no item with a
+   non-blank `image` field. Check the ai-engine log for
+   `event=reasoning_context.news_no_images ticker=...` warnings.
+4. `StockLogo` falls back to an initials chip on `onError`. A flicker
+   from logo to initials in the browser usually means a CDN 404 — the
+   chain is healthy but Finnhub does not have a logo for that ticker.

@@ -42,6 +42,11 @@ export type ReasoningAudit = {
   reasoningStatus: string | null;
   reasoning: string | null;
   reasoningGeneratedAt: string | null;
+  signalGeneratedAt: string | null;
+  entryPrice: number | null;
+  targetPrice: number | null;
+  stopLoss: number | null;
+  expectedMovePct: number | null;
   outcome: string | null;
   provider: string | null;
   modelVersion: string | null;
