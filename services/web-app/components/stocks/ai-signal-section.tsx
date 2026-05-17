@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { apiClient, type SignalResponse } from "@/lib/api-client";
-import { formatPredictedChange } from "@/lib/signal-utils";
+import { resolveExpectedMovePct, formatPredictedChange } from "@/lib/signal-utils";
 
 type Props = {
   readonly ticker: string;
@@ -57,6 +57,8 @@ export function AISignalSection({ ticker }: Props) {
   }
 
   const live = Date.now() - new Date(signal.generatedAt).getTime() < 1000 * 60 * 60 * 24;
+  const movePct = resolveExpectedMovePct(signal.entryPrice, signal.targetPrice, signal.predictedChangePct);
+  const { label: moveLabel, colorClass: moveColorClass } = formatPredictedChange(movePct, signal.type);
 
   return (
     <div className="space-y-3 rounded-xl border border-cyan-500/30 bg-card p-4 shadow-[0_0_20px_rgba(6,182,212,0.08)]">
@@ -80,15 +82,12 @@ export function AISignalSection({ ticker }: Props) {
           <p className="text-muted-foreground">Timeframe</p>
           <p className="mt-0.5 font-mono font-semibold">{signal.timeframe}</p>
         </div>
-        {signal.predictedChangePct != null && (() => {
-          const { label, colorClass } = formatPredictedChange(signal.predictedChangePct, signal.type);
-          return (
-            <div className="rounded-lg bg-muted/50 p-2">
-              <p className="text-muted-foreground">Expected move</p>
-              <p className={`font-mono font-semibold mt-0.5 ${colorClass}`}>{label}</p>
-            </div>
-          );
-        })()}
+        {movePct != null && (
+          <div className="rounded-lg bg-muted/50 p-2">
+            <p className="text-muted-foreground">Expected move</p>
+            <p className={`mt-0.5 font-mono font-semibold ${moveColorClass}`}>{moveLabel}</p>
+          </div>
+        )}
       </div>
     </div>
   );

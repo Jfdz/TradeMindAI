@@ -1,5 +1,26 @@
 import type { SignalResponse } from "./api-client";
 
+export function calculateExpectedMovePct(
+  entry: number | null | undefined,
+  target: number | null | undefined,
+): number | null {
+  if (
+    entry == null || target == null ||
+    Number.isNaN(entry) || Number.isNaN(target) || entry === 0
+  ) {
+    return null;
+  }
+  return Math.abs((target - entry) / entry) * 100;
+}
+
+export function resolveExpectedMovePct(
+  entry: number | null | undefined,
+  target: number | null | undefined,
+  fallbackPct: number | null | undefined,
+): number | null {
+  return calculateExpectedMovePct(entry, target) ?? fallbackPct ?? null;
+}
+
 export function formatConfidence(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
@@ -41,7 +62,7 @@ export function buildSignalReasoning(signal: SignalResponse, latestPrice: number
     return signal.reasoning;
   }
 
-  const predicted = signal.predictedChangePct ?? 0;
+  const predicted = resolveExpectedMovePct(signal.entryPrice, signal.targetPrice, signal.predictedChangePct) ?? 0;
   const move = `${Math.abs(predicted).toFixed(1)}%`;
   const priceText =
     latestPrice == null

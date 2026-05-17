@@ -1,6 +1,6 @@
 import type { SeriesMarker, Time } from "lightweight-charts";
 import type { MarketPriceResponse, SignalResponse } from "@/lib/api-client";
-import { buildSignalReasoning, signalTypeColor } from "@/lib/signal-utils";
+import { buildSignalReasoning, resolveExpectedMovePct, signalTypeColor } from "@/lib/signal-utils";
 import { hasOwnImage } from "@/lib/enrichment/news-image-filter";
 import type { DashboardCandle, FilteredSignal } from "@/lib/dashboard/dashboard-api";
 
@@ -89,6 +89,7 @@ export function deriveSignal(signal: SignalResponse, latestPrice: number | null)
     signal.targetPrice ?? calculateTakeProfit(signal.type, signal.takeProfitPct, entry);
   const stopLoss =
     signal.stopLoss ?? calculateStopLoss(signal.type, signal.stopLossPct, entry);
+  const expectedMovePct = resolveExpectedMovePct(entry, takeProfit, signal.predictedChangePct);
   const live = isLiveSignal(signal.generatedAt);
 
   return {
@@ -97,6 +98,7 @@ export function deriveSignal(signal: SignalResponse, latestPrice: number | null)
     entry,
     takeProfit,
     stopLoss,
+    expectedMovePct,
     live,
     status: deriveStatus(signal.generatedAt),
     age: formatAge(signal.generatedAt),
