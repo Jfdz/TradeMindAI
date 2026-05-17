@@ -61,6 +61,7 @@ export default async function StockDetailPage({ params }: Props) {
 
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         <section className="min-w-0 space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">News</h2>
           <NewsFeed ticker={ticker} />
         </section>
 
