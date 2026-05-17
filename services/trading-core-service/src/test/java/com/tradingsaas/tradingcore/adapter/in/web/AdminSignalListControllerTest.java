@@ -42,6 +42,7 @@ class AdminSignalListControllerTest {
                 new Confidence(new BigDecimal("0.6200")), Timeframe.DAILY,
                 Instant.parse("2026-05-13T12:00:00Z"),
                 null, null, new BigDecimal("4.5"), new BigDecimal("603.0"),
+                new BigDecimal("615.0"), null, null,
                 "Price 603.0 above sma_200 (510.0).",
                 ReasoningStatus.READY,
                 Instant.parse("2026-05-13T12:00:30Z"),
@@ -73,6 +74,8 @@ class AdminSignalListControllerTest {
         AdminSignalSummary row = body.getContent().get(0);
         assertEquals(id, row.id());
         assertEquals("META", row.ticker());
+        assertEquals(new BigDecimal("603.0"), row.entryPrice());
+        assertEquals(new BigDecimal("615.0"), row.targetPrice());
         assertEquals("GENERATED", row.reasoningOutcome());
         assertEquals("anthropic_oauth", row.reasoningProvider());
         assertTrue(row.hasArtifact());
