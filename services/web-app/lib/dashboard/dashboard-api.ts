@@ -16,6 +16,7 @@ export type FilteredSignal = SignalResponse & {
   entry: number | null;
   takeProfit: number | null;
   stopLoss: number | null;
+  expectedMovePct: number | null;
   live: boolean;
   status: "NEW" | "LIVE" | "ACTIVE";
   age: string;
