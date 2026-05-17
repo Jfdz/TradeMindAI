@@ -16,6 +16,7 @@ export type AdminSignalSummary = {
   timeframe: string;
   generatedAt: string;
   entryPrice: number | null;
+  targetPrice: number | null;
   predictedChangePct: number | null;
   reasoningStatus: "PENDING" | "READY" | "FALLBACK" | "FAILED" | string;
   reasoningGeneratedAt: string | null;
