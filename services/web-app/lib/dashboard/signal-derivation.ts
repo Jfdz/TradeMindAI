@@ -1,7 +1,12 @@
 import type { SeriesMarker, Time } from "lightweight-charts";
 import type { MarketPriceResponse, SignalResponse } from "@/lib/api-client";
 import { buildSignalReasoning, signalTypeColor } from "@/lib/signal-utils";
+import { hasOwnImage } from "@/lib/enrichment/news-image-filter";
 import type { DashboardCandle, FilteredSignal } from "@/lib/dashboard/dashboard-api";
+
+export function hasValidReasoningNews(signal: SignalResponse): boolean {
+  return signal.reasoningNews != null && hasOwnImage(signal.reasoningNews.imageUrl);
+}
 
 export function formatAge(value: string) {
   const generatedAt = new Date(value).getTime();

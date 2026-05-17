@@ -15,7 +15,7 @@ import type { DashboardCandle, EnrichedHolding, FilteredSignal } from "@/lib/das
 import { fetchDashboardPageData } from "@/lib/dashboard/client-data";
 import { useAgeOutToast } from "@/lib/dashboard/use-age-out-toast";
 import { useStockLogos } from "@/lib/dashboard/use-stock-logos";
-import { buildSignalMarker } from "@/lib/dashboard/signal-derivation";
+import { buildSignalMarker, hasValidReasoningNews } from "@/lib/dashboard/signal-derivation";
 import { signedTone, TONE_NEUTRAL } from "@/lib/dashboard/format";
 import { cn } from "@/lib/utils";
 
@@ -379,7 +379,7 @@ export default function DashboardHomePage() {
           <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">Recent AI decisions</h3>
 
           <div className="mt-6 space-y-4">
-            {signals.slice(0, 4).map((signal) => (
+            {signals.filter(hasValidReasoningNews).slice(0, 4).map((signal) => (
               <AiDecisionCard
                 key={signal.id}
                 signal={signal}
