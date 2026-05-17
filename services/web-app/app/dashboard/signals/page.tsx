@@ -180,16 +180,23 @@ function SignalsContent() {
                         <td className="border-t border-border px-4 py-4 font-mono text-green">{formatPrice(signal.takeProfit)}</td>
                         <td className="border-t border-border px-4 py-4 font-mono text-red">{formatPrice(signal.stopLoss)}</td>
                         <td className="border-t border-border px-4 py-4">
-                          <div className="w-44">
-                            <div className="text-xs text-text-2">
-                              {formatConfidence(signal.confidence)}
-                            </div>
-                            <div className="mt-2 h-2 overflow-hidden rounded-full bg-bg-3">
+                          <div className="flex items-center gap-2">
+                            <div className="h-[3px] w-20 overflow-hidden rounded-full bg-bg-3">
                               <div
-                                className="h-full rounded-full bg-gradient-to-r from-cyan via-cyan-bright to-green"
-                                style={{ width: `${signal.confidence * 100}%`, boxShadow: "0 0 8px rgba(0,200,212,0.35)" }}
+                                className={cn(
+                                  "h-full rounded-full",
+                                  signal.confidence > 0.8
+                                    ? "bg-cyan"
+                                    : signal.confidence > 0.7
+                                      ? "bg-gold"
+                                      : "bg-text-2"
+                                )}
+                                style={{ width: `${signal.confidence * 100}%` }}
                               />
                             </div>
+                            <span className="font-mono text-xs text-text-2">
+                              {formatConfidence(signal.confidence)}
+                            </span>
                           </div>
                         </td>
                         <td className="border-t border-border px-4 py-4">
