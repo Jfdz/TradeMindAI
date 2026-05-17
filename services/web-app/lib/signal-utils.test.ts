@@ -8,7 +8,7 @@ describe("calculateExpectedMovePct", () => {
   });
 
   it("SELL: 100 → 95 = 5.00%", () => {
-    expect(calculateExpectedMovePct(100, 95)).toBeCloseTo(5.0, 5);
+    expect(calculateExpectedMovePct(100, 95)).toBeCloseTo(5, 5);
   });
 
   it("returns null when entry is null", () => {
@@ -24,13 +24,13 @@ describe("calculateExpectedMovePct", () => {
   });
 
   it("returns null when entry is NaN", () => {
-    expect(calculateExpectedMovePct(NaN, 135)).toBeNull();
+    expect(calculateExpectedMovePct(Number.NaN, 135)).toBeNull();
   });
 });
 
 describe("resolveExpectedMovePct", () => {
   it("returns calculated move when entry and target present", () => {
-    expect(resolveExpectedMovePct(100, 105, 2)).toBeCloseTo(5.0, 5);
+    expect(resolveExpectedMovePct(100, 105, 2)).toBeCloseTo(5, 5);
   });
 
   it("falls back to predictedChangePct when entry is missing", () => {
