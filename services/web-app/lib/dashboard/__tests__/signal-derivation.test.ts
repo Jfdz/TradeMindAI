@@ -82,6 +82,17 @@ function makeApiSignal(overrides: Partial<SignalResponse> = {}): SignalResponse 
   };
 }
 
+function makeReasoningNews(overrides: Record<string, unknown> = {}) {
+  return {
+    headline: "Apple Stock Surges",
+    url: "https://example.com/news",
+    imageUrl: "https://example.com/image.jpg",
+    source: "Example News",
+    publishedAt: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
 describe("deriveSignal", () => {
   it("prefers backend-provided targetPrice and stopLoss over frontend math", () => {
     const signal = makeApiSignal({ targetPrice: 110.5, stopLoss: 98.25 });
@@ -101,15 +112,7 @@ describe("deriveSignal", () => {
 
 describe("hasValidReasoningNews", () => {
   it("returns true when reasoning news has a valid article image", () => {
-    const signal = makeApiSignal({
-      reasoningNews: {
-        headline: "Apple Stock Surges",
-        url: "https://example.com/news",
-        imageUrl: "https://example.com/image.jpg",
-        source: "Example News",
-        publishedAt: new Date().toISOString(),
-      },
-    });
+    const signal = makeApiSignal({ reasoningNews: makeReasoningNews() });
     expect(hasValidReasoningNews(signal)).toBe(true);
   });
 
@@ -124,66 +127,33 @@ describe("hasValidReasoningNews", () => {
   });
 
   it("returns false when reasoning news has null imageUrl", () => {
-    const signal = makeApiSignal({
-      reasoningNews: {
-        headline: "Apple Stock Surges",
-        url: "https://example.com/news",
-        imageUrl: null,
-        source: "Example News",
-        publishedAt: new Date().toISOString(),
-      },
-    });
+    const signal = makeApiSignal({ reasoningNews: makeReasoningNews({ imageUrl: null }) });
     expect(hasValidReasoningNews(signal)).toBe(false);
   });
 
   it("returns false when reasoning news has empty imageUrl", () => {
-    const signal = makeApiSignal({
-      reasoningNews: {
-        headline: "Apple Stock Surges",
-        url: "https://example.com/news",
-        imageUrl: "",
-        source: "Example News",
-        publishedAt: new Date().toISOString(),
-      },
-    });
+    const signal = makeApiSignal({ reasoningNews: makeReasoningNews({ imageUrl: "" }) });
     expect(hasValidReasoningNews(signal)).toBe(false);
   });
 
   it("returns false when reasoning news has whitespace-only imageUrl", () => {
-    const signal = makeApiSignal({
-      reasoningNews: {
-        headline: "Apple Stock Surges",
-        url: "https://example.com/news",
-        imageUrl: "   ",
-        source: "Example News",
-        publishedAt: new Date().toISOString(),
-      },
-    });
+    const signal = makeApiSignal({ reasoningNews: makeReasoningNews({ imageUrl: "   " }) });
     expect(hasValidReasoningNews(signal)).toBe(false);
   });
 
   it("returns false when reasoning news has Yahoo template image", () => {
     const signal = makeApiSignal({
-      reasoningNews: {
-        headline: "Apple Stock Surges",
-        url: "https://example.com/news",
+      reasoningNews: makeReasoningNews({
         imageUrl: "https://s.yimg.com/rz/stage/p/yahoo_finance_en-US_h_p_finance_2.png",
         source: "Yahoo Finance",
-        publishedAt: new Date().toISOString(),
-      },
+      }),
     });
     expect(hasValidReasoningNews(signal)).toBe(false);
   });
 
   it("returns false when imageUrl is not an http URL", () => {
     const signal = makeApiSignal({
-      reasoningNews: {
-        headline: "Apple Stock Surges",
-        url: "https://example.com/news",
-        imageUrl: "data:image/png;base64,iVBORw0KGgo=",
-        source: "Example News",
-        publishedAt: new Date().toISOString(),
-      },
+      reasoningNews: makeReasoningNews({ imageUrl: "data:image/png;base64,iVBORw0KGgo=" }),
     });
     expect(hasValidReasoningNews(signal)).toBe(false);
   });
