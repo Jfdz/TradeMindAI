@@ -24,6 +24,7 @@ jobs:
   trivy:
     name: Trivy scan — ${{ inputs.image-ref }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       SCAN_TAR: ${{ github.workspace }}/scan-image.tar
     permissions:
@@ -92,6 +93,7 @@ jobs:
         with:
           sarif_file: trivy-results.sarif
           category: trivy-${{ steps.normalize.outputs.image-ref }}
+          wait-for-processing: false
 
       - name: Trivy scan (table, gating)
         if: success()
