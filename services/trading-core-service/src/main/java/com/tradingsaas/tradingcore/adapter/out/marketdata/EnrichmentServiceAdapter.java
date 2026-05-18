@@ -1,7 +1,9 @@
 package com.tradingsaas.tradingcore.adapter.out.marketdata;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import io.netty.channel.ChannelOption;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -9,9 +11,11 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
 
 @Component
 public class EnrichmentServiceAdapter {
@@ -32,8 +36,15 @@ public class EnrichmentServiceAdapter {
     @Autowired
     public EnrichmentServiceAdapter(
             @Value("${services.market-data.url:http://localhost:8081}") String baseUrl,
-            @Value("${services.market-data.internal-secret:}") String internalSecret) {
-        this(WebClient.builder().baseUrl(baseUrl).build(), internalSecret);
+            @Value("${services.market-data.internal-secret:}") String internalSecret,
+            @Value("${services.market-data.connect-timeout-ms:5000}") int connectTimeoutMs,
+            @Value("${services.market-data.response-timeout-seconds:10}") int responseTimeoutSeconds) {
+        this(WebClient.builder()
+                .baseUrl(baseUrl)
+                .clientConnector(new ReactorClientHttpConnector(HttpClient.create()
+                        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMs)
+                        .responseTimeout(Duration.ofSeconds(responseTimeoutSeconds))))
+                .build(), internalSecret);
     }
 
     EnrichmentServiceAdapter(WebClient webClient, String internalSecret) {

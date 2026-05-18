@@ -88,6 +88,8 @@ management:
     health:
       show-details: never
       show-components: never
+      probes:
+        enabled: true
   health:
     db:
       enabled: true
@@ -140,3 +142,5 @@ services:
   market-data:
     url: ${MARKET_DATA_SERVICE_URL:http://localhost:8081}
     internal-secret: ${INTERNAL_API_SECRET:${MARKET_DATA_INTERNAL_SECRET:}}
+    connect-timeout-ms: ${MARKET_DATA_CONNECT_TIMEOUT_MS:5000}
+    response-timeout-seconds: ${MARKET_DATA_RESPONSE_TIMEOUT_SECONDS:10}
