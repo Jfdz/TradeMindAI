@@ -122,42 +122,63 @@ create_pr_to_branch() {
   local pr_title=$(generate_pr_title "$target_branch" "$feature_branch")
   local pr_body=$(generate_pr_body "$target_branch" "$feature_branch")
 
-  # Create PR
-  local pr_result=$(gh pr create \
-    --repo "$REPO_OWNER/$REPO_NAME" \
+  # Create PR with better error handling
+  echo -e "${CYAN}📝 Creating PR: $feature_branch → $target_branch${NC}"
+
+  local pr_result
+  if pr_result=$(gh pr create \
     --title "$pr_title" \
     --body "$pr_body" \
     --head "$feature_branch" \
     --base "$target_branch" \
-    --json number,url,state \
-    2>&1 || echo "error")
+    2>&1); then
 
-  if echo "$pr_result" | grep -q "error\|already exists"; then
+    # Extract PR number from URL
+    local pr_number=$(echo "$pr_result" | grep -oP 'pull/\K[0-9]+' || echo "")
+
+    if [ -z "$pr_number" ]; then
+      # Try to extract from the output line
+      pr_number=$(echo "$pr_result" | grep -oP '#\K[0-9]+' | head -1)
+    fi
+
+    if [ -z "$pr_number" ]; then
+      echo -e "${YELLOW}⚠️  Could not extract PR number${NC}"
+      # Get the created PR
+      sleep 1
+      local created_pr=$(gh pr list \
+        --head "$feature_branch" \
+        --base "$target_branch" \
+        --json number,url \
+        --jq '.[0]' 2>/dev/null)
+
+      if [ -n "$created_pr" ] && [ "$created_pr" != "null" ]; then
+        pr_number=$(echo "$created_pr" | jq -r '.number')
+      fi
+    fi
+  else
+    # Check if PR already exists
     echo -e "${YELLOW}⚠️  PR might already exist${NC}"
-    # Try to get existing PR
     local existing_pr=$(gh pr list \
-      --repo "$REPO_OWNER/$REPO_NAME" \
       --head "$feature_branch" \
       --base "$target_branch" \
       --json number,url \
-      --jq '.[0]')
+      --jq '.[0]' 2>/dev/null)
 
     if [ -n "$existing_pr" ] && [ "$existing_pr" != "null" ]; then
-      local pr_number=$(echo "$existing_pr" | jq -r '.number')
-      local pr_url=$(echo "$existing_pr" | jq -r '.url')
+      pr_number=$(echo "$existing_pr" | jq -r '.number')
       echo -e "${CYAN}📌 Using existing PR #$pr_number${NC}"
       echo "$pr_number"
       log_event "pr_create_skipped" "existing_pr" "PR #$pr_number already exists"
       return 0
     else
       echo -e "${RED}❌ Failed to create PR${NC}"
+      echo -e "${RED}$pr_result${NC}"
       log_event "pr_create_failed" "error" "Could not create PR $feature_branch → $target_branch"
       return 1
     fi
   fi
 
-  local pr_number=$(echo "$pr_result" | jq -r '.number')
-  local pr_url=$(echo "$pr_result" | jq -r '.url')
+  local pr_url="https://github.com/$REPO_OWNER/$REPO_NAME/pull/$pr_number"
 
   echo -e "${GREEN}✅ PR created: #$pr_number${NC}"
   echo -e "${CYAN}🔗 $pr_url${NC}"

@@ -27,7 +27,7 @@ import org.springframework.data.domain.Pageable;
 class SignalGenerationServiceTest {
 
     @Test
-    void generatesBuySignalWithDefaultRiskParameters() {
+    void generatesBuySignal_dynamicTpSlFromPredictedChangePct() {
         UUID symbolId = UUID.fromString("22222222-2222-2222-2222-222222222222");
         AiPrediction prediction = new AiPrediction(
                 "AAPL",
@@ -48,13 +48,112 @@ class SignalGenerationServiceTest {
         assertEquals(symbolId, generated.getSymbolId());
         assertEquals("AAPL", generated.getTicker());
         assertEquals(SignalType.BUY, generated.getType());
-        assertEquals(new BigDecimal("2.00"), generated.getStopLossPct());
-        assertEquals(new BigDecimal("4.00"), generated.getTakeProfitPct());
+        // TP = |predictedChangePct| = 1.50; SL = TP/2 = 0.75
+        assertEquals(0, generated.getTakeProfitPct().compareTo(new BigDecimal("1.50")));
+        assertEquals(0, generated.getStopLossPct().compareTo(new BigDecimal("0.75")));
         assertEquals(new BigDecimal("1.50"), generated.getPredictedChangePct());
         assertEquals(new BigDecimal("182.50"), generated.getEntryPrice());
-        assertEquals(0, generated.getTargetPrice().compareTo(new BigDecimal("189.800000")));
-        assertEquals(0, generated.getStopLoss().compareTo(new BigDecimal("178.850000")));
-        assertEquals(0, generated.getExpectedMovePct().compareTo(new BigDecimal("4.0000")));
+        // targetPrice = 182.50 × 1.015 = 185.237500
+        assertEquals(0, generated.getTargetPrice().compareTo(new BigDecimal("185.237500")));
+        // stopLoss = 182.50 × (1 − 0.0075) = 181.131250
+        assertEquals(0, generated.getStopLoss().compareTo(new BigDecimal("181.131250")));
+        // expectedMovePct = |predictedChangePct| = 1.5000
+        assertEquals(0, generated.getExpectedMovePct().compareTo(new BigDecimal("1.5000")));
+    }
+
+    @Test
+    void generatesBuySignal_largerPrediction_dynamicTpSlCorrect() {
+        UUID symbolId = UUID.fromString("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
+        AiPrediction prediction = new AiPrediction(
+                "TSLA",
+                SignalType.BUY,
+                new Confidence(new BigDecimal("0.80")),
+                new BigDecimal("6.00"),
+                List.of(),
+                Instant.parse("2026-04-17T10:00:00Z"));
+
+        RecordingRepository repository = new RecordingRepository();
+        SignalGenerationService service = new SignalGenerationService(repository,
+                new StubMarketDataPort(Map.of("TSLA", new BigDecimal("100.00"))));
+
+        TradingSignal generated = service.generate(symbolId, prediction);
+
+        // TP = 6.00, SL = 3.00
+        assertEquals(0, generated.getTakeProfitPct().compareTo(new BigDecimal("6.00")));
+        // targetPrice = 100 × 1.06 = 106.000000
+        assertEquals(0, generated.getTargetPrice().compareTo(new BigDecimal("106.000000")));
+        // stopLoss = 100 × (1 − 0.03) = 97.000000
+        assertEquals(0, generated.getStopLoss().compareTo(new BigDecimal("97.000000")));
+        assertEquals(0, generated.getExpectedMovePct().compareTo(new BigDecimal("6.0000")));
+    }
+
+    @Test
+    void generatesSellSignal_dynamicTpSlSymmetric() {
+        UUID symbolId = UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff");
+        AiPrediction prediction = new AiPrediction(
+                "NVDA",
+                SignalType.SELL,
+                new Confidence(new BigDecimal("0.75")),
+                new BigDecimal("-6.00"),
+                List.of(),
+                Instant.parse("2026-04-17T10:00:00Z"));
+
+        RecordingRepository repository = new RecordingRepository();
+        SignalGenerationService service = new SignalGenerationService(repository,
+                new StubMarketDataPort(Map.of("NVDA", new BigDecimal("100.00"))));
+
+        TradingSignal generated = service.generate(symbolId, prediction);
+
+        // TP = |-6.00| = 6.00; targetPrice = 100 × (1 − 0.06) = 94.000000
+        assertEquals(0, generated.getTakeProfitPct().compareTo(new BigDecimal("6.00")));
+        assertEquals(0, generated.getTargetPrice().compareTo(new BigDecimal("94.000000")));
+        // stopLoss (SELL) = 100 × (1 + 0.03) = 103.000000
+        assertEquals(0, generated.getStopLoss().compareTo(new BigDecimal("103.000000")));
+        assertEquals(0, generated.getExpectedMovePct().compareTo(new BigDecimal("6.0000")));
+    }
+
+    @Test
+    void lowConvictionPrediction_belowMinFloor_leavesTargetNull() {
+        UUID symbolId = UUID.fromString("dddddddd-dddd-dddd-dddd-dddddddddddd");
+        AiPrediction prediction = new AiPrediction(
+                "AAPL",
+                SignalType.BUY,
+                new Confidence(new BigDecimal("0.60")),
+                new BigDecimal("0.05"),  // < MIN_TP_PCT (0.10)
+                List.of(),
+                Instant.parse("2026-04-17T10:00:00Z"));
+
+        RecordingRepository repository = new RecordingRepository();
+        SignalGenerationService service = new SignalGenerationService(repository,
+                new StubMarketDataPort(Map.of("AAPL", new BigDecimal("150.00"))));
+
+        TradingSignal generated = service.generate(symbolId, prediction);
+
+        assertNull(generated.getTargetPrice());
+        assertNull(generated.getStopLoss());
+        assertNull(generated.getExpectedMovePct());
+    }
+
+    @Test
+    void zeroPredictedChangePct_leavesTargetNull() {
+        UUID symbolId = UUID.fromString("cccccccc-0000-0000-0000-000000000000");
+        AiPrediction prediction = new AiPrediction(
+                "AAPL",
+                SignalType.BUY,
+                new Confidence(new BigDecimal("0.60")),
+                BigDecimal.ZERO,
+                List.of(),
+                Instant.parse("2026-04-17T10:00:00Z"));
+
+        RecordingRepository repository = new RecordingRepository();
+        SignalGenerationService service = new SignalGenerationService(repository,
+                new StubMarketDataPort(Map.of("AAPL", new BigDecimal("150.00"))));
+
+        TradingSignal generated = service.generate(symbolId, prediction);
+
+        assertNull(generated.getTargetPrice());
+        assertNull(generated.getStopLoss());
+        assertNull(generated.getExpectedMovePct());
     }
 
     @Test

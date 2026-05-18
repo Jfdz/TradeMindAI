@@ -1,0 +1,40 @@
+cat > .git/hooks/post-push << 'EOF'
+#!/bin/bash
+# Post-push Hook (Windows)
+# Ejecuta automáticamente pr-automation después de push
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+echo ""
+echo "🪝 [POST-PUSH] Branch: $BRANCH"
+echo ""
+
+# Skip para main/develop (usa GA monitoring)
+if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "develop" ]; then
+  echo "📌 Main/develop detected - GA monitoring mode"
+  bash "$SCRIPT_DIR/.claude/agents/ga-monitor.sh" "$BRANCH" 2>&1 || true
+  exit 0
+fi
+
+# Feature branch: ejecutar PR automation
+echo "🚀 Feature branch: $BRANCH"
+echo "🤖 Ejecutando PR automation..."
+echo ""
+
+bash "$SCRIPT_DIR/.claude/agents/pr-automation-windows.sh"
+
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -eq 0 ]; then
+  echo ""
+  echo "✅ Automation completed successfully"
+else
+  echo ""
+  echo "❌ Automation failed with code $EXIT_CODE"
+fi
+
+exit $EXIT_CODE
+EOF
+
+chmod +x .git/hooks/post-push
