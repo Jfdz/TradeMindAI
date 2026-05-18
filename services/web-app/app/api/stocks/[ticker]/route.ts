@@ -1,5 +1,5 @@
-import { getToken } from "next-auth/jwt";
-import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import {
   fetchEarnings,
   fetchPeers,
@@ -9,20 +9,15 @@ import {
 } from "@/lib/enrichment-client";
 
 export async function GET(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ ticker: string }> },
 ) {
-  // getToken reads the raw next-auth JWT from the request cookie and
-  // returns the fields set in the jwt() callback (incl. accessToken).
-  // getServerSession() did not surface the custom accessToken field in
-  // App Router route handlers — that was why every enrichment proxy
-  // call went out unauthenticated and the backend 401'd to null.
-  const jwt = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-  if (!jwt) {
+  const { getToken } = await auth();
+  const token = await getToken({ template: "backend" });
+  if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const token = typeof jwt.accessToken === "string" ? jwt.accessToken : undefined;
   const { ticker } = await params;
   const now = new Date();
   const from = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString();
