@@ -5,14 +5,10 @@
 
 set -euo pipefail
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-MAGENTA='\033[0;35m'
-NC='\033[0m'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../helpers/common.sh
+source "$SCRIPT_DIR/../helpers/common.sh"
+source "$SCRIPT_DIR/../helpers/k8s.sh"
 
 # Configuration
 NAMESPACE="${K8S_NAMESPACE:-trading-saas}"
