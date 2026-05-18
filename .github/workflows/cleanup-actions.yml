@@ -55,21 +55,29 @@ jobs:
               -H "Accept: application/vnd.github+json" \
               --paginate=false \
               "repos/${repo}/actions/runs?per_page=${per_page}&page=${page}" \
-              --jq '.workflow_runs[] | "\(.id)\t\(.status)\t\(.created_at)\t\(.name)"')
+              --jq '.workflow_runs[] | "\(.id)\t\(.status)\t\(.conclusion // "")\t\(.created_at)\t\(.name)"')
 
             [ "${#lines[@]}" -eq 0 ] && break
             total_seen=$((total_seen + ${#lines[@]}))
 
             for line in "${lines[@]}"; do
-              id=$(echo "$line"   | cut -f1)
-              status=$(echo "$line" | cut -f2)
-              created=$(echo "$line" | cut -f3)
-              name=$(echo "$line"   | cut -f4-)
+              id=$(echo "$line"         | cut -f1)
+              status=$(echo "$line"     | cut -f2)
+              conclusion=$(echo "$line" | cut -f3)
+              created=$(echo "$line"    | cut -f4)
+              name=$(echo "$line"       | cut -f5-)
               created_epoch=$(date -u -d "$created" +%s)
 
+              # Only consider completed runs (in_progress / queued stay)
               if [ "$status" != "completed" ]; then
                 continue
               fi
+              # Delete skipped runs immediately regardless of age
+              if [ "$conclusion" = "skipped" ]; then
+                echo -e "${id}\t${created}\t${name} [skipped]" >> "$tmpfile"
+                continue
+              fi
+              # Delete all other completed runs older than the retention window
               if [ "$created_epoch" -ge "$cutoff_epoch" ]; then
                 continue
               fi
