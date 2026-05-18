@@ -28,7 +28,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository/org/owasp/dependency-check-data
-          key: ${{ runner.os }}-dc-data-v12-${{ github.run_id }}
+          key: ${{ runner.os }}-dc-data-v12-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-dc-data-v12-
 
@@ -86,7 +86,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository/org/owasp/dependency-check-data
-          key: ${{ runner.os }}-dc-data-v12-${{ github.run_id }}
+          key: ${{ runner.os }}-dc-data-v12-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-dc-data-v12-
 
