@@ -1,0 +1,14 @@
+#!/bin/bash
+# Post-commit Hook
+# Ejecuta decision-tree después de cada commit
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# Skip para main/develop
+if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "develop" ]; then
+  exit 0
+fi
+
+echo ""
+echo "📊 Analizando contexto..."
+./.claude/agents/decision-tree.ts 2>/dev/null || true
