@@ -1,0 +1,20 @@
+#!/bin/bash
+# Post-push Hook
+# Ejecuta PR automation después de cada push
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# Skip para main/develop (no crear PR automaticamente)
+if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "develop" ]; then
+  echo "📌 Main/develop branch - GA monitoring mode"
+  ./.claude/agents/ga-monitor.sh "$BRANCH" 2>/dev/null || true
+  exit 0
+fi
+
+# Feature branch: crear PR automáticamente
+echo ""
+echo "🚀 Feature branch detectada: $BRANCH"
+echo "📝 Ejecutando PR automation..."
+echo ""
+
+./.claude/agents/pr-automation-enhanced.sh auto
