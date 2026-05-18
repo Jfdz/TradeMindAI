@@ -64,6 +64,7 @@ export type BacktestResultResponse = {
   sharpeRatio: number;
   sortinoRatio: number;
   maxDrawdown: number;
+  calmarRatio: number;
   profitFactor: number;
   winRate: number;
   trades: BacktestTradeResponse[];

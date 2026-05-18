@@ -96,9 +96,13 @@ async function main() {
       continue;
     }
 
-    // Skip if already in Clerk
+    // Skip if already in Clerk — still backfill clerk_user_id in Postgres
     const existing = await findClerkUserByEmail(email);
     if (existing) {
+      await db.query(
+        "UPDATE trading_core.users SET clerk_user_id = $1 WHERE id = $2 AND clerk_user_id IS NULL",
+        [existing.id, id],
+      );
       console.log(`SKIP  ${email} — already in Clerk (${existing.id})`);
       results.push({ email, pgId: id, outcome: "skipped", clerkId: existing.id });
       continue;
@@ -126,6 +130,10 @@ async function main() {
 
     if (status === 200 || status === 201) {
       const clerkId = body.id;
+      await db.query(
+        "UPDATE trading_core.users SET clerk_user_id = $1 WHERE id = $2",
+        [clerkId, id],
+      );
       console.log(`OK    ${email} → ${clerkId}`);
       results.push({ email, pgId: id, outcome: "created", clerkId });
     } else {
