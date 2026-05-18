@@ -40,6 +40,16 @@ jobs:
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: self-hosted
     steps:
+      - name: Verify not a fork
+        env:
+          HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+          BASE_REPO: ${{ github.repository }}
+        run: |
+          if [ "$HEAD_REPO" != "$BASE_REPO" ]; then
+            echo "::error::Refusing to run on fork PR (head_repo=$HEAD_REPO base=$BASE_REPO)"
+            exit 1
+          fi
+
       - name: Checkout failing branch
         uses: actions/checkout@v4
         with:
