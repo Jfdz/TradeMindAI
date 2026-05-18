@@ -205,95 +205,143 @@ Nota: Esto es solo staging. Main requiere GA.
 
 ---
 
+## Tu Flujo de Trabajo Automatizado (Feature Branch → Develop → Main)
+
+**Basado en tu preferencia:**
+
+```
+1. Trabajas en feature branch (ej: feature/limits-ai-decisions)
+2. Haces commits + git push
+   ↓
+3. 🤖 Claude automáticamente detecta push
+   ├─ Crea PR contra develop
+   ├─ Espera tests + security scans en GA
+   ├─ Si TODO PASA:
+   │  ├─ Mergea automáticamente a develop
+   │  ├─ Crea PR contra main
+   │  └─ Mergea automáticamente a main
+   └─ Si algo FALLA:
+      ├─ Reporta error
+      ├─ Muestra logs de GA
+      └─ Espera que confirmes fix
+```
+
+---
+
 ## Configuración: `.claude/settings.json`
 
 ```json
 {
-  "deployment": {
-    "default_strategy": "auto-detect",
-    "strategies": {
-      "github-actions": {
-        "monitor_workflows": true,
-        "workflows_to_track": [
-          "release-orchestrator.yml",
-          "deploy-staging-reusable.yml",
-          "deploy-production-reusable.yml"
-        ],
-        "wait_for_completion": true,
-        "max_wait_minutes": 20,
-        "analyze_failures": true,
-        "suggest_reruns": true
-      },
-      "direct-k8s": {
-        "read_only_auto": [
-          "get",
-          "logs",
-          "describe",
-          "top",
-          "events"
-        ],
-        "hotfix_validations": [
-          "image-exists-in-registry",
-          "dry-run-first",
-          "health-check-post-deploy",
-          "auto-rollback-enabled",
-          "slack-notification"
-        ],
-        "hotfix_timeout_minutes": 5,
-        "auto_rollback_on_failure": true
-      },
-      "local-build": {
-        "allow_for": [
-          "feature-branch-testing"
-        ],
-        "skip_ga": true,
-        "target_env": "staging",
-        "only_staging": true
-      }
-    }
-  },
   "permissions": {
-    "github": {
-      "allow": [
-        "pr-merge",
-        "workflow-run",
-        "view-logs"
-      ],
-      "require_confirm": [
-        "force-push",
-        "delete-branch"
-      ]
+    "allow": [
+      "Bash(git *)",
+      "Bash(npm *)",
+      "Bash(mvn *)",
+      "Bash(python *)",
+      "Bash(docker *)",
+      "Bash(kubectl *)",
+      "Read",
+      "Edit",
+      "Write(.claude)",
+      "mcp__github__pull_request_read",
+      "mcp__github__pull_request_review_write",
+      "mcp__github__create_pull_request",
+      "mcp__github__merge_pull_request",
+      "mcp__github__update_pull_request",
+      "mcp__github__list_pull_requests",
+      "mcp__github__search_pull_requests",
+      "mcp__github__list_commits",
+      "mcp__github__get_commit"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Edit(CLAUDE.md)",
+      "Write(/etc/*)"
+    ],
+    "ask": [
+      "Bash(git push origin main)",
+      "Bash(git push origin develop)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command' | grep -E '^git (push|commit)' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"✅ Git command completed. Checking if PR is needed...\"}}' || true",
+            "statusMessage": "Verificando si necesita PR..."
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "git rev-parse --abbrev-ref HEAD | grep -v '^main$\\|^develop$' && echo '{\"systemMessage\":\"📋 Rama de feature detectada. Estaré listo para crear PR cuando termines tus commits.\"}' || true",
+            "statusMessage": "Verificando rama actual..."
+          }
+        ]
+      }
+    ]
+  },
+  "deployment": {
+    "pr_automation": {
+      "enabled": true,
+      "auto_create_pr": true,
+      "trigger_on": "git_push",
+      "branches": {
+        "feature": {
+          "pr_target": "develop",
+          "auto_merge_on_success": true,
+          "wait_for_checks": true,
+          "max_wait_minutes": 20,
+          "then_create_pr_to": "main"
+        },
+        "develop": {
+          "pr_target": "main",
+          "auto_merge_on_success": true,
+          "wait_for_checks": true
+        }
+      },
+      "ga_monitoring": {
+        "enabled": true,
+        "workflows_to_track": [
+          "ci-market-data-service.yml",
+          "ci-trading-core-service.yml",
+          "ci-ai-engine.yml",
+          "ci-web-app.yml",
+          "release-orchestrator.yml"
+        ],
+        "analyze_failures": true,
+        "suggest_reruns": true,
+        "notify_on_failure": true
+      }
     },
     "k8s": {
-      "readonly_auto_execute": [
+      "read_only_auto": [
         "get",
         "logs",
         "describe",
         "top",
         "events"
       ],
-      "hotfix_require_confirm": [
-        "set-image",
-        "patch",
-        "scale"
+      "hotfix_validations": [
+        "image-exists-in-registry",
+        "dry-run-first",
+        "health-check-post-deploy",
+        "auto-rollback-enabled",
+        "slack-notification"
       ],
-      "never_allow": [
-        "delete",
-        "apply",
-        "edit-secret"
-      ]
+      "hotfix_timeout_minutes": 5,
+      "auto_rollback_on_failure": true
     }
-  },
-  "remote": {
-    "k8s_config": "./.claude/k8s-contexts.json",
-    "timeout_ms": 5000,
-    "cache_ttl_ms": {
-      "k8s_queries": 30000,
-      "logs": 60000,
-      "events": 10000
-    },
-    "log_path": "./.claude/debug-logs/",
-    "audit_log": "./.claude/debug-logs/audit.jsonl"
   }
 }
 ```

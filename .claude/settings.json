@@ -1,0 +1,61 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(npm *)",
+      "Bash(mvn *)",
+      "Bash(python *)",
+      "Bash(docker *)",
+      "Bash(kubectl *)",
+      "Read",
+      "Edit",
+      "Write(.claude)",
+      "mcp__github__pull_request_read",
+      "mcp__github__pull_request_review_write",
+      "mcp__github__create_pull_request",
+      "mcp__github__merge_pull_request",
+      "mcp__github__update_pull_request",
+      "mcp__github__list_pull_requests",
+      "mcp__github__search_pull_requests",
+      "mcp__github__list_commits",
+      "mcp__github__get_commit"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Edit(CLAUDE.md)",
+      "Write(/etc/*)"
+    ],
+    "ask": [
+      "Bash(git push origin main)",
+      "Bash(git push origin develop)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command' | grep -E '^git (push|commit)' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"✅ Git command completed. Checking if PR is needed...\"}}' || true",
+            "statusMessage": "Verificando si necesita PR..."
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "git rev-parse --abbrev-ref HEAD | grep -v '^main$\\|^develop$' && echo '{\"systemMessage\":\"📋 Rama de feature detectada. Estaré listo para crear PR cuando termines tus commits.\"}' || true",
+            "statusMessage": "Verificando rama actual..."
+          }
+        ]
+      }
+    ]
+  }
+}
