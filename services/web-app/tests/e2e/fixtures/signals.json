@@ -1,0 +1,58 @@
+{
+  "content": [
+    {
+      "id": "sig-buy-1",
+      "symbol": "AAPL",
+      "type": "BUY",
+      "confidence": 0.85,
+      "generatedAt": "2026-05-08T10:00:00Z",
+      "timeframe": "DAILY",
+      "stopLossPct": -0.05,
+      "takeProfitPct": 0.1,
+      "predictedChangePct": 0.08,
+      "entryPrice": 182.5
+    },
+    {
+      "id": "sig-buy-2",
+      "symbol": "TSLA",
+      "type": "BUY",
+      "confidence": 0.78,
+      "generatedAt": "2026-05-08T11:00:00Z",
+      "timeframe": "DAILY",
+      "stopLossPct": -0.04,
+      "takeProfitPct": 0.09,
+      "predictedChangePct": 0.07,
+      "entryPrice": 245.0
+    },
+    {
+      "id": "sig-sell-1",
+      "symbol": "MSFT",
+      "type": "SELL",
+      "confidence": 0.72,
+      "generatedAt": "2026-05-08T09:00:00Z",
+      "timeframe": "DAILY",
+      "stopLossPct": -0.03,
+      "takeProfitPct": 0.06,
+      "predictedChangePct": -0.05,
+      "entryPrice": 430.5
+    },
+    {
+      "id": "sig-hold-1",
+      "symbol": "GOOGL",
+      "type": "HOLD",
+      "confidence": 0.6,
+      "generatedAt": "2026-05-08T08:00:00Z",
+      "timeframe": "DAILY",
+      "stopLossPct": null,
+      "takeProfitPct": null,
+      "predictedChangePct": 0.01,
+      "entryPrice": null
+    }
+  ],
+  "number": 0,
+  "size": 4,
+  "totalElements": 4,
+  "totalPages": 1,
+  "first": true,
+  "last": true
+}

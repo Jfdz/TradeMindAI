@@ -35,8 +35,7 @@ class PredictionResultListenerTest {
                 """);
 
         assertNotNull(useCase.lastSignal);
-        UUID expectedSymbolId = PredictionResultListener.symbolIdForTicker("aapl");
-        assertEquals(expectedSymbolId, useCase.lastSignal.getSymbolId());
+        assertNull(useCase.lastSignal.getSymbolId());
         assertEquals("AAPL", useCase.lastPrediction.getTicker());
         assertEquals(new BigDecimal("0.85"), useCase.lastPrediction.getConfidence().getValue());
     }
@@ -88,14 +87,33 @@ class PredictionResultListenerTest {
         assertNull(useCase.lastPrediction);
     }
 
+    @Test
+    void acceptsAlternativePublisherFieldNames() throws Exception {
+        RecordingUseCase useCase = new RecordingUseCase();
+        PredictionResultListener listener = new PredictionResultListener(useCase, new ObjectMapper());
+
+        listener.onPredictionResult("""
+                {
+                  "predictions": [
+                    {
+                      "symbol": "nvda",
+                      "type": "DOWN",
+                      "confidence": 0.61,
+                      "predictedChangePct": -1.5,
+                      "rawLogits": [0.7, 0.2, 0.1]
+                    }
+                  ]
+                }
+                """);
+
+        assertNotNull(useCase.lastSignal);
+        assertEquals("NVDA", useCase.lastPrediction.getTicker());
+        assertEquals(new BigDecimal("-1.5"), useCase.lastPrediction.getPredictedChangePct());
+    }
+
     private static final class RecordingUseCase implements GenerateSignalUseCase {
         private TradingSignal lastSignal;
         private AiPrediction lastPrediction;
-
-        @Override
-        public TradingSignal generate(UUID symbolId, String ticker) {
-            throw new UnsupportedOperationException();
-        }
 
         @Override
         public TradingSignal generate(UUID symbolId, AiPrediction prediction) {

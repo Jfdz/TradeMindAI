@@ -29,5 +29,9 @@ public interface HistoricalMarketDataPort {
         public static LatestPricesResult unavailable(String reason) {
             return new LatestPricesResult(false, Map.of(), reason == null || reason.isBlank() ? "unknown" : reason);
         }
+
+        public static LatestPricesResult partial(Map<String, BigDecimal> prices, List<String> missingSymbols) {
+            return new LatestPricesResult(true, prices, "missing: " + String.join(",", missingSymbols));
+        }
     }
 }

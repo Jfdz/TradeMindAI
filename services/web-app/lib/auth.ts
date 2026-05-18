@@ -43,7 +43,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
 
     // Backend may rotate the refresh token — capture it if present
     const setCookie = response.headers.get("set-cookie") ?? "";
-    const refreshTokenMatch = setCookie.match(/refresh_token=([^;]+)/);
+    const refreshTokenMatch = /refresh_token=([^;]+)/.exec(setCookie);
     const newRefreshToken = refreshTokenMatch?.[1] ?? (token.refreshToken as string);
 
     return {
@@ -104,7 +104,7 @@ export const authOptions: NextAuthOptions = {
 
           // Extract refresh_token from Set-Cookie — stored in NextAuth JWT for server-side refresh
           const setCookie = response.headers.get("set-cookie") ?? "";
-          const refreshTokenMatch = setCookie.match(/refresh_token=([^;]+)/);
+          const refreshTokenMatch = /refresh_token=([^;]+)/.exec(setCookie);
           const refreshToken = refreshTokenMatch?.[1] ?? undefined;
 
           return {
@@ -141,9 +141,14 @@ export const authOptions: NextAuthOptions = {
         return token;
       }
 
-      // Token still valid (60s buffer before real expiry)
+      // Token still valid (120s buffer before real expiry). Re-evaluate
+      // isAdmin on every callback so ADMIN_EMAILS changes propagate
+      // without forcing a fresh login.
+      if (typeof token.email === "string") {
+        token.isAdmin = ADMIN_EMAILS.has(token.email.toLowerCase());
+      }
       const expires = typeof token.accessTokenExpires === "number" ? token.accessTokenExpires : 0;
-      if (Date.now() < expires - 60_000) {
+      if (Date.now() < expires - 120_000) {
         return token;
       }
 

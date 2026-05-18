@@ -48,6 +48,13 @@ spec:
                 name: trading-core-service
                 port:
                   number: 8082
+          - path: /api/v1/admin
+            pathType: Prefix
+            backend:
+              service:
+                name: trading-core-service
+                port:
+                  number: 8082
           - path: /api/v1/strategies
             pathType: Prefix
             backend:
@@ -70,6 +77,27 @@ spec:
                 port:
                   number: 8082
           - path: /api/v1/subscriptions
+            pathType: Prefix
+            backend:
+              service:
+                name: trading-core-service
+                port:
+                  number: 8082
+          - path: /api/v1/users
+            pathType: Prefix
+            backend:
+              service:
+                name: trading-core-service
+                port:
+                  number: 8082
+          - path: /api/v1/stocks
+            pathType: Prefix
+            backend:
+              service:
+                name: trading-core-service
+                port:
+                  number: 8082
+          - path: /api/v1/enrichment
             pathType: Prefix
             backend:
               service:

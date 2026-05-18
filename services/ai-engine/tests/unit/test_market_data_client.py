@@ -56,7 +56,8 @@ def test_fetch_ohlcv_returns_oldest_rows_first(monkeypatch):
 
     monkeypatch.setattr(market_data_client_module.httpx, "get", fake_get)
 
-    frame = MarketDataClient("http://market-data-service:8081", internal_secret="secret-123").fetch_ohlcv("AAPL", size=2)
+    client = MarketDataClient("http://market-data-service:8081", internal_secret="secret-123")
+    frame = client.fetch_ohlcv("AAPL", size=2)
 
     assert isinstance(frame, pd.DataFrame)
     assert list(frame.index.strftime("%Y-%m-%d")) == ["2026-04-16", "2026-04-17"]
@@ -94,8 +95,9 @@ def test_fetch_ohlcv_propagates_http_errors(monkeypatch, status_code):
 
     monkeypatch.setattr(market_data_client_module.httpx, "get", fake_get)
 
+    client = MarketDataClient("http://market-data-service:8081", internal_secret="secret-123")
     with pytest.raises(httpx.HTTPStatusError):
-        MarketDataClient("http://market-data-service:8081", internal_secret="secret-123").fetch_ohlcv("AAPL")
+        client.fetch_ohlcv("AAPL")
 
 
 class _FakeDate:

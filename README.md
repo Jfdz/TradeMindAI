@@ -4,7 +4,7 @@ AI-powered trading signal SaaS platform with CNN-based stock predictions, subscr
 
 ## Overview
 
-Trading SaaS is a microservices platform that delivers AI-generated trading signals for stock markets. It ingests real market data, processes it through a CNN model, and serves BUY/SELL/HOLD signals to subscribers via a Next.js dashboard.
+Trading SaaS is a microservices platform that delivers AI-generated trading signals for stock markets. It ingests real market data, processes it through a CNN model, and serves BUY/SELL/HOLD signals to subscribers via a Next.js dashboard
 
 ## Architecture
 
@@ -65,7 +65,7 @@ make test
 
 ### Environment variables
 
-All variables are documented in `.env.example`. Copy it to `.env` and fill in your values.
+All variables are documented in `.env.example`. Copy it to `.env` and fill in your values
 
 ## Services
 

@@ -22,8 +22,28 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TradeMindAI",
-  description: "Frontend dashboard for trading signals, strategies, and portfolio insights.",
+  metadataBase: new URL("https://trademind.es"),
+  title: {
+    default: "TradeMindAI",
+    template: "%s — TradeMindAI",
+  },
+  description:
+    "AI-powered trading signals, portfolio analytics, and backtesting for disciplined traders.",
+  openGraph: {
+    type: "website",
+    siteName: "TradeMindAI",
+    title: "TradeMindAI",
+    description:
+      "AI-powered trading signals, portfolio analytics, and backtesting for disciplined traders.",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "TradeMindAI" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TradeMindAI",
+    description:
+      "AI-powered trading signals, portfolio analytics, and backtesting for disciplined traders.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({

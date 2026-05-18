@@ -1,7 +1,7 @@
 type RouteLoadingProps = {
-  eyebrow: string;
-  title: string;
-  description: string;
+  readonly eyebrow: string;
+  readonly title: string;
+  readonly description: string;
 };
 
 export function RouteLoading({ eyebrow, title, description }: RouteLoadingProps) {

@@ -93,10 +93,13 @@ class MarketDataProxySecurityTest {
     }
 
     @Test
-    void latestPriceRequiresAuthentication() throws Exception {
+    void latestPriceIsPublic() throws Exception {
+        // /api/v1/prices/latest and /api/v1/prices/{ticker}/latest are permit-all (public market data)
         mockMvc.perform(get("/api/v1/prices/AAPL/latest"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Authentication required"));
+                .andExpect(result -> {
+                    int status = result.getResponse().getStatus();
+                    if (status == 401) throw new AssertionError("Expected non-401 for public prices endpoint, got 401");
+                });
     }
 
     @Test

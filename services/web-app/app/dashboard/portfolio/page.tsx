@@ -5,12 +5,37 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { apiClient } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
+import { StockLogo } from "@/components/ui/stock-logo";
+import {
+  ApiError,
+  apiClient,
+  type PortfolioClosedPositionResponse,
+  type PortfolioHoldingResponse,
+} from "@/lib/api-client";
 import type { EnrichedHolding } from "@/lib/dashboard/dashboard-api";
 import { fetchPortfolioPageData } from "@/lib/dashboard/client-data";
+import { useStockLogos } from "@/lib/dashboard/use-stock-logos";
+import {
+  TONE_NEGATIVE,
+  TONE_NEUTRAL,
+  formatMoney,
+  formatMoneyOrDash,
+  formatPercentOrDash,
+  formatSignedMoney,
+  formatSignedMoneyOrDash,
+  formatSignedPercent,
+  signedTone,
+} from "@/lib/dashboard/format";
+import {
+  buildClosePositionPayload,
+  calculateClosePositionPnl,
+  type ClosePositionDraft,
+} from "@/lib/portfolio-close";
 
 const EMPTY_HOLDINGS: EnrichedHolding[] = [];
+const fieldCls =
+  "w-full rounded-2xl border border-border bg-bg-2 px-4 py-3 text-sm text-white outline-none transition placeholder:text-text-3 focus:border-cyan/40";
 
 function isMarketDataUnavailable(dataSource: string | null | undefined) {
   return dataSource === "unavailable";
@@ -20,17 +45,111 @@ function isPartialMarketData(dataSource: string | null | undefined) {
   return dataSource === "partial-market-data";
 }
 
-function formatMoney(value: number) {
-  return value.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
+function isEmptyPortfolio(dataSource: string | null | undefined) {
+  return dataSource === "none" || dataSource === "missing-portfolio";
+}
+
+type DataSourceState = "empty" | "unavailable" | "partial" | "ok";
+
+function getDataSourceState(dataSource: string | null | undefined): DataSourceState {
+  if (isEmptyPortfolio(dataSource)) return "empty";
+  if (isMarketDataUnavailable(dataSource)) return "unavailable";
+  if (isPartialMarketData(dataSource)) return "partial";
+  return "ok";
+}
+
+function pickTotalValueDisplay(state: DataSourceState, totalCapital: number | null) {
+  if (state === "empty") return formatMoney(0);
+  if (totalCapital != null) return formatMoney(totalCapital);
+  return "Unavailable";
+}
+
+function pickTotalValueDetail(state: DataSourceState, unpricedCount: number) {
+  switch (state) {
+    case "empty":
+      return "No open positions";
+    case "unavailable":
+      return "Market data unavailable";
+    case "partial":
+      return `${unpricedCount} still unpriced`;
+    default:
+      return unpricedCount > 0 ? `${unpricedCount} unpriced` : "Marked to market";
+  }
+}
+
+function pickUnrealizedValue(state: DataSourceState, unrealizedPnl: number | null) {
+  if (state === "empty") return formatMoney(0);
+  if (state === "unavailable") return "Unavailable";
+  if (unrealizedPnl != null) return formatSignedMoney(unrealizedPnl);
+  return "N/A";
+}
+
+function pickUnrealizedDetail(state: DataSourceState) {
+  switch (state) {
+    case "unavailable":
+      return "Market data unavailable";
+    case "partial":
+      return "Priced holdings only";
+    default:
+      return "Open position gains";
+  }
+}
+
+function pickUnrealizedTone(state: DataSourceState, unrealizedPnl: number | null) {
+  if (state === "empty" || state === "unavailable") return TONE_NEUTRAL;
+  return signedTone(unrealizedPnl, TONE_NEUTRAL);
+}
+
+function pickDonutCenterValue(state: DataSourceState, totalCapital: number | null) {
+  if (totalCapital != null) return formatMoney(totalCapital);
+  if (state === "empty") return formatMoney(0);
+  return "Unavailable";
+}
+
+function formatWinRate(winRate: number | null | undefined) {
+  if (winRate == null) return "—";
+  return `${Math.round(winRate * 100)}%`;
+}
+
+function pickWinRateDetail(winRate: number | null | undefined) {
+  if (winRate == null) return "No closed trades yet";
+  return "Position-level";
+}
+
+function pickWinRateTone(winRate: number | null | undefined) {
+  return signedTone(winRate ?? null, TONE_NEGATIVE);
+}
+
+function calculatePnlPct(pnl: number | null, costBasis: number) {
+  if (pnl == null || costBasis <= 0) return null;
+  return (pnl / costBasis) * 100;
+}
+
+function formatPnlPctCell(lastPrice: number | null | undefined, pnlPct: number | null) {
+  if (lastPrice == null) return "—";
+  return formatSignedPercent(pnlPct ?? 0);
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) {
+    return "—";
+  }
+
+  return new Date(value).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   });
 }
 
-function formatSignedMoney(value: number) {
-  const formatted = formatMoney(Math.abs(value));
-  return value >= 0 ? `+${formatted}` : `-${formatted}`;
+function synthTrend(position: EnrichedHolding): number[] {
+  if (position.trend.length > 0) return position.trend;
+  const start = position.averageCost;
+  const end = position.lastPrice ?? null;
+  if (end == null || start <= 0) return [];
+  return [start, end];
 }
 
 function getDonutTextClass(value: number) {
@@ -40,9 +159,9 @@ function getDonutTextClass(value: number) {
   return "mt-3 font-display text-xl font-bold tracking-[-0.05em] text-white";
 }
 
-function Sparkline({ values, color }: { values: number[]; color: string }) {
+function Sparkline({ values, color }: { readonly values: number[]; readonly color: string }) {
   if (values.length === 0) {
-    return null;
+    return <span className="text-text-3 text-xs">—</span>;
   }
 
   const min = Math.min(...values);
@@ -66,19 +185,22 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
   );
 }
 
-const fieldCls =
-  "w-full rounded-2xl border border-border bg-bg-2 px-4 py-3 text-sm text-white outline-none transition placeholder:text-text-3 focus:border-cyan/40";
-
-function AddPositionPanel({
-  onAdded,
+function ClosePositionPanel({
+  position,
+  onClosed,
+  onAlreadyClosed,
   onClose,
 }: {
-  onAdded: () => void;
-  onClose: () => void;
+  readonly position: PortfolioHoldingResponse;
+  readonly onClosed: (payload: { realizedPnl: number }) => void;
+  readonly onAlreadyClosed: () => void;
+  readonly onClose: () => void;
 }) {
-  const [ticker, setTicker] = useState("");
-  const [quantity, setQuantity] = useState("");
-  const [entryPrice, setEntryPrice] = useState("");
+  const [draft, setDraft] = useState<ClosePositionDraft>({
+    exitPrice: "",
+    fees: "",
+    closedAt: "",
+  });
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const firstRef = useRef<HTMLInputElement>(null);
@@ -89,20 +211,27 @@ function AddPositionPanel({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const qty = parseFloat(quantity);
-    const price = parseFloat(entryPrice);
-    if (!ticker.trim() || isNaN(qty) || qty <= 0 || isNaN(price) || price <= 0) {
-      setErr("Please fill all fields with valid positive numbers.");
-      return;
-    }
-    setSubmitting(true);
-    setErr(null);
     try {
-      await apiClient.addPosition({ ticker: ticker.trim().toUpperCase(), quantity: qty, entryPrice: price });
-      toast.success(`${ticker.toUpperCase()} position added`);
-      onAdded();
+      if (!position.id) {
+        toast.error("Cannot close position: missing position ID. Contact support.");
+        return;
+      }
+      const payload = buildClosePositionPayload(draft);
+      setSubmitting(true);
+      setErr(null);
+      await apiClient.closePosition(position.id, payload);
+      onClosed({ realizedPnl: calculateClosePositionPnl(position, payload) });
     } catch (error) {
-      setErr(error instanceof Error ? error.message : "Failed to add position");
+      if (error instanceof ApiError && error.status === 409) {
+        onAlreadyClosed();
+        return;
+      }
+      if (error instanceof ApiError && error.isRateLimit) {
+        const seconds = error.rateLimit ? Math.max(0, Math.ceil((error.rateLimit.resetEpoch * 1000 - Date.now()) / 1000)) : 60;
+        toast.warning(`Rate limit reached — try again in ${seconds}s or upgrade your plan.`);
+        return;
+      }
+      setErr(error instanceof Error ? error.message : "Failed to close position");
     } finally {
       setSubmitting(false);
     }
@@ -110,50 +239,55 @@ function AddPositionPanel({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-end sm:items-center sm:justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md rounded-t-[28px] sm:rounded-[28px] border border-border bg-bg-1 p-6 shadow-glow">
-        <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Portfolio</div>
-        <h3 className="mt-2 font-display text-2xl font-bold tracking-[-0.04em] text-white">Add position</h3>
-        <p className="mt-2 text-sm text-text-2">Enter the ticker, quantity and your average entry price.</p>
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+        aria-label="Close dialog"
+      />
+      <div className="relative z-10 w-full max-w-md rounded-t-[28px] border border-border bg-bg-1 p-6 shadow-glow sm:rounded-[28px]">
+        <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Close Position</div>
+        <h3 className="mt-2 font-display text-2xl font-bold tracking-[-0.04em] text-white">{position.symbol}</h3>
+        <p className="mt-2 text-sm text-text-2">Record the final sale price, optional fees, and close time for this full exit.</p>
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <label className="block">
-            <span className="mb-2 block text-xs uppercase tracking-[0.22em] text-text-3">Ticker</span>
+            <span className="mb-2 block text-xs uppercase tracking-[0.22em] text-text-3">Exit Price (USD)</span>
             <input
               ref={firstRef}
-              className={fieldCls}
-              placeholder="e.g. AAPL"
-              value={ticker}
-              onChange={(e) => setTicker(e.target.value)}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-2 block text-xs uppercase tracking-[0.22em] text-text-3">Quantity</span>
-            <input
-              type="number"
-              min="0.00000001"
-              step="any"
-              className={fieldCls}
-              placeholder="10"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-2 block text-xs uppercase tracking-[0.22em] text-text-3">Entry price (USD)</span>
-            <input
               type="number"
               min="0.01"
               step="any"
               className={fieldCls}
-              placeholder="178.50"
-              value={entryPrice}
-              onChange={(e) => setEntryPrice(e.target.value)}
+              placeholder="185.00"
+              value={draft.exitPrice}
+              onChange={(e) => setDraft((current) => ({ ...current, exitPrice: e.target.value }))}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-2 block text-xs uppercase tracking-[0.22em] text-text-3">Fees (USD)</span>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              className={fieldCls}
+              placeholder="0.00"
+              value={draft.fees}
+              onChange={(e) => setDraft((current) => ({ ...current, fees: e.target.value }))}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-2 block text-xs uppercase tracking-[0.22em] text-text-3">Closed At</span>
+            <input
+              type="datetime-local"
+              className={fieldCls}
+              value={draft.closedAt}
+              onChange={(e) => setDraft((current) => ({ ...current, closedAt: e.target.value }))}
             />
           </label>
           {err ? <p className="text-sm text-red">{err}</p> : null}
           <div className="flex gap-3 pt-2">
             <Button type="submit" variant="cyan" disabled={submitting} className="flex-1">
-              {submitting ? "Adding…" : "Add position"}
+              {submitting ? "Closing..." : "Close Position"}
             </Button>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
@@ -167,56 +301,57 @@ function AddPositionPanel({
 
 export default function PortfolioPage() {
   const queryClient = useQueryClient();
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [positionToClose, setPositionToClose] = useState<PortfolioHoldingResponse | null>(null);
   const { data, isLoading, error } = useQuery({
     queryKey: ["portfolio"],
     queryFn: fetchPortfolioPageData,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+    refetchOnMount: "always",
   });
-const portfolio = data?.portfolio ?? null;
+
+  const portfolio = data?.portfolio ?? null;
   const holdings = data?.holdings ?? EMPTY_HOLDINGS;
+  const closedPositions = useMemo(() => portfolio?.closedPositions ?? [], [portfolio]);
+  const closedLogos = useStockLogos(
+    useMemo(() => closedPositions.map((position) => position.symbol), [closedPositions]),
+  );
 
   const summary = useMemo(() => {
     if (!portfolio) {
       return null;
     }
 
-    const totalCost = holdings.reduce((sum, h) => sum + (h.quantity * h.averageCost), 0);
+    const totalCost = holdings.reduce((sum, h) => sum + h.quantity * h.averageCost, 0);
     const unpricedCount = holdings.filter((h) => h.lastPrice == null).length;
-    const marketDataUnavailable = isMarketDataUnavailable(portfolio.dataSource);
-    const partialMarketData = isPartialMarketData(portfolio.dataSource);
+    const state = getDataSourceState(portfolio.dataSource);
+
+    const showCostZero = state === "empty" || totalCost > 0;
+    const costBasisValue = showCostZero ? formatMoney(totalCost) : "—";
+    const winRateValue = formatWinRate(portfolio.winRate);
 
     return [
       {
         label: "Total Value",
-        value: portfolio.totalCapital != null ? formatMoney(portfolio.totalCapital) : "Unavailable",
-        detail: marketDataUnavailable
-          ? "Market data unavailable"
-          : partialMarketData
-            ? `${unpricedCount} still unpriced`
-            : unpricedCount > 0
-              ? `${unpricedCount} unpriced`
-              : "Marked to market",
+        value: pickTotalValueDisplay(state, portfolio.totalCapital),
+        detail: pickTotalValueDetail(state, unpricedCount),
       },
       {
         label: "Total Cost Basis",
-        value: totalCost > 0 ? formatMoney(totalCost) : "—",
+        value: costBasisValue,
         detail: "Weighted entry cost",
       },
       {
         label: "Unrealized P&L",
-        value: marketDataUnavailable
-          ? "Unavailable"
-          : portfolio.unrealizedPnl != null
-            ? formatSignedMoney(portfolio.unrealizedPnl)
-            : "N/A",
-        detail: marketDataUnavailable ? "Market data unavailable" : partialMarketData ? "Priced holdings only" : "Open position gains",
+        value: pickUnrealizedValue(state, portfolio.unrealizedPnl),
+        detail: pickUnrealizedDetail(state),
+        tone: pickUnrealizedTone(state, portfolio.unrealizedPnl),
       },
       {
         label: "Win Rate",
-        value: portfolio.winRate != null ? `${Math.round(portfolio.winRate * 100)}%` : "N/A",
-        detail: "Position-level",
+        value: winRateValue,
+        detail: pickWinRateDetail(portfolio.winRate),
+        tone: pickWinRateTone(portfolio.winRate),
       },
     ];
   }, [portfolio, holdings]);
@@ -275,31 +410,50 @@ const portfolio = data?.portfolio ?? null;
 
   return (
     <div className="space-y-8">
-      {showAddForm ? (
-        <AddPositionPanel
-          onAdded={() => {
-            setShowAddForm(false);
+      {positionToClose ? (
+        <ClosePositionPanel
+          position={positionToClose}
+          onClosed={({ realizedPnl }) => {
+            const symbol = positionToClose.symbol;
+            setPositionToClose(null);
             queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+            toast.success(`${symbol} closed with ${formatSignedMoney(realizedPnl)} realized`);
           }}
-          onClose={() => setShowAddForm(false)}
+          onAlreadyClosed={() => {
+            const symbol = positionToClose.symbol;
+            setPositionToClose(null);
+            queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+            toast.message(`${symbol} was already closed — refreshed your portfolio`);
+          }}
+          onClose={() => setPositionToClose(null)}
         />
       ) : null}
 
-      {isMarketDataUnavailable(portfolio.dataSource) ? (
-        <section className="rounded-[20px] border border-gold/30 bg-[rgba(232,184,75,0.12)] px-5 py-4 text-sm text-gold">
-          Market data is unavailable. Open positions are shown without current prices until the pricing service recovers.
-        </section>
-      ) : isPartialMarketData(portfolio.dataSource) ? (
-        <section className="rounded-[20px] border border-gold/30 bg-[rgba(232,184,75,0.12)] px-5 py-4 text-sm text-gold">
-          Market data returned only a partial price set. Holdings without a live quote remain visible as unpriced until the next refresh.
-        </section>
-      ) : null}
+      {(() => {
+        const marketDataUnavailable = isMarketDataUnavailable(portfolio.dataSource);
+        const partialMarketData = isPartialMarketData(portfolio.dataSource);
+        if (marketDataUnavailable) {
+          return (
+            <section className="rounded-[20px] border border-gold/30 bg-[rgba(232,184,75,0.12)] px-5 py-4 text-sm text-gold">
+              Market data is unavailable. Open positions are shown without current prices until the pricing service recovers.
+            </section>
+          );
+        }
+        if (partialMarketData) {
+          return (
+            <section className="rounded-[20px] border border-gold/30 bg-[rgba(232,184,75,0.12)] px-5 py-4 text-sm text-gold">
+              Market data returned only a partial price set. Holdings without a live quote remain visible as unpriced until the next refresh.
+            </section>
+          );
+        }
+        return null;
+      })()}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {summary.map((card) => (
           <article key={card.label} className="rounded-[20px] border border-border bg-bg-1/80 p-5 shadow-glow">
             <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">{card.label}</div>
-            <div className="mt-3 font-display text-3xl font-bold tracking-[-0.05em] text-white">{card.value}</div>
+            <div className={`mt-3 font-display text-3xl font-bold tracking-[-0.05em] ${"tone" in card ? card.tone : "text-white"}`}>{card.value}</div>
             <div className="mt-2 text-sm text-text-2">{card.detail}</div>
           </article>
         ))}
@@ -307,7 +461,7 @@ const portfolio = data?.portfolio ?? null;
 
       <section className="grid gap-6 lg:grid-cols-[300px_1fr]">
         <article className="rounded-[24px] border border-border bg-bg-1/80 p-6 shadow-glow">
-          <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Portfolio mix</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Portfolio Mix</div>
           <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">Allocation donut</h3>
 
           <div className="mt-8 flex items-center justify-center">
@@ -315,9 +469,9 @@ const portfolio = data?.portfolio ?? null;
               <div className="absolute inset-4 rounded-full border border-border bg-bg-0/95 p-3 text-center">
                 <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">Portfolio</div>
                 <div className={getDonutTextClass(portfolio.totalCapital ?? 0)}>
-                  {portfolio.totalCapital != null ? formatMoney(portfolio.totalCapital) : "Unavailable"}
+                  {pickDonutCenterValue(getDataSourceState(portfolio.dataSource), portfolio.totalCapital)}
                 </div>
-                <div className="mt-2 text-sm text-text-2 whitespace-nowrap">
+                <div className={`mt-2 whitespace-nowrap text-sm ${signedTone(portfolio.realizedPnl)}`}>
                   Realized {formatSignedMoney(portfolio.realizedPnl)}
                 </div>
               </div>
@@ -326,7 +480,7 @@ const portfolio = data?.portfolio ?? null;
 
           <div className="mt-6 space-y-3">
             {holdings.map((position) => (
-              <div key={position.symbol} className="flex items-center justify-between rounded-2xl border border-border bg-bg-2 px-4 py-3">
+              <div key={position.id} className="flex items-center justify-between rounded-2xl border border-border bg-bg-2 px-4 py-3">
                 <div className="flex items-center gap-3">
                   <span className="h-3 w-3 rounded-full" style={{ backgroundColor: position.color }} />
                   <div>
@@ -334,7 +488,9 @@ const portfolio = data?.portfolio ?? null;
                     <div className="text-xs text-text-3">{position.sector}</div>
                   </div>
                 </div>
-                <div className="font-mono text-sm text-text-1">{position.allocationPct != null ? `${position.allocationPct.toFixed(1)}%` : "—"}</div>
+                <div className="font-mono text-sm text-text-1">
+                  {formatPercentOrDash(position.allocationPct)}
+                </div>
               </div>
             ))}
           </div>
@@ -355,63 +511,134 @@ const portfolio = data?.portfolio ?? null;
           </div>
 
           <div className="mt-6 overflow-x-auto">
-            {holdings.length === 0 && (
+            {holdings.length === 0 ? (
               <div className="py-12 text-center text-sm text-text-3">
                 No open positions. Use &ldquo;Add Position&rdquo; to track your holdings.
               </div>
+            ) : (
+              <table className="min-w-[1080px] w-full border-separate border-spacing-0">
+                <thead className="text-[11px] uppercase tracking-[0.22em] text-text-3">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Asset</th>
+                    <th className="px-4 py-3 text-left">Qty</th>
+                    <th className="px-4 py-3 text-left">Avg cost</th>
+                    <th className="px-4 py-3 text-left">Current</th>
+                    <th className="px-4 py-3 text-left">P&amp;L</th>
+                    <th className="px-4 py-3 text-left">P&amp;L %</th>
+                    <th className="px-4 py-3 text-left">7d sparkline</th>
+                    <th className="px-4 py-3 text-left">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {holdings.map((position, index) => {
+                    const pnl = position.unrealizedPnl ?? null;
+                    const costBasis = position.quantity * position.averageCost;
+                    const pnlPct = calculatePnlPct(pnl, costBasis);
+                    const rowClass = index % 2 === 0 ? "bg-white/[0.015]" : "";
+                    const lastPriceCell = formatMoneyOrDash(position.lastPrice);
+                    const pnlCell = formatSignedMoneyOrDash(pnl);
+                    const pnlPctCell = formatPnlPctCell(position.lastPrice, pnlPct);
+
+                    return (
+                      <tr key={position.id} className={rowClass}>
+                        <td className="border-t border-border px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            <span className="h-3 w-3 rounded-full" style={{ backgroundColor: position.color }} />
+                            <div>
+                              <Link
+                                href={`/dashboard/stocks/${position.symbol}`}
+                                className="font-semibold text-white hover:text-cyan transition-colors"
+                              >
+                                {position.symbol}
+                              </Link>
+                              <div className="text-xs text-text-3">{position.name}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="border-t border-border px-4 py-4 font-mono text-text-1">{position.quantity}</td>
+                        <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.averageCost)}</td>
+                        <td className="border-t border-border px-4 py-4 font-mono text-text-1">{lastPriceCell}</td>
+                        <td className={`border-t border-border px-4 py-4 font-mono ${signedTone(pnl, TONE_NEUTRAL)}`}>
+                          {pnlCell}
+                        </td>
+                        <td className={`border-t border-border px-4 py-4 font-mono ${signedTone(pnlPct, TONE_NEUTRAL)}`}>
+                          {pnlPctCell}
+                        </td>
+                        <td className="border-t border-border px-4 py-4">
+                          <Sparkline values={synthTrend(position)} color={position.color} />
+                        </td>
+                        <td className="border-t border-border px-4 py-4">
+                          <button
+                            type="button"
+                            onClick={() => setPositionToClose(position)}
+                            className="rounded-full border border-cyan/30 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-cyan transition hover:bg-cyan/10"
+                          >
+                            Close
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
-            {holdings.length > 0 && (
-            <table className="min-w-[980px] w-full border-separate border-spacing-0">
+          </div>
+        </article>
+      </section>
+
+      <section className="rounded-[24px] border border-border bg-bg-1/80 p-6 shadow-glow">
+        <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">History</div>
+        <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">Closed positions</h3>
+        <p className="mt-2 text-sm text-text-2">Realized exits stay visible here after they leave the open holdings table.</p>
+
+        <div className="mt-6 overflow-x-auto">
+          {closedPositions.length === 0 ? (
+            <div className="py-12 text-center text-sm text-text-3">No closed positions recorded yet.</div>
+          ) : (
+            <table className="min-w-[1080px] w-full border-separate border-spacing-0">
               <thead className="text-[11px] uppercase tracking-[0.22em] text-text-3">
                 <tr>
                   <th className="px-4 py-3 text-left">Asset</th>
                   <th className="px-4 py-3 text-left">Qty</th>
                   <th className="px-4 py-3 text-left">Avg cost</th>
-                  <th className="px-4 py-3 text-left">Current</th>
-                  <th className="px-4 py-3 text-left">P&amp;L</th>
-                  <th className="px-4 py-3 text-left">P&amp;L %</th>
-                  <th className="px-4 py-3 text-left">7d sparkline</th>
+                  <th className="px-4 py-3 text-left">Exit</th>
+                  <th className="px-4 py-3 text-left">Fees</th>
+                  <th className="px-4 py-3 text-left">Realized P&amp;L</th>
+                  <th className="px-4 py-3 text-left">Opened</th>
+                  <th className="px-4 py-3 text-left">Closed</th>
                 </tr>
               </thead>
               <tbody>
-                {holdings.map((position, index) => {
-                  const pnl = position.unrealizedPnl ?? null;
-                  const costBasis = position.quantity * position.averageCost;
-                  const pnlPct = costBasis > 0 && pnl != null ? (pnl / costBasis) * 100 : null;
-
-                  return (
-                    <tr key={position.symbol} className={index % 2 === 0 ? "bg-white/[0.015]" : ""}>
-                      <td className="border-t border-border px-4 py-4">
-                        <div className="flex items-center gap-3">
-                          <span className="h-3 w-3 rounded-full" style={{ backgroundColor: position.color }} />
-                          <div>
-                            <div className="font-semibold text-white">{position.symbol}</div>
-                            <div className="text-xs text-text-3">{position.name}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="border-t border-border px-4 py-4 font-mono text-text-1">{position.quantity}</td>
-                      <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.averageCost)}</td>
-                      <td className="border-t border-border px-4 py-4 font-mono text-text-1">
-                        {position.lastPrice != null ? formatMoney(position.lastPrice) : "—"}
-                      </td>
-                      <td className={`border-t border-border px-4 py-4 font-mono ${pnl != null && pnl >= 0 ? "text-green" : pnl != null && pnl < 0 ? "text-red" : "text-text-3"}`}>
-                        {pnl != null ? formatSignedMoney(pnl) : "—"}
-                      </td>
-                      <td className={`border-t border-border px-4 py-4 font-mono ${pnlPct != null && pnlPct >= 0 ? "text-green" : pnlPct != null && pnlPct < 0 ? "text-red" : "text-text-3"}`}>
-                        {position.lastPrice != null ? (pnlPct != null && pnlPct >= 0 ? "+" : "") + (pnlPct?.toFixed(2) ?? "0.00") + "%" : "—"}
-                      </td>
-                      <td className="border-t border-border px-4 py-4">
-                        <Sparkline values={position.trend} color={position.color} />
-                      </td>
-                    </tr>
-                  );
-                })}
+                {closedPositions.map((position: PortfolioClosedPositionResponse, index: number) => (
+                  <tr key={position.id} className={index % 2 === 0 ? "bg-white/[0.015]" : ""}>
+                    <td className="border-t border-border px-4 py-4">
+                      <Link
+                        href={`/dashboard/stocks/${position.symbol}`}
+                        className="flex items-center gap-3 font-semibold text-white transition-colors hover:text-cyan"
+                      >
+                        <StockLogo
+                          ticker={position.symbol}
+                          logoUrl={closedLogos?.[position.symbol]}
+                          size={28}
+                        />
+                        {position.symbol}
+                      </Link>
+                    </td>
+                    <td className="border-t border-border px-4 py-4 font-mono text-text-1">{position.quantity}</td>
+                    <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.averageCost)}</td>
+                    <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.exitPrice)}</td>
+                    <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.fees)}</td>
+                    <td className={`border-t border-border px-4 py-4 font-mono ${signedTone(position.realizedPnl)}`}>
+                      {formatSignedMoney(position.realizedPnl)}
+                    </td>
+                    <td className="border-t border-border px-4 py-4 text-sm text-text-2">{formatDateTime(position.openedAt)}</td>
+                    <td className="border-t border-border px-4 py-4 text-sm text-text-2">{formatDateTime(position.closedAt)}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
-            )}
-          </div>
-        </article>
+          )}
+        </div>
       </section>
     </div>
   );

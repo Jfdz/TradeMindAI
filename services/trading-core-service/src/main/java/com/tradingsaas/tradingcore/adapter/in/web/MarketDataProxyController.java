@@ -7,6 +7,7 @@ import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapt
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter.MarketSymbolResponse;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -64,6 +65,22 @@ public class MarketDataProxyController {
         subscriptionAccessGuard.requireHistoricalPriceAccess(from, to);
         int clampedSize = Math.min(Math.max(1, size), MAX_PAGE_SIZE);
         return ResponseEntity.ok(marketDataServiceAdapter.fetchHistoricalPrices(ticker, timeframe, from, to, page, clampedSize));
+    }
+
+    @GetMapping("/prices/history-batch")
+    ResponseEntity<Map<String, List<MarketPriceResponse>>> historicalPricesBatch(
+            @RequestParam List<String> symbols,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(defaultValue = "8") int size,
+            @RequestParam(defaultValue = "DAILY") String timeframe) {
+        if (symbols == null || symbols.isEmpty() || from.isAfter(to)) {
+            return ResponseEntity.badRequest().build();
+        }
+        subscriptionAccessGuard.requireHistoricalPriceAccess(from, to);
+        int clampedSize = Math.min(Math.max(1, size), MAX_PAGE_SIZE);
+        return ResponseEntity.ok(
+                marketDataServiceAdapter.fetchHistoricalPricesBatch(symbols, timeframe, from, to, clampedSize));
     }
 
     @GetMapping("/symbols")

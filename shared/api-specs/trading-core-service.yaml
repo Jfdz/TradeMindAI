@@ -1,0 +1,110 @@
+openapi: 3.0.3
+info:
+  title: trading-core-service
+  description: |
+    Identity, signals, strategies, subscriptions, backtests, and the
+    internal BFF endpoints consumed by ai-engine.
+  version: 0.1.0
+servers:
+  - url: http://localhost:8082
+    description: Local dev
+  - url: https://api.trademindai.local/trading-core
+    description: Cluster-internal (staging/prod)
+
+tags:
+  - name: reasoning-context
+    description: |
+      Service-to-service endpoints consumed by ai-engine to assemble
+      grounded reasoning contexts.
+
+paths:
+  /api/v1/internal/reasoning-context/{ticker}:
+    get:
+      tags: [reasoning-context]
+      operationId: getReasoningContext
+      summary: Assemble a grounded reasoning context for ai-engine.
+      description: |
+        Service-to-service BFF that combines `PriceFacts` from
+        market-data with multi-provider aggregated news into a single
+        payload for ai-engine's reasoning generation.
+
+        Auth: requires `X-Internal-Secret`. JWT is not parsed for this
+        path; the web app must never call this endpoint.
+
+        Semantics:
+        - `200` with full payload when both sub-fetches succeed.
+        - `200` with `news=[]` and `errors=["news_aggregator_unavailable"]`
+          when news fan-out fails (graceful degradation — price facts
+          alone are still enough to surface a refusal in the LLM step).
+        - `404` when market-data does not track the ticker at all.
+        - `422` (INSUFFICIENT_HISTORY) when market-data has fewer than
+          200 daily bars; ai-engine must treat this as a refusal signal.
+        - `503` when market-data is unavailable for transport reasons.
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9.\-]{1,10}$'
+          example: META
+        - name: newsHours
+          in: query
+          required: false
+          description: Lookback window for ticker news (clamped to 1..168).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 168
+            default: 48
+        - name: newsLimit
+          in: query
+          required: false
+          description: Max news items to attach (clamped to 1..25).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 25
+            default: 8
+      responses:
+        '200':
+          description: Context assembled (possibly with degraded news).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReasoningContextResponse'
+        '401':
+          description: Missing or invalid `X-Internal-Secret`.
+        '404':
+          description: Ticker not tracked by market-data.
+        '422':
+          description: Insufficient history to compute price facts.
+        '503':
+          description: market-data upstream unavailable.
+
+components:
+  schemas:
+    ReasoningContextResponse:
+      type: object
+      required: [ticker, generatedAt, priceFacts, news, errors]
+      properties:
+        ticker:
+          type: string
+          example: META
+        generatedAt:
+          type: string
+          format: date-time
+          description: When this context was assembled (used as audit timestamp).
+        priceFacts:
+          $ref: 'market-data-service.yaml#/components/schemas/PriceFactsResponse'
+        news:
+          type: array
+          items:
+            $ref: 'market-data-service.yaml#/components/schemas/NewsItemResponse'
+        errors:
+          type: array
+          description: |
+            Non-fatal degradation tags surfaced to the caller for logging.
+            Examples: `news_aggregator_unavailable`, `news_aggregator_empty`.
+          items:
+            type: string

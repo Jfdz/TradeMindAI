@@ -10,3 +10,7 @@ yarn-error.log*
 pnpm-debug.log*
 now
 .vercel
+playwright-report/
+test-results/
+.auth/
+*.tsbuildinfo

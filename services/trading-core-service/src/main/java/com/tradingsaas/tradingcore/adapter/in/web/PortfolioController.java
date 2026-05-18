@@ -5,10 +5,12 @@ import com.tradingsaas.tradingcore.application.usecase.portfolio.AddPortfolioPos
 import com.tradingsaas.tradingcore.application.usecase.portfolio.ManagePortfolioPositionUseCase;
 import com.tradingsaas.tradingcore.application.usecase.portfolio.ManagePortfolioPositionUseCase.CloseCommand;
 import com.tradingsaas.tradingcore.application.usecase.portfolio.ManagePortfolioPositionUseCase.UpdateCommand;
+import com.tradingsaas.tradingcore.application.usecase.portfolio.PortfolioClosedPositionOverview;
 import com.tradingsaas.tradingcore.application.usecase.portfolio.PortfolioHoldingOverview;
 import com.tradingsaas.tradingcore.application.usecase.portfolio.PortfolioOverview;
 import com.tradingsaas.tradingcore.application.usecase.portfolio.PortfolioOverviewService;
 import com.tradingsaas.tradingcore.domain.model.TokenClaims;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -134,7 +136,8 @@ record PortfolioOverviewResponse(
             BigDecimal equity,
             Double winRate,
             String dataSource,
-            List<PortfolioHoldingResponse> holdings) {
+            List<PortfolioHoldingResponse> holdings,
+            List<PortfolioClosedPositionResponse> closedPositions) {
 
         static PortfolioOverviewResponse from(PortfolioOverview overview) {
             return new PortfolioOverviewResponse(
@@ -146,12 +149,14 @@ record PortfolioOverviewResponse(
                     overview.equity(),
                     overview.winRate(),
                     overview.dataSource(),
-                    overview.holdings().stream().map(PortfolioHoldingResponse::from).toList()
+                    overview.holdings().stream().map(PortfolioHoldingResponse::from).toList(),
+                    overview.closedPositions().stream().map(PortfolioClosedPositionResponse::from).toList()
             );
         }
     }
 
     record PortfolioHoldingResponse(
+            @JsonProperty("id") UUID id,
             String symbol,
             BigDecimal quantity,
             BigDecimal averageCost,
@@ -161,10 +166,14 @@ record PortfolioOverviewResponse(
             Double allocationPct,
             String status,
             Instant openedAt,
-            Instant closedAt) {
+            Instant closedAt,
+            String name,
+            String sector,
+            List<BigDecimal> trend7d) {
 
         static PortfolioHoldingResponse from(PortfolioHoldingOverview overview) {
             return new PortfolioHoldingResponse(
+                    overview.id(),
                     overview.symbol(),
                     overview.quantity(),
                     overview.averageCost(),
@@ -173,6 +182,35 @@ record PortfolioOverviewResponse(
                     overview.unrealizedPnl(),
                     overview.allocationPct(),
                     overview.status(),
+                    overview.openedAt(),
+                    overview.closedAt(),
+                    overview.name(),
+                    overview.sector(),
+                    overview.trend7d()
+            );
+        }
+    }
+
+    record PortfolioClosedPositionResponse(
+            UUID id,
+            String symbol,
+            BigDecimal quantity,
+            BigDecimal averageCost,
+            BigDecimal exitPrice,
+            BigDecimal fees,
+            BigDecimal realizedPnl,
+            Instant openedAt,
+            Instant closedAt) {
+
+        static PortfolioClosedPositionResponse from(PortfolioClosedPositionOverview overview) {
+            return new PortfolioClosedPositionResponse(
+                    overview.id(),
+                    overview.symbol(),
+                    overview.quantity(),
+                    overview.averageCost(),
+                    overview.exitPrice(),
+                    overview.fees(),
+                    overview.realizedPnl(),
                     overview.openedAt(),
                     overview.closedAt()
             );

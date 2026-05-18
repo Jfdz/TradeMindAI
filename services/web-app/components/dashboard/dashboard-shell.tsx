@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
@@ -8,8 +9,12 @@ import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { BrandMark, MenuIcon, XIcon } from "@/components/site/icons";
+import { apiClient } from "@/lib/api-client";
 import { dashboardNavItems } from "@/lib/trademind-content";
 import { cn } from "@/lib/utils";
+
+const SIGNAL_COUNT_STALE_MS = 60_000;
+const SIGNAL_COUNT_BADGE_LIMIT = 99;
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Overview",
@@ -19,10 +24,32 @@ const pageTitles: Record<string, string> = {
   "/dashboard/settings": "Settings",
 };
 
-export function DashboardShell({ children }: { children: ReactNode }) {
+function formatSignalBadge(count: number): string {
+  return count > SIGNAL_COUNT_BADGE_LIMIT ? `${SIGNAL_COUNT_BADGE_LIMIT}+` : String(count);
+}
+
+export function DashboardShell({ children }: { readonly children: ReactNode }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const { data: signalCount } = useQuery({
+    queryKey: ["dashboard-shell", "signal-count"],
+    queryFn: async () => {
+      const page = await apiClient.getSignals();
+      return page.totalElements ?? page.content.length;
+    },
+    staleTime: SIGNAL_COUNT_STALE_MS,
+  });
+  const navItems = useMemo(
+    () =>
+      dashboardNavItems.map((item) =>
+        item.href === "/dashboard/signals" && signalCount && signalCount > 0
+          ? { ...item, badge: formatSignalBadge(signalCount) }
+          : item,
+      ),
+    [signalCount],
+  );
 
   const pageTitle = useMemo(() => pageTitles[pathname] ?? "Dashboard", [pathname]);
   const initials = useMemo(() => {
@@ -37,12 +64,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-bg-0 text-text-1">
-      <div
+      <button
+        type="button"
         className={cn(
           "fixed inset-0 z-40 bg-black/60 transition-opacity lg:hidden",
           sidebarOpen ? "opacity-100" : "pointer-events-none opacity-0"
         )}
         onClick={() => setSidebarOpen(false)}
+        aria-label="Close sidebar"
       />
 
       <aside
@@ -72,7 +101,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </div>
 
         <nav className="mt-10 space-y-2">
-          {dashboardNavItems.map((item) => {
+          {navItems.map((item) => {
             const active = pathname === item.href;
 
             return (

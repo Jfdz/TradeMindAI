@@ -31,12 +31,16 @@ class AuthControllerTest {
         JwtProperties jwtProperties = jwtProperties();
         AuthController controller = new AuthController(
                 registerUserUseCase, loginUseCase, refreshTokenUseCase, logoutUseCase, jwtProperties);
+        MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        when(loginUseCase.login("user@example.com", "secret"))
+        when(loginUseCase.login(org.mockito.ArgumentMatchers.eq("user@example.com"),
+                org.mockito.ArgumentMatchers.eq("secret"),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()))
                 .thenReturn(new LoginUseCase.AuthTokens("access-token", "refresh-token"));
 
-        LoginResponse loginResponse = controller.login(new LoginRequest("user@example.com", "secret"), response);
+        LoginResponse loginResponse = controller.login(new LoginRequest("user@example.com", "secret"), request, response);
 
         assertEquals("access-token", loginResponse.accessToken());
         String setCookie = response.getHeader("Set-Cookie");

@@ -102,6 +102,23 @@ spec:
                 secretKeyRef:
                   name: internal-service-secret
                   key: market-data
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: llm-credentials
+                  key: gemini-api-key
+                  optional: true
+            - name: GROQ_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: llm-credentials
+                  key: groq-api-key
+                  optional: true
+            # Track C cutover: ai-engine owns the reasoning queue.
+            # Explicitly disable the legacy Gemini listener to prevent
+            # split-brain delivery between the two consumers.
+            - name: TRADING_CORE_REASONING_LEGACY_LISTENER_ENABLED
+              value: "false"
           envFrom:
             - configMapRef:
                 name: trading-core-service-config

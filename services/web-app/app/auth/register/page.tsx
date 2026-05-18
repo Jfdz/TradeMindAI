@@ -7,7 +7,7 @@ export default function RegisterPage() {
       mode="register"
       eyebrow="Open an account"
       title="Create your trading profile"
-      description="Register once and move directly into the dashboard with a user-owned session and JWT flow."
+      description="Create your account and get instant access to signals, strategies, and portfolio tools."
     >
       <RegisterForm />
     </AuthShell>

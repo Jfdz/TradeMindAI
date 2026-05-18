@@ -14,10 +14,10 @@ import { demoBenchmarkCurve, demoDrawdownCurve, demoEquityCurve, formatMoney, fo
 import { cn } from "@/lib/utils";
 
 type BacktestResultsProps = {
-  backtestId: string;
+  readonly backtestId: string;
 };
 
-function FailedState({ message }: { message: string }) {
+function FailedState({ message }: { readonly message: string }) {
   return (
     <article className="rounded-[24px] border border-border bg-bg-1/80 p-6 shadow-glow">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
@@ -53,9 +53,9 @@ function MetricTile({
   value,
   tone = "text-white",
 }: {
-  label: string;
-  value: string;
-  tone?: string;
+  readonly label: string;
+  readonly value: string;
+  readonly tone?: string;
 }) {
   return (
     <article className="rounded-[18px] border border-border bg-bg-2 p-4">
@@ -114,7 +114,7 @@ export function BacktestResults({ backtestId }: BacktestResultsProps) {
     { label: "Max drawdown", value: formatPercent(result.maxDrawdown * 100), tone: "text-red" },
     { label: "Win rate", value: formatPercent((result.winRate ?? 0) * 100), tone: "text-white" },
     { label: "Total trades", value: `${result.trades.length}`, tone: "text-white" },
-    { label: "Profit factor", value: isFinite(result.profitFactor) ? result.profitFactor.toFixed(2) : "Unlimited", tone: "text-gold" },
+    { label: "Profit factor", value: Number.isFinite(result.profitFactor) ? result.profitFactor.toFixed(2) : "Unlimited", tone: "text-gold" },
   ];
 
   return (

@@ -1,0 +1,215 @@
+name: opencode-local-dual
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: read
+  checks: read
+
+jobs:
+  opencode:
+    name: OpenCode Review / Fix / SonarQube Triage
+
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (
+        (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') &&
+        github.event.comment.user.type != 'Bot' &&
+        (
+          startsWith(github.event.comment.body, '/oc') ||
+          startsWith(github.event.comment.body, '/opencode') ||
+          contains(github.event.comment.body, ' /oc') ||
+          contains(github.event.comment.body, ' /opencode')
+        )
+      )
+        
+    runs-on: self-hosted
+
+    concurrency:
+      group: opencode-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Resolve checkout ref
+        id: ref
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const ev = context.eventName;
+            let ref = 'develop';
+            if (ev === 'workflow_dispatch') {
+              ref = 'develop';
+            } else if (ev === 'pull_request_review_comment') {
+              ref = context.payload.pull_request.head.sha;
+            } else if (context.payload.issue && context.payload.issue.pull_request) {
+              const pr = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.issue.number,
+              });
+              ref = pr.data.head.sha;
+            }
+            core.setOutput('ref', ref);
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ steps.ref.outputs.ref }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Create OpenCode context folder
+        run: mkdir -p /tmp/opencode-context
+      - name: Capture SonarQube issues
+        shell: bash
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+        run: |
+          if [[ -z "${SONAR_HOST_URL}" || -z "${SONAR_TOKEN}" || -z "${SONAR_PROJECT_KEY}" ]]; then
+            echo "WARNING: SONAR_HOST_URL / SONAR_TOKEN / SONAR_PROJECT_KEY not configured — skipping capture."
+            echo '{"total":0,"issues":[]}' > /tmp/opencode-context/sonarqube-issues.json
+          else
+            # Strip any path/query from SONAR_HOST_URL — users often copy the
+            # project page URL (e.g. https://sonarcloud.io/project/overview?id=...)
+            # which makes the API path resolve to the SPA and return 200 HTML.
+            SONAR_BASE=$(echo "${SONAR_HOST_URL}" | grep -oP 'https?://[^/]+')
+            SONAR_API="${SONAR_BASE}/api/issues/search?componentKeys=${SONAR_PROJECT_KEY}&resolved=false&ps=100"
+            echo "Calling SonarCloud API: ${SONAR_API}"
+            HTTP_STATUS=$(curl -ss -w "%{http_code}" \
+              -H "Accept: application/json" \
+              -H "Authorization: Bearer ${SONAR_TOKEN}" \
+              -H "User-Agent: GitHub-Actions-OpenCode/1.0" \
+              "${SONAR_API}" \
+              -o /tmp/opencode-context/sonarqube-issues.json)
+            echo "HTTP status: ${HTTP_STATUS}"
+            # Validate with python3 (jq may not be installed on self-hosted runner)
+            if ! python3 -c "import json,sys; d=json.load(open('/tmp/opencode-context/sonarqube-issues.json')); sys.exit(0 if 'issues' in d else 1)" 2>/dev/null; then
+              echo "ERROR: SonarCloud API returned non-JSON (status ${HTTP_STATUS})."
+              echo "SONAR_HOST_URL must be bare server root, e.g. https://sonarcloud.io"
+              echo "SONAR_PROJECT_KEY must match the key shown in sonarcloud.io → Project Information"
+              echo "--- First 400 bytes ---"
+              head -c 400 /tmp/opencode-context/sonarqube-issues.json
+              exit 1
+            fi
+            TOTAL=$(python3 -c "import json; print(json.load(open('/tmp/opencode-context/sonarqube-issues.json'))['total'])")
+            echo "SonarQube issues captured. total=${TOTAL}"
+          fi
+      - name: Build project context
+        shell: bash
+        run: |
+          cat > /tmp/opencode-context/instructions.md <<'EOF'
+          You are acting as a Senior Full-Stack Engineer on the TradeMindAI platform.
+          The stack includes Java 21 / Spring Boot (backend) and Next.js 14 / TypeScript / Tailwind (frontend).
+
+          Repository rules:
+          - Target branch for all fix PRs: develop.
+          - Never merge automatically. Never approve your own PR.
+          - Implement the smallest safe change. Keep behaviour unchanged.
+          - Add or update tests when possible.
+          - Open a pull request targeting develop.
+
+          Git workflow for any fix task (MUST follow this order):
+          1. git fetch origin develop
+          2. git checkout -b fix/sonarcloud-issues origin/develop
+          3. Make all changes on this branch.
+          4. git add <changed files only — never add workflow or context files>
+          5. git commit -m "<commit message from prompt>"
+          6. git push -u origin fix/sonarcloud-issues
+          7. gh pr create --base develop --title "<title from prompt>" --body "<body from prompt>"
+
+          PR review rules:
+          - Cover Java, Spring Boot, REST, TypeScript, React, Next.js, security, null safety, test coverage.
+          - Classify findings as HIGH / MEDIUM / LOW.
+          - Do not modify code during pure review unless explicitly requested.
+
+          SonarQube rules:
+          - Read /tmp/opencode-context/sonarqube-issues.json.
+          - If total == 0 or the file has no issues, post a comment on the issue/PR saying no open SonarCloud issues were found and no fix PR was opened.
+          - If issues exist: fix them, then follow the Git workflow above to open a PR.
+          EOF
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Bun
+        shell: bash
+        run: npm install -g bun
+
+      - name: Run OpenCode
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: "--model claude-haiku-4-5-20251001 --dangerously-skip-permissions"
+          path_to_bun_executable: bun
+          show_full_output: "true"
+          prompt: |
+            Read /tmp/opencode-context/instructions.md first.
+
+            User request / GitHub event context:
+            ${{ github.event.comment.body || github.event.inputs.task || 'Automatically review this pull request.' }}
+
+            CRITICAL RULES:
+            - Do not create, modify, stage, or commit any file under .opencode or .github.
+            - Context files are read-only and located at /tmp/opencode-context.
+            - This is a FIX task, not a summary task, if the request contains "fix", "sonar", "sonarqube", "sonarcloud", "refactor" or a file path.
+            - Do NOT output internal tool calls, JSON tool messages, skill names, "caveman", "delivery-agent", or session metadata in the PR title, PR body, comments, or commits.
+            - Do NOT modify workflow files.
+            - Do NOT modify .opencode files.
+            - Do NOT commit .opencode/context/instructions.md.
+            - Do NOT commit .opencode/context/sonarqube-issues.json.
+            - Modify only the affected application file unless another file is strictly required.
+
+            Target file:
+            All related files to the SonarCloud issues in /tmp/opencode-context/sonarqube-issues.json, if present.
+
+            SonarQube task:
+            - Read /tmp/opencode-context/sonarqube-issues.json.
+            - Fix all the SonarCloud issues related.
+            - Keep behaviour unchanged.
+            - Do not perform broad formatting.
+            - Do not refactor unrelated code.
+            - Do not change CI/CD configuration.
+
+            Commit rules:
+            - Commit only relevant source-code changes.
+            - Commit message must be:
+              fix(portfolio): resolve SonarCloud issues in dashboard page
+
+            Target branch:
+            - All fix PRs MUST target develop.
+            - Never open fix PRs against main.
+            
+            Pull request rules:
+            - PR target branch must be develop.
+            - PR title must be:
+              fix(portfolio): resolve SonarCloud issues in dashboard page
+            - PR body must contain:
+              Summary:
+              - Fixed SonarCloud issues.
+              - Kept behaviour unchanged.
+              - No workflow or generated context files changed.
+
+              Validation:
+              - Mention which checks were run, or explain if checks were not available.
+
+              Closes #${{ github.event.issue.number || github.event.pull_request.number }}
