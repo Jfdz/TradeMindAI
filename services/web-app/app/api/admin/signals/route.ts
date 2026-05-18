@@ -1,15 +1,17 @@
-import { getServerSession } from "next-auth";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/auth";
 import { fetchAdminSignals, isError } from "@/lib/admin/reasoning-audit-client";
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
+  const { userId, getToken } = await auth();
+  if (!userId) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
-  if (!session.isAdmin) {
+
+  const user = await currentUser();
+  const isAdmin = (user?.publicMetadata as { role?: string } | null)?.role === "admin";
+  if (!isAdmin) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
 
@@ -18,8 +20,8 @@ export async function GET(request: NextRequest) {
   const page = Number(params.get("page") ?? "0");
   const size = Number(params.get("size") ?? "25");
 
-  const token = (session as { accessToken?: string })?.accessToken;
-  const result = await fetchAdminSignals(token, { ticker, page, size });
+  const token = await getToken({ template: "backend" });
+  const result = await fetchAdminSignals(token ?? undefined, { ticker, page, size });
 
   if (isError(result)) {
     return NextResponse.json(

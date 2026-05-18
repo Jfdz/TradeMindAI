@@ -36,13 +36,10 @@ kubectl create secret generic rabbitmq-credentials -n trading-saas \
 # Set on server after first deploy:
 # kubectl exec -n trading-saas rabbitmq-0 -- rabbitmqctl change_password tradinguser "$RABBIT_PASS"
 
-# JWT
-kubectl create secret generic jwt-secret -n trading-saas \
-  --from-literal=secret=$(openssl rand -base64 48)
-
-# NextAuth
-kubectl create secret generic nextauth-secret -n trading-saas \
-  --from-literal=secret=$(openssl rand -base64 32)
+# Clerk (get keys from Clerk dashboard → API Keys)
+kubectl create secret generic clerk-credentials -n trading-saas \
+  --from-literal=publishable-key=pk_live_... \
+  --from-literal=secret-key=sk_live_...
 
 # Internal service-to-service token
 kubectl create secret generic internal-secret -n trading-saas \
@@ -63,7 +60,7 @@ kubectl rollout restart deployment/<name> -n trading-saas
 ### Verify no REPLACE_ME placeholders remain
 
 ```bash
-for s in postgres-credentials redis-credentials rabbitmq-credentials jwt-secret nextauth-secret internal-secret; do
+for s in postgres-credentials redis-credentials rabbitmq-credentials clerk-credentials internal-secret; do
   echo -n "$s: "
   kubectl get secret $s -n trading-saas \
     -o go-template='{{range $k,$v := .data}}{{$k}}={{$v | base64decode}} {{end}}' \
@@ -103,9 +100,9 @@ kubectl exec -n trading-saas postgres-0 -- psql -U tradinguser -d trading_saas -
 | `postgres-credentials` | `host`, `username`, `password`, `ai-engine-db` | ai-engine |
 | `redis-credentials` | `host`, `password` | market-data-service, trading-core-service |
 | `rabbitmq-credentials` | `host`, `username`, `password` | market-data-service, trading-core-service, ai-engine |
-| `jwt-secret` | `secret` | trading-core-service |
-| `nextauth-secret` | `secret` | web-app |
-| `internal-secret` | `secret` | web-app (INTERNAL_SECRET env var) |
+| `clerk-credentials` | `publishable-key` | web-app (NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) |
+| `clerk-credentials` | `secret-key` | web-app (CLERK_SECRET_KEY) |
+| `internal-secret` | `secret` | web-app, trading-core-service (INTERNAL_SECRET / INTERNAL_API_SECRET) |
 
 ---
 

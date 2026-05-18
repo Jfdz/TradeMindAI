@@ -22,7 +22,10 @@ public class UserJpaEntity {
     @Column(name = "email", nullable = false, unique = true, length = 255)
     private String email;
 
-    @Column(name = "password_hash", nullable = false, length = 255)
+    @Column(name = "clerk_user_id", unique = true, length = 64)
+    private String clerkUserId;
+
+    @Column(name = "password_hash", nullable = true, length = 255)
     private String passwordHash;
 
     @Column(name = "first_name", nullable = false, length = 100)
@@ -48,10 +51,12 @@ public class UserJpaEntity {
 
     protected UserJpaEntity() {}
 
-    public UserJpaEntity(UUID id, String email, String passwordHash, String firstName,
-                         String lastName, String timezone, boolean active, Instant createdAt, Instant updatedAt) {
+    public UserJpaEntity(UUID id, String email, String clerkUserId, String passwordHash,
+                         String firstName, String lastName, String timezone,
+                         boolean active, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.email = email;
+        this.clerkUserId = clerkUserId;
         this.passwordHash = passwordHash;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -63,6 +68,7 @@ public class UserJpaEntity {
 
     public UUID getId() { return id; }
     public String getEmail() { return email; }
+    public String getClerkUserId() { return clerkUserId; }
     public String getPasswordHash() { return passwordHash; }
     public String getFirstName() { return firstName; }
     public String getLastName() { return lastName; }
@@ -72,4 +78,5 @@ public class UserJpaEntity {
     public Instant getUpdatedAt() { return updatedAt; }
     public SubscriptionJpaEntity getSubscription() { return subscription; }
     public void setSubscription(SubscriptionJpaEntity subscription) { this.subscription = subscription; }
+    public void setClerkUserId(String clerkUserId) { this.clerkUserId = clerkUserId; }
 }
