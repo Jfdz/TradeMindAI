@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
@@ -32,8 +33,9 @@ import org.springframework.stereotype.Service;
 class SignalGenerationService implements GenerateSignalUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(SignalGenerationService.class);
-    private static final BigDecimal DEFAULT_STOP_LOSS_PCT = new BigDecimal("2.00");
-    private static final BigDecimal DEFAULT_TAKE_PROFIT_PCT = new BigDecimal("4.00");
+    // Minimum conviction threshold: predictions below this yield no actionable target/stop
+    private static final BigDecimal MIN_TP_PCT = new BigDecimal("0.10");
+    private static final BigDecimal TWO = BigDecimal.valueOf(2);
 
     // A duplicate window of 24h aligns with the unique-per-day index on the DB side
     // (date_trunc('day', generated_at)) and tolerates clock skew across producers.
@@ -93,12 +95,24 @@ class SignalGenerationService implements GenerateSignalUseCase {
                     prediction.getTicker(), prediction.getSignalType(), entryPrice, existing.get().getId());
             return backfillDerivedPricesIfMissing(existing.get());
         }
-        BigDecimal slPct = riskStopLossPct(prediction.getSignalType());
-        BigDecimal tpPct = riskTakeProfitPct(prediction.getSignalType());
+        // Derive TP/SL from prediction magnitude; HOLD always gets nulls
+        BigDecimal tpPct;
+        BigDecimal slPct;
+        if (prediction.getSignalType() == SignalType.HOLD) {
+            tpPct = null;
+            slPct = null;
+        } else {
+            BigDecimal predicted = prediction.getPredictedChangePct();
+            tpPct = (predicted != null) ? predicted.abs() : null;
+            if (tpPct != null && tpPct.compareTo(MIN_TP_PCT) < 0) {
+                tpPct = null;
+            }
+            slPct = (tpPct != null) ? tpPct.divide(TWO, 10, RoundingMode.HALF_EVEN) : null;
+        }
         BigDecimal targetPrice = null;
         BigDecimal stopLoss = null;
         BigDecimal expectedMovePct = null;
-        if (entryPrice != null && prediction.getSignalType() != SignalType.HOLD) {
+        if (entryPrice != null && prediction.getSignalType() != SignalType.HOLD && tpPct != null) {
             targetPrice = signalMath.calculateTargetPrice(prediction.getSignalType(), entryPrice, tpPct);
             stopLoss = signalMath.calculateStopLoss(prediction.getSignalType(), entryPrice, slPct);
             expectedMovePct = signalMath.calculateExpectedMovePct(prediction.getSignalType(), entryPrice, targetPrice);
@@ -199,10 +213,12 @@ class SignalGenerationService implements GenerateSignalUseCase {
                 && existing.getExpectedMovePct() != null) {
             return existing;
         }
-        BigDecimal slPct = existing.getStopLossPct() != null
-                ? existing.getStopLossPct() : DEFAULT_STOP_LOSS_PCT;
-        BigDecimal tpPct = existing.getTakeProfitPct() != null
-                ? existing.getTakeProfitPct() : DEFAULT_TAKE_PROFIT_PCT;
+        // Use stored pcts only — we cannot retroactively recompute the ATR at generation time
+        BigDecimal tpPct = existing.getTakeProfitPct();
+        BigDecimal slPct = existing.getStopLossPct();
+        if (tpPct == null || slPct == null) {
+            return existing;
+        }
         BigDecimal targetPrice = signalMath.calculateTargetPrice(
                 existing.getType(), existing.getEntryPrice(), tpPct);
         BigDecimal stopLoss = signalMath.calculateStopLoss(
@@ -217,11 +233,4 @@ class SignalGenerationService implements GenerateSignalUseCase {
         return tradingSignalRepository.save(healed);
     }
 
-    private BigDecimal riskStopLossPct(SignalType signalType) {
-        return signalType == SignalType.HOLD ? null : DEFAULT_STOP_LOSS_PCT;
-    }
-
-    private BigDecimal riskTakeProfitPct(SignalType signalType) {
-        return signalType == SignalType.HOLD ? null : DEFAULT_TAKE_PROFIT_PCT;
-    }
 }
