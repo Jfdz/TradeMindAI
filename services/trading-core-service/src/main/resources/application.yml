@@ -35,6 +35,12 @@ spring:
     baseline-on-migrate: false
     out-of-order: false
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${CLERK_ISSUER_URI:https://clerk.trademindai.com}
+
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -125,12 +131,8 @@ trading-core:
       timeout-seconds: 10
       max-output-tokens: 100
       temperature: 0.7
-  jwt:
-    secret: ${JWT_SECRET:changeme-use-a-256-bit-secret-in-production}
-    access-token-expiry: ${JWT_ACCESS_TOKEN_EXPIRY:3600}
-    refresh-token-expiry: ${JWT_REFRESH_TOKEN_EXPIRY:604800}
-  redis:
-    token-blacklist-prefix: "trading-core:blacklist:"
+  clerk:
+    audience: ${CLERK_AUDIENCE:https://api.trademindai.com}
 subscriptions:
   enforce: ${SUBSCRIPTIONS_ENFORCE:false}
 

@@ -11,6 +11,7 @@ import java.util.UUID;
 public class User {
 
     private final UUID id;
+    private final String clerkUserId;
     private final String email;
     private final String passwordHash;
     private final String firstName;
@@ -21,6 +22,7 @@ public class User {
     private final boolean active;
 
     public User(UUID id,
+                String clerkUserId,
                 String email,
                 String passwordHash,
                 String firstName,
@@ -32,10 +34,8 @@ public class User {
         if (email == null || email.isBlank()) {
             throw new IllegalArgumentException("email must not be blank");
         }
-        if (passwordHash == null || passwordHash.isBlank()) {
-            throw new IllegalArgumentException("passwordHash must not be blank");
-        }
         this.id = id;
+        this.clerkUserId = clerkUserId;
         this.email = email;
         this.passwordHash = passwordHash;
         this.firstName = firstName;
@@ -46,8 +46,38 @@ public class User {
         this.active = active;
     }
 
+    /** Factory for users provisioned via Clerk (no local password). */
+    public static User fromClerk(String clerkUserId,
+                                 String email,
+                                 String firstName,
+                                 String lastName) {
+        return new User(
+                UUID.randomUUID(),
+                clerkUserId,
+                email,
+                null,
+                firstName,
+                lastName,
+                "UTC",
+                null,
+                Instant.now(),
+                true
+        );
+    }
+
+    /** Returns a new User with clerkUserId attached (for migrated password users). */
+    public User attachClerkUserId(String newClerkUserId) {
+        return new User(this.id, newClerkUserId, this.email, this.passwordHash,
+                this.firstName, this.lastName, this.timezone,
+                this.subscription, this.createdAt, this.active);
+    }
+
     public UUID getId() {
         return id;
+    }
+
+    public String getClerkUserId() {
+        return clerkUserId;
     }
 
     public String getEmail() {

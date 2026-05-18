@@ -1,10 +1,12 @@
 package com.tradingsaas.tradingcore.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tradingsaas.tradingcore.adapter.in.web.JwtAuthenticationFilter;
+import com.tradingsaas.tradingcore.adapter.in.web.JitProvisioningFilter;
 import com.tradingsaas.tradingcore.adapter.in.web.RateLimitFilter;
+import com.tradingsaas.tradingcore.domain.port.out.UserRepository;
 import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -13,10 +15,16 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -30,40 +38,39 @@ import java.util.Map;
 @Configuration
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtFilter;
-    private final InternalSecretFilter internalSecretFilter;
     private final ObjectMapper objectMapper;
     private final LettuceBasedProxyManager<String> rateLimitProxyManager;
+    private final UserRepository userRepository;
     private final String[] allowedCorsOrigins;
     private final long rateLimitFreePm;
     private final long rateLimitBasicPm;
     private final long rateLimitPremiumPm;
+    private final String clerkIssuerUri;
+    private final String clerkAudience;
 
-    SecurityConfig(JwtAuthenticationFilter jwtFilter,
-                   InternalSecretFilter internalSecretFilter,
-                   ObjectMapper objectMapper,
+    SecurityConfig(ObjectMapper objectMapper,
                    LettuceBasedProxyManager<String> rateLimitProxyManager,
-                   @org.springframework.beans.factory.annotation.Value("${trading-core.cors.allowed-origins}") String[] allowedCorsOrigins,
-                   @org.springframework.beans.factory.annotation.Value("${trading-core.rate-limit.free-per-minute:5}") long rateLimitFreePm,
-                   @org.springframework.beans.factory.annotation.Value("${trading-core.rate-limit.basic-per-minute:50}") long rateLimitBasicPm,
-                   @org.springframework.beans.factory.annotation.Value("${trading-core.rate-limit.premium-per-minute:500}") long rateLimitPremiumPm) {
-        this.jwtFilter = jwtFilter;
-        this.internalSecretFilter = internalSecretFilter;
+                   UserRepository userRepository,
+                   @Value("${trading-core.cors.allowed-origins}") String[] allowedCorsOrigins,
+                   @Value("${trading-core.rate-limit.free-per-minute:5}") long rateLimitFreePm,
+                   @Value("${trading-core.rate-limit.basic-per-minute:50}") long rateLimitBasicPm,
+                   @Value("${trading-core.rate-limit.premium-per-minute:500}") long rateLimitPremiumPm,
+                   @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}") String clerkIssuerUri,
+                   @Value("${trading-core.clerk.audience}") String clerkAudience) {
         this.objectMapper = objectMapper;
         this.rateLimitProxyManager = rateLimitProxyManager;
+        this.userRepository = userRepository;
         this.allowedCorsOrigins = allowedCorsOrigins;
         this.rateLimitFreePm = rateLimitFreePm;
         this.rateLimitBasicPm = rateLimitBasicPm;
         this.rateLimitPremiumPm = rateLimitPremiumPm;
-    }
-
-    @Bean
-    PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);
+        this.clerkIssuerUri = clerkIssuerUri;
+        this.clerkAudience = clerkAudience;
     }
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        JitProvisioningFilter jitFilter = new JitProvisioningFilter(userRepository);
         RateLimitFilter rateLimitFilter = new RateLimitFilter(rateLimitProxyManager, rateLimitFreePm, rateLimitBasicPm, rateLimitPremiumPm);
 
         http
@@ -77,20 +84,13 @@ public class SecurityConfig {
                     writeForbidden(response, request.getRequestURI()))
             )
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints
                 .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/prometheus", "/actuator/metrics", "/actuator/metrics/**").permitAll()
-                .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/subscriptions/plans").permitAll()
                 .requestMatchers("/api/v1/backtests/symbols/*/available").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/prices/latest", "/api/v1/prices/*/latest").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                // Service-to-service internal endpoints (gated by InternalSecretFilter)
-                .requestMatchers("/api/v1/internal/**").permitAll()
-                // Admin-only endpoints
                 .requestMatchers("/api/v1/ingestion/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/models/**").hasRole("ADMIN")
-                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                // Everything else requires authentication
                 .anyRequest().authenticated()
             )
             .headers(headers -> headers
@@ -106,11 +106,25 @@ public class SecurityConfig {
                     "connect-src 'self' https: ws: wss: http://localhost:* http://127.0.0.1:*"))
                 .referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.SAME_ORIGIN))
             )
-            .addFilterBefore(internalSecretFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthConverter()))
+            )
+            .addFilterAfter(jitFilter, BearerTokenAuthenticationFilter.class)
+            .addFilterAfter(rateLimitFilter, JitProvisioningFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    JwtDecoder jwtDecoder() {
+        NimbusJwtDecoder decoder = NimbusJwtDecoder
+                .withIssuerLocation(clerkIssuerUri)
+                .build();
+
+        OAuth2TokenValidator<Jwt> issuerValidator = JwtValidators.createDefaultWithIssuer(clerkIssuerUri);
+        OAuth2TokenValidator<Jwt> audienceValidator = new AudienceValidator(clerkAudience);
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(issuerValidator, audienceValidator));
+        return decoder;
     }
 
     @Bean
@@ -125,6 +139,22 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+
+    private JwtAuthenticationConverter jwtAuthConverter() {
+        JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
+        grantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
+        grantedAuthoritiesConverter.setAuthoritiesClaimName("roles");
+
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            var authorities = grantedAuthoritiesConverter.convert(jwt);
+            if (authorities == null || authorities.isEmpty()) {
+                return List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_USER"));
+            }
+            return authorities;
+        });
+        return converter;
     }
 
     private void writeUnauthorized(HttpServletResponse response, String path) throws IOException {
