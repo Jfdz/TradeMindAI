@@ -36,7 +36,8 @@ jobs:
     if: >
       github.event.workflow_run.conclusion == 'failure' &&
       github.event.workflow_run.head_branch != 'main' &&
-      github.event.workflow_run.event == 'pull_request'
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: self-hosted
     steps:
       - name: Checkout failing branch
@@ -65,17 +66,18 @@ jobs:
         if: steps.guard.outputs.stop == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WF_RUN_ID: ${{ github.event.workflow_run.id }}
+          WF_NAME: ${{ github.event.workflow_run.name }}
+          WF_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WF_URL: ${{ github.event.workflow_run.html_url }}
         run: |
           set -euo pipefail
           mkdir -p /tmp/autofix-context
-          gh run view "${{ github.event.workflow_run.id }}" \
+          gh run view "$WF_RUN_ID" \
             --log-failed > /tmp/autofix-context/ci-failure.log 2>&1 || true
-          echo "Workflow: ${{ github.event.workflow_run.name }}" \
-            > /tmp/autofix-context/meta.txt
-          echo "Branch:   ${{ github.event.workflow_run.head_branch }}" \
-            >> /tmp/autofix-context/meta.txt
-          echo "Run URL:  ${{ github.event.workflow_run.html_url }}" \
-            >> /tmp/autofix-context/meta.txt
+          printf 'Workflow: %s\n' "$WF_NAME"   > /tmp/autofix-context/meta.txt
+          printf 'Branch:   %s\n' "$WF_BRANCH" >> /tmp/autofix-context/meta.txt
+          printf 'Run URL:  %s\n' "$WF_URL"    >> /tmp/autofix-context/meta.txt
           tail -c 20000 /tmp/autofix-context/ci-failure.log \
             > /tmp/autofix-context/ci-failure.tail.log || true
 
@@ -99,6 +101,9 @@ jobs:
 
       - name: Claude Code — diagnose and fix
         if: steps.guard.outputs.stop == 'false'
+        env:
+          WF_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WF_NAME: ${{ github.event.workflow_run.name }}
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -107,8 +112,8 @@ jobs:
           path_to_bun_executable: bun
           show_full_output: "true"
           prompt: |
-            CI failed on branch `${{ github.event.workflow_run.head_branch }}`
-            for workflow "${{ github.event.workflow_run.name }}".
+            CI failed. Workflow name and target branch are in
+            /tmp/autofix-context/meta.txt — read that file first.
 
             Your job: make CI green again with the smallest safe change.
 
@@ -128,8 +133,9 @@ jobs:
             5. Commit with a Conventional Commit message that ends with
                the marker " [auto-fix]", e.g.:
                  fix(ai-engine): clamp batch size to model capacity [auto-fix]
-            6. Push to the SAME branch:
-                 git push origin HEAD:${{ github.event.workflow_run.head_branch }}
+            6. Read the branch name from meta.txt, then push to that branch:
+                 BRANCH=$(grep '^Branch:' /tmp/autofix-context/meta.txt | cut -d' ' -f2-)
+                 git push origin "HEAD:$BRANCH"
 
             HARD RULES:
             - Do NOT modify any workflow file under .github/.
