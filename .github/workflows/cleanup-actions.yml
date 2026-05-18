@@ -72,9 +72,9 @@ jobs:
               if [ "$status" != "completed" ]; then
                 continue
               fi
-              # Delete skipped runs immediately regardless of age
-              if [ "$conclusion" = "skipped" ]; then
-                echo -e "${id}\t${created}\t${name} [skipped]" >> "$tmpfile"
+              # Delete skipped and cancelled runs immediately regardless of age
+              if [ "$conclusion" = "skipped" ] || [ "$conclusion" = "cancelled" ]; then
+                echo -e "${id}\t${created}\t${name} [${conclusion}]" >> "$tmpfile"
                 continue
               fi
               # Delete all other completed runs older than the retention window
