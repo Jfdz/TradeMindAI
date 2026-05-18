@@ -1,8 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/auth";
-
 // Read server env per-request, never at module load. Module-level reads are
 // captured when the route module is first evaluated during the build/trace
 // phase, before the container's runtime env (INTERNAL_SECRET from the k8s
