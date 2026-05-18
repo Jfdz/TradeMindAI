@@ -110,7 +110,10 @@ export function BacktestResults({ backtestId }: BacktestResultsProps) {
 
   const metricCards = [
     { label: "Total return", value: formatPercent(result.totalReturn * 100), tone: result.totalReturn >= 0 ? "text-green" : "text-red" },
+    { label: "Annualized return", value: formatPercent(result.annualizedReturn * 100), tone: result.annualizedReturn >= 0 ? "text-green" : "text-red" },
     { label: "Sharpe ratio", value: result.sharpeRatio.toFixed(2), tone: "text-cyan" },
+    { label: "Sortino ratio", value: Number.isFinite(result.sortinoRatio) ? result.sortinoRatio.toFixed(2) : "N/A", tone: "text-cyan" },
+    { label: "Calmar ratio", value: Number.isFinite(result.calmarRatio) ? result.calmarRatio.toFixed(2) : "N/A", tone: "text-gold" },
     { label: "Max drawdown", value: formatPercent(result.maxDrawdown * 100), tone: "text-red" },
     { label: "Win rate", value: formatPercent((result.winRate ?? 0) * 100), tone: "text-white" },
     { label: "Total trades", value: `${result.trades.length}`, tone: "text-white" },
