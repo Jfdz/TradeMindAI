@@ -1,7 +1,6 @@
-import { getServerSession } from "next-auth";
+import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/auth";
 import { fetchCandles } from "@/lib/dashboard/dashboard-api";
 
 export async function GET(request: NextRequest) {
@@ -10,7 +9,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "symbol required" }, { status: 400 });
   }
 
-  const session = await getServerSession(authOptions);
-  const candles = await fetchCandles(symbol, session?.accessToken);
+  const { getToken } = await auth();
+  const token = await getToken({ template: "backend" });
+  const candles = await fetchCandles(symbol, token ?? undefined);
   return NextResponse.json(candles);
 }

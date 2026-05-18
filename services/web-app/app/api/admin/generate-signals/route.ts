@@ -1,16 +1,19 @@
-import { getServerSession } from "next-auth";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-
-import { authOptions } from "@/lib/auth";
 
 const AI_ENGINE_URL =
   process.env.AI_ENGINE_SERVICE_URL ?? process.env.AI_ENGINE_URL ?? "http://localhost:8000";
 const INTERNAL_SECRET = process.env.INTERNAL_SECRET ?? "";
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  }
 
-  if (!session?.isAdmin) {
+  const user = await currentUser();
+  const isAdmin = (user?.publicMetadata as { role?: string } | null)?.role === "admin";
+  if (!isAdmin) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
 

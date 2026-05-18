@@ -76,6 +76,7 @@ class AddPortfolioPositionUseCaseImplTest {
         UserJpaEntity user = new UserJpaEntity(
                 userId,
                 "user@example.com",
+                null,
                 "$2a$10$hash",
                 "Test",
                 "User",
@@ -115,6 +116,7 @@ class AddPortfolioPositionUseCaseImplTest {
         UserJpaEntity user = new UserJpaEntity(
                 userId,
                 "user@example.com",
+                null,
                 "$2a$10$hash",
                 "Test",
                 "User",
