@@ -2,13 +2,13 @@
   "contexts": {
     "staging": {
       "namespace": "trading-saas",
-      "context": "",
-      "cluster": ""
+      "context": "default",
+      "cluster": "default"
     },
     "production": {
       "namespace": "trading-saas",
-      "context": "",
-      "cluster": ""
+      "context": "default",
+      "cluster": "default"
     }
   },
   "services": {
