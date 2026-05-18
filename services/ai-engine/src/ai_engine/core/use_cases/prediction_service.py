@@ -103,7 +103,8 @@ class PredictionService:
         x_scaled = self._normalizer.fit_transform(x)
         # Take the most recent window
         seq = x_scaled[-_WINDOW:].T  # shape: (n_features, window)
-        return torch.tensor(seq, dtype=torch.float32).unsqueeze(0), atr_pct  # (1, n_features, window)
+        tensor = torch.tensor(seq, dtype=torch.float32).unsqueeze(0)  # (1, n_features, window)
+        return tensor, atr_pct
 
     def _infer(
         self, ticker: str, sequence: torch.Tensor, model: StockCNN, atr_pct: float | None = None

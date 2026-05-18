@@ -65,7 +65,7 @@ make test
 
 ### Environment variables
 
-All variables are documented in `.env.example`. Copy it to `.env` and fill in your values.
+All variables are documented in `.env.example`. Copy it to `.env` and fill in your values
 
 ## Services
 
