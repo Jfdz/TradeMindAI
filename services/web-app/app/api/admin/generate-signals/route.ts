@@ -1,9 +1,14 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-const AI_ENGINE_URL =
-  process.env.AI_ENGINE_SERVICE_URL ?? process.env.AI_ENGINE_URL ?? "http://localhost:8000";
-const INTERNAL_SECRET = process.env.INTERNAL_SECRET ?? "";
+import { authOptions } from "@/lib/auth";
+
+// Read server env per-request, never at module load. Module-level reads are
+// captured when the route module is first evaluated during the build/trace
+// phase, before the container's runtime env (INTERNAL_SECRET from the k8s
+// secret) is injected — yielding a permanent empty value in production.
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const { userId } = await auth();
@@ -16,6 +21,10 @@ export async function POST(request: Request) {
   if (!isAdmin) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
+
+  const AI_ENGINE_URL =
+    process.env.AI_ENGINE_SERVICE_URL ?? process.env.AI_ENGINE_URL ?? "http://localhost:8000";
+  const INTERNAL_SECRET = process.env.INTERNAL_SECRET ?? "";
 
   if (!INTERNAL_SECRET) {
     return NextResponse.json({ message: "Server misconfiguration: INTERNAL_SECRET not set" }, { status: 503 });
