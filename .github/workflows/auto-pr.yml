@@ -1,0 +1,106 @@
+name: Auto PR & Merge
+
+# Autonomous PR engine. Replaces local git hooks (which do not fire from
+# Windows GUI clients). Triggers server-side on every push, so it works
+# from any client: VS Code, GitHub Desktop, CLI, web.
+#
+# Decision logic (embedded from decision-tree.ts — .claude/ is gitignored
+# so the runner cannot read it; the routing intelligence lives here):
+#   feature branch  → open PR to develop, enable auto-merge (squash)
+#   develop          → open PR to main,    enable auto-merge (merge commit)
+#   main             → ignored (release-orchestrator.yml owns it)
+#
+# Auto-merge respects branch protection: GitHub only merges once the
+# required status checks (orchestrator / per-service CI) are green.
+
+on:
+  push:
+    branches-ignore:
+      - main
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to open a PR for (defaults to current)
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: auto-pr-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  auto-pr:
+    name: Open PR and enable auto-merge
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Route, create PR, enable auto-merge
+        env:
+          # A PAT (repo scope) makes the created PR trigger CI and lets the
+          # develop→main merge fire release-orchestrator.yml. The default
+          # GITHUB_TOKEN cannot trigger downstream workflows. Falls back to
+          # GITHUB_TOKEN if AUTOMATION_PAT is not configured.
+          GH_TOKEN: ${{ secrets.AUTOMATION_PAT || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          BRANCH="${{ github.event.inputs.branch || github.ref_name }}"
+          echo "::notice::Source branch: $BRANCH"
+
+          # ── Embedded decision tree: choose target + merge strategy ──────
+          case "$BRANCH" in
+            main)
+              echo "::notice::main is owned by release-orchestrator.yml — nothing to do"
+              exit 0
+              ;;
+            develop)
+              TARGET="main"
+              STRATEGY="--merge"   # preserve history into release branch
+              ;;
+            *)
+              TARGET="develop"
+              STRATEGY="--squash"  # one clean commit per feature
+              ;;
+          esac
+          echo "::notice::Routing $BRANCH → $TARGET ($STRATEGY)"
+
+          # ── Guard: are there commits to PR? ─────────────────────────────
+          if [ "$(git rev-list --count "origin/$TARGET..origin/$BRANCH" 2>/dev/null || echo 0)" -eq 0 ]; then
+            echo "::notice::No commits ahead of $TARGET — skipping"
+            exit 0
+          fi
+
+          # ── Idempotent: reuse an open PR if one exists ──────────────────
+          PR_NUM="$(gh pr list --head "$BRANCH" --base "$TARGET" \
+            --state open --json number --jq '.[0].number // empty' || true)"
+
+          if [ -n "$PR_NUM" ]; then
+            echo "::notice::Reusing existing PR #$PR_NUM"
+          else
+            TITLE="$(git log -1 --pretty=%s origin/"$BRANCH")"
+            PR_URL="$(gh pr create \
+              --base "$TARGET" \
+              --head "$BRANCH" \
+              --title "$TITLE" \
+              --body "Automated PR: \`$BRANCH\` → \`$TARGET\`. Auto-merges when required checks pass." \
+              )"
+            PR_NUM="${PR_URL##*/}"
+            echo "::notice::Created PR #$PR_NUM — $PR_URL"
+          fi
+
+          # ── Enable native auto-merge (gated by branch protection) ───────
+          if gh pr merge "$PR_NUM" --auto $STRATEGY 2>/dev/null; then
+            echo "::notice::Auto-merge armed on PR #$PR_NUM ($STRATEGY)"
+          else
+            echo "::warning::Could not arm auto-merge on PR #$PR_NUM. \
+          Enable 'Allow auto-merge' in repo Settings → General, and ensure \
+          branch protection defines required status checks."
+          fi
