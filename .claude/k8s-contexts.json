@@ -1,0 +1,36 @@
+{
+  "contexts": {
+    "staging": {
+      "namespace": "trading-saas",
+      "context": "default",
+      "cluster": "default"
+    },
+    "production": {
+      "namespace": "trading-saas",
+      "context": "default",
+      "cluster": "default"
+    }
+  },
+  "services": {
+    "market-data-service": {
+      "deployment": "market-data-service",
+      "port": 8081,
+      "healthPath": "/actuator/health"
+    },
+    "trading-core-service": {
+      "deployment": "trading-core",
+      "port": 8082,
+      "healthPath": "/actuator/health"
+    },
+    "ai-engine": {
+      "deployment": "ai-engine",
+      "port": 8000,
+      "healthPath": "/health"
+    },
+    "web-app": {
+      "deployment": "web-app",
+      "port": 3000,
+      "healthPath": "/api/health"
+    }
+  }
+}

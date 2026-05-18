@@ -9,7 +9,7 @@ import type {
   AdminSignalSummary,
   ReasoningAudit,
 } from "@/lib/admin/reasoning-audit-types";
-import { formatPredictedChange } from "@/lib/signal-utils";
+import { formatPredictedChange, resolveExpectedMovePct } from "@/lib/signal-utils";
 
 const PAGE_SIZE = 25;
 
@@ -208,10 +208,8 @@ function SignalRow({
     minute: "2-digit",
   });
   const typeClass = row.signalType === "BUY" ? "text-green" : row.signalType === "SELL" ? "text-red" : "text-gold";
-  const expectedMove =
-    row.predictedChangePct != null
-      ? formatPredictedChange(row.predictedChangePct, row.signalType)
-      : null;
+  const movePct = resolveExpectedMovePct(row.entryPrice, row.targetPrice, row.predictedChangePct);
+  const expectedMove = movePct != null ? formatPredictedChange(movePct, row.signalType) : null;
   return (
     <tr
       onClick={onSelect}

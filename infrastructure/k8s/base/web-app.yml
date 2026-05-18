@@ -64,8 +64,8 @@ spec:
             - name: INTERNAL_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: internal-secret
-                  key: secret
+                  name: internal-service-secret
+                  key: market-data
             - name: MARKET_DATA_SERVICE_URL
               valueFrom:
                 configMapKeyRef:

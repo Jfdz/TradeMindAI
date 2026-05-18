@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReasoningAudit } from "@/lib/admin/reasoning-audit-types";
+import { calculateExpectedMovePct } from "@/lib/signal-utils";
 
 function formatTimestamp(value: string | null | undefined): string {
   if (!value) return "—";
@@ -77,7 +78,7 @@ export function ReasoningAuditDetail({ audit }: { audit: ReasoningAudit }) {
             <PriceCell label="Entry" value={formatPrice(audit.entryPrice)} />
             <PriceCell label="Target" value={formatPrice(audit.targetPrice)} />
             <PriceCell label="Stop" value={formatPrice(audit.stopLoss)} />
-            <PriceCell label="Expected move" value={formatPct(audit.expectedMovePct)} />
+            <PriceCell label="Expected move" value={formatPct(calculateExpectedMovePct(audit.entryPrice, audit.targetPrice) ?? audit.expectedMovePct)} />
           </div>
         </Section>
       )}

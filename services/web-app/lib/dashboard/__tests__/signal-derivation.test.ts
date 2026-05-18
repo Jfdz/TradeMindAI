@@ -25,6 +25,7 @@ function makeSignal(type: "BUY" | "SELL" | "HOLD", symbol = "AAPL"): FilteredSig
     entry: 100,
     takeProfit: 105,
     stopLoss: 97,
+    expectedMovePct: 5,
     live: true,
     status: "LIVE",
     age: "1h ago",
@@ -107,6 +108,19 @@ describe("deriveSignal", () => {
     // 100 * (1 + 5/100) = 105; 100 * (1 - 3/100) = 97
     expect(derived.takeProfit).toBe(105);
     expect(derived.stopLoss).toBe(97);
+  });
+
+  it("computes expectedMovePct from entry and takeProfit when both present", () => {
+    const signal = makeApiSignal({ entryPrice: 130.05, targetPrice: 135.25 });
+    const derived = deriveSignal(signal, null);
+    // |(135.25 - 130.05) / 130.05| * 100 ≈ 3.998
+    expect(derived.expectedMovePct).toBeCloseTo(3.998, 2);
+  });
+
+  it("falls back to predictedChangePct for expectedMovePct when prices absent", () => {
+    const signal = makeApiSignal({ entryPrice: null, targetPrice: undefined });
+    const derived = deriveSignal(signal, null);
+    expect(derived.expectedMovePct).toBe(4); // predictedChangePct from makeApiSignal
   });
 });
 

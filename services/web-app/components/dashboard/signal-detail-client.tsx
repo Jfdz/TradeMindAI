@@ -109,7 +109,7 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
       return scrubReasoningText(signal.reasoning, signal);
     }
 
-    const predicted = signal.predictedChangePct ?? 0;
+    const predicted = derived?.expectedMovePct ?? 0;
     const priceText = formatPrice(entry);
 
     if (signal.type === "BUY") {
@@ -121,7 +121,7 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
     }
 
     return `Neutral setup around ${priceText} while the model waits for a cleaner directional edge.`;
-  }, [entry, signal]);
+  }, [derived, entry, signal]);
 
   if (isLoading) {
     return (
@@ -260,8 +260,9 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
           </div>
 
           {(() => {
-            const { label, colorClass } = formatPredictedChange(signal.predictedChangePct, signal.type);
-            const pct = signal.predictedChangePct ?? 0;
+            const movePct = derived?.expectedMovePct ?? null;
+            const { label, colorClass } = formatPredictedChange(movePct, signal.type);
+            const pct = movePct ?? 0;
             const barWidth = Math.min(Math.abs(pct) / 10, 1) * 100;
             let barColor: string;
             switch (signal.type) {
@@ -279,7 +280,7 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
                   <div className="flex-1 max-w-[140px]">
                     <div
                       className="mt-1 h-2 rounded-full bg-bg-3 overflow-hidden"
-                      title={entry == null ? undefined : `From ${formatPrice(entry)} to ~${formatPrice(entry * (1 + pct / 100))}`}
+                      title={entry == null || takeProfit == null ? undefined : `From ${formatPrice(entry)} to ${formatPrice(takeProfit)}`}
                     >
                       <div
                         className={`h-full rounded-full ${barColor}`}

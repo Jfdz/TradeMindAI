@@ -1,6 +1,50 @@
 import { describe, expect, it } from "vitest";
 import type { SignalResponse } from "./api-client";
-import { buildSignalReasoning } from "./signal-utils";
+import { buildSignalReasoning, calculateExpectedMovePct, resolveExpectedMovePct } from "./signal-utils";
+
+describe("calculateExpectedMovePct", () => {
+  it("BUY: 130.05 → 135.25 ≈ 4.00%", () => {
+    expect(calculateExpectedMovePct(130.05, 135.25)).toBeCloseTo(3.998, 2);
+  });
+
+  it("SELL: 100 → 95 = 5.00%", () => {
+    expect(calculateExpectedMovePct(100, 95)).toBeCloseTo(5, 5);
+  });
+
+  it("returns null when entry is null", () => {
+    expect(calculateExpectedMovePct(null, 135)).toBeNull();
+  });
+
+  it("returns null when target is null", () => {
+    expect(calculateExpectedMovePct(130, null)).toBeNull();
+  });
+
+  it("returns null when entry is 0", () => {
+    expect(calculateExpectedMovePct(0, 135)).toBeNull();
+  });
+
+  it("returns null when entry is NaN", () => {
+    expect(calculateExpectedMovePct(Number.NaN, 135)).toBeNull();
+  });
+});
+
+describe("resolveExpectedMovePct", () => {
+  it("returns calculated move when entry and target present", () => {
+    expect(resolveExpectedMovePct(100, 105, 2)).toBeCloseTo(5, 5);
+  });
+
+  it("falls back to predictedChangePct when entry is missing", () => {
+    expect(resolveExpectedMovePct(null, 105, 3.5)).toBe(3.5);
+  });
+
+  it("falls back to predictedChangePct when target is missing", () => {
+    expect(resolveExpectedMovePct(100, null, 3.5)).toBe(3.5);
+  });
+
+  it("returns null when all inputs are null", () => {
+    expect(resolveExpectedMovePct(null, null, null)).toBeNull();
+  });
+});
 
 function makeSignal(overrides: Partial<SignalResponse> = {}): SignalResponse {
   return {
