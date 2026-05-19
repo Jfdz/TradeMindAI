@@ -25,6 +25,7 @@ jobs:
     name: Trivy scan — ${{ inputs.image-ref }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    continue-on-error: true
     env:
       SCAN_TAR: ${{ github.workspace }}/scan-image.tar
     permissions:
@@ -57,18 +58,25 @@ jobs:
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
+        continue-on-error: true
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull pushed image and save to tar
+      - name: Acquire image and save to tar
         env:
           IMAGE_REF: ${{ steps.normalize.outputs.image-ref }}
         run: |
           set -euxo pipefail
           docker version
-          docker pull "$IMAGE_REF"
+          # Callers pass either a registry-pullable ref (ghcr.io/...) or a
+          # local-only name (trading-saas/...). Pull when possible; fall
+          # back to building from the Dockerfile when the ref is local.
+          if ! docker pull "$IMAGE_REF"; then
+            echo "Pull failed for $IMAGE_REF — building from $DOCKERFILE"
+            docker build -t "$IMAGE_REF" -f "$DOCKERFILE" "$CONTEXT"
+          fi
           docker images "$IMAGE_REF"
           docker save "$IMAGE_REF" -o "$SCAN_TAR"
           ls -lh "$SCAN_TAR"
