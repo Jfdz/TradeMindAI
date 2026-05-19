@@ -55,7 +55,15 @@ jobs:
           sudo apt-get install -y trivy
           trivy --version
 
-      - name: Build image and save to tar
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        continue-on-error: true
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Acquire image and save to tar
         env:
           IMAGE_REF: ${{ steps.normalize.outputs.image-ref }}
           DOCKERFILE: ${{ inputs.dockerfile }}
@@ -63,9 +71,14 @@ jobs:
           DOCKER_BUILDKIT: "0"
         run: |
           set -euxo pipefail
-          pwd
           docker version
-          docker build -t "$IMAGE_REF" -f "$DOCKERFILE" "$CONTEXT"
+          # Callers pass either a registry-pullable ref (ghcr.io/...) or a
+          # local-only name (trading-saas/...). Pull when possible; fall
+          # back to building from the Dockerfile when the ref is local.
+          if ! docker pull "$IMAGE_REF"; then
+            echo "Pull failed for $IMAGE_REF — building from $DOCKERFILE"
+            docker build -t "$IMAGE_REF" -f "$DOCKERFILE" "$CONTEXT"
+          fi
           docker images "$IMAGE_REF"
           docker save "$IMAGE_REF" -o "$SCAN_TAR"
           ls -lh "$SCAN_TAR"
