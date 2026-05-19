@@ -3,7 +3,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { TickerBarMarquee } from "./ticker-bar-marquee";
 import type { TickerQuote } from "@/lib/trademind-content";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
+const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8082";
 
 const TICKERS = [
   "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "AMD", "NFLX", "INTC",

@@ -2,6 +2,10 @@ import { test, expect } from "@playwright/test";
 
 test.describe("backtests page", () => {
   test.beforeEach(async ({ page }) => {
+    test.skip(
+      process.env.E2E_CLERK_TESTS_ENABLED !== "true",
+      "Clerk e2e disabled — authenticated dashboard specs require a real Clerk session",
+    );
     await page.goto("/dashboard/backtests");
     await expect(page.locator("body")).not.toContainText("Application error");
     await expect(page.locator("form")).toBeVisible({ timeout: 10_000 });

@@ -82,6 +82,8 @@ management:
     health:
       show-details: never
       show-components: when_authorized
+      probes:
+        enabled: true
   health:
     db:
       enabled: true

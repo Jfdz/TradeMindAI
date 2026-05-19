@@ -2,9 +2,7 @@ package com.tradingsaas.tradingcore.adapter.in.web;
 
 import com.tradingsaas.tradingcore.domain.exception.EmailAlreadyExistsException;
 import com.tradingsaas.tradingcore.domain.exception.InsufficientSubscriptionException;
-import com.tradingsaas.tradingcore.domain.exception.InvalidCredentialsException;
 import com.tradingsaas.tradingcore.domain.exception.StrategyNotFoundException;
-import com.tradingsaas.tradingcore.domain.exception.TokenBlacklistedException;
 import com.tradingsaas.tradingcore.domain.exception.UserNotFoundException;
 import com.tradingsaas.tradingcore.adapter.in.web.SignalController.SignalNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,20 +41,6 @@ class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.CONFLICT)
     ErrorResponse handleEmailExists(EmailAlreadyExistsException ex, HttpServletRequest req) {
         return new ErrorResponse(409, "Conflict", ex.getMessage(), List.of(),
-                null, Instant.now(), req.getRequestURI());
-    }
-
-    @ExceptionHandler(InvalidCredentialsException.class)
-    @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    ErrorResponse handleInvalidCredentials(InvalidCredentialsException ex, HttpServletRequest req) {
-        return new ErrorResponse(401, "Unauthorized", "Invalid email or password", List.of(),
-                null, Instant.now(), req.getRequestURI());
-    }
-
-    @ExceptionHandler(TokenBlacklistedException.class)
-    @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    ErrorResponse handleTokenBlacklisted(TokenBlacklistedException ex, HttpServletRequest req) {
-        return new ErrorResponse(401, "Unauthorized", "Token has been revoked", List.of(),
                 null, Instant.now(), req.getRequestURI());
     }
 

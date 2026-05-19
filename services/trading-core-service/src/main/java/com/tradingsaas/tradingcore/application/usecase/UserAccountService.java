@@ -43,6 +43,7 @@ public class UserAccountService {
         User current = getProfile(userId);
         User updated = new User(
                 current.getId(),
+                current.getClerkUserId(),
                 current.getEmail(),
                 current.getPasswordHash(),
                 firstName,

@@ -67,9 +67,6 @@ jobs:
       - name: Acquire image and save to tar
         env:
           IMAGE_REF: ${{ steps.normalize.outputs.image-ref }}
-          DOCKERFILE: ${{ inputs.dockerfile }}
-          CONTEXT: ${{ inputs.context }}
-          DOCKER_BUILDKIT: "0"
         run: |
           set -euxo pipefail
           docker version
@@ -107,6 +104,7 @@ jobs:
         with:
           sarif_file: trivy-results.sarif
           category: trivy-${{ steps.normalize.outputs.image-ref }}
+          wait-for-processing: false
 
       - name: Trivy scan (table, gating)
         if: success()
