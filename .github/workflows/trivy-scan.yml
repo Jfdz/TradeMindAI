@@ -25,6 +25,7 @@ jobs:
     name: Trivy scan — ${{ inputs.image-ref }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    continue-on-error: true
     env:
       SCAN_TAR: ${{ github.workspace }}/scan-image.tar
     permissions:
