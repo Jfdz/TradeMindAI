@@ -55,17 +55,20 @@ jobs:
           sudo apt-get install -y trivy
           trivy --version
 
-      - name: Build image and save to tar
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull pushed image and save to tar
         env:
           IMAGE_REF: ${{ steps.normalize.outputs.image-ref }}
-          DOCKERFILE: ${{ inputs.dockerfile }}
-          CONTEXT: ${{ inputs.context }}
-          DOCKER_BUILDKIT: "0"
         run: |
           set -euxo pipefail
-          pwd
           docker version
-          docker build -t "$IMAGE_REF" -f "$DOCKERFILE" "$CONTEXT"
+          docker pull "$IMAGE_REF"
           docker images "$IMAGE_REF"
           docker save "$IMAGE_REF" -o "$SCAN_TAR"
           ls -lh "$SCAN_TAR"
