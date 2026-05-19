@@ -3,6 +3,10 @@ import { mockSignalsApi } from "./helpers/mock-api";
 
 test.describe("signals page", () => {
   test.beforeEach(async ({ page }) => {
+    test.skip(
+      process.env.E2E_CLERK_TESTS_ENABLED !== "true",
+      "Clerk e2e disabled — authenticated dashboard specs require a real Clerk session",
+    );
     await mockSignalsApi(page);
     await page.goto("/dashboard/signals");
     await expect(page.locator("table")).toBeVisible({ timeout: 15_000 });

@@ -3,6 +3,10 @@ import { mockPortfolioApi, mockSignalsApi } from "./helpers/mock-api";
 
 test.describe("dashboard smoke", () => {
   test.beforeEach(async ({ page }) => {
+    test.skip(
+      process.env.E2E_CLERK_TESTS_ENABLED !== "true",
+      "Clerk e2e disabled — authenticated dashboard specs require a real Clerk session",
+    );
     await mockSignalsApi(page);
     await mockPortfolioApi(page);
   });

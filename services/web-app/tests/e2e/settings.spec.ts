@@ -2,6 +2,10 @@ import { test, expect } from "@playwright/test";
 
 test.describe("settings page", () => {
   test.beforeEach(async ({ page }) => {
+    test.skip(
+      process.env.E2E_CLERK_TESTS_ENABLED !== "true",
+      "Clerk e2e disabled — authenticated dashboard specs require a real Clerk session",
+    );
     await page.goto("/dashboard/settings");
     await expect(page.getByRole("heading", { name: "Configure your workspace" })).toBeVisible();
   });

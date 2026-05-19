@@ -34,13 +34,13 @@ spec:
             - name: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
               valueFrom:
                 secretKeyRef:
-                  name: clerk-credentials
-                  key: publishable-key
+                  name: clerk-secrets
+                  key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
             - name: CLERK_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: clerk-credentials
-                  key: secret-key
+                  name: clerk-secrets
+                  key: CLERK_SECRET_KEY
             - name: NEXT_PUBLIC_CLERK_SIGN_IN_URL
               valueFrom:
                 configMapKeyRef:
