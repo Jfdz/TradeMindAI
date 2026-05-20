@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @TestPropertySource(properties = {
         "trading-core.cors.allowed-origins=https://trading-saas.example.com",
         "spring.security.oauth2.resourceserver.jwt.issuer-uri=https://clerk.example.dev",
-        "trading-core.clerk.audience=https://api.trademindai.com"
+        "trading-core.clerk.audience=https://api.trademind.es"
 })
 class SecurityConfigTest {
 
