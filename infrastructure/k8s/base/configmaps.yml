@@ -28,7 +28,7 @@ data:
   MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin.monitoring.svc.cluster.local:9411/api/v2/spans
   LOGGING_LEVEL_ROOT: INFO
   APP_CORS_ALLOWED_ORIGINS: https://trademind.es
-  CLERK_ISSUER_URI: https://clerk.trademindai.com
+  CLERK_ISSUER_URI: https://hopeful-albacore-64.clerk.accounts.dev
   CLERK_AUDIENCE: https://api.trademindai.com
   SERVICES_MARKET_DATA_URL: http://market-data-service.trading-saas.svc.cluster.local:8081
   AI_ENGINE_SERVICE_URL: http://ai-engine.trading-saas.svc.cluster.local:8000

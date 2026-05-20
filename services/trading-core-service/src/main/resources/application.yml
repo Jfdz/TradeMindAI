@@ -39,7 +39,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${CLERK_ISSUER_URI:https://clerk.trademindai.com}
+          issuer-uri: ${CLERK_ISSUER_URI:https://hopeful-albacore-64.clerk.accounts.dev}
 
   data:
     redis:
