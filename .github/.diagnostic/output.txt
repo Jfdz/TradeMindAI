@@ -1,4 +1,1 @@
-NAME                                    READY   STATUS             RESTARTS        AGE     IP            NODE                     NOMINATED NODE   READINESS GATES
-trading-core-service-787f96d846-mjnwb   1/1     Running            0               4d15h   10.42.0.140   instance-20260423-1017   <none>           <none>
-trading-core-service-787f96d846-s66rz   1/1     Running            0               4d15h   10.42.0.141   instance-20260423-1017   <none>           <none>
-trading-core-service-7f7d679747-dhz2z   0/1     CrashLoopBackOff   6 (2m19s ago)   12m     10.42.0.206   instance-20260423-1017   <none>           <none>
+No resources found in trading-saas namespace.
