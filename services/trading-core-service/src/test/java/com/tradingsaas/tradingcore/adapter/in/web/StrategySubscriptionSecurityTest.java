@@ -53,7 +53,7 @@ import org.springframework.test.web.servlet.MockMvc;
         "trading-core.rate-limit.basic-per-minute=5",
         "trading-core.rate-limit.premium-per-minute=10",
         "spring.security.oauth2.resourceserver.jwt.issuer-uri=https://clerk.example.dev",
-        "trading-core.clerk.audience=https://api.trademindai.com"
+        "trading-core.clerk.audience=https://api.trademind.es"
 })
 class StrategySubscriptionSecurityTest {
 

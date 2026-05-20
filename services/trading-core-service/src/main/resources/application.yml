@@ -134,7 +134,7 @@ trading-core:
       max-output-tokens: 100
       temperature: 0.7
   clerk:
-    audience: ${CLERK_AUDIENCE:https://api.trademindai.com}
+    audience: ${CLERK_AUDIENCE:https://api.trademind.es}
 subscriptions:
   enforce: ${SUBSCRIPTIONS_ENFORCE:false}
 

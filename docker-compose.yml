@@ -140,7 +140,7 @@ services:
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
       MARKET_DATA_INTERNAL_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
       CLERK_ISSUER_URI: ${CLERK_ISSUER_URI:-}
-      CLERK_AUDIENCE: ${CLERK_AUDIENCE:-https://api.trademindai.com}
+      CLERK_AUDIENCE: ${CLERK_AUDIENCE:-https://api.trademind.es}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
     depends_on:
