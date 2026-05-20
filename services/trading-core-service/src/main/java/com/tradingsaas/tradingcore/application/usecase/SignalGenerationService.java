@@ -36,6 +36,8 @@ class SignalGenerationService implements GenerateSignalUseCase {
     // Minimum conviction threshold: predictions below this yield no actionable target/stop
     private static final BigDecimal MIN_TP_PCT = new BigDecimal("0.10");
     private static final BigDecimal TWO = BigDecimal.valueOf(2);
+    // Must match trading_signals.entry_price NUMERIC(18,6) (V15).
+    private static final int ENTRY_PRICE_SCALE = 6;
 
     // A duplicate window of 24h aligns with the unique-per-day index on the DB side
     // (date_trunc('day', generated_at)) and tolerates clock skew across producers.
@@ -186,8 +188,15 @@ class SignalGenerationService implements GenerateSignalUseCase {
             BigDecimal price = prices.get(ticker);
             if (price == null) {
                 log.warn("signal-generation: no entry_price captured for ticker={} (market-data returned empty)", ticker);
+                return null;
             }
-            return price;
+            // Match trading_signals.entry_price NUMERIC(18,6) so in-memory
+            // equality (preflight findRecentEquivalent / DB-collision recovery)
+            // matches the value the unique index sees after Postgres truncates
+            // on INSERT. Upstream BigDecimals derived from float carry full
+            // mantissa precision; without this they never compare equal to the
+            // stored row and recovery throws "no equivalent row found".
+            return price.setScale(ENTRY_PRICE_SCALE, RoundingMode.HALF_EVEN);
         } catch (Exception e) {
             log.warn("Could not fetch entry price for ticker={}: {}", ticker, e.getMessage());
             return null;
