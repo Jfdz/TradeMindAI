@@ -13,10 +13,22 @@ spec:
   tls:
     - hosts:
         - api.trademind.es
+        - trademind.es
       secretName: trading-saas-tls
   rules:
+    # Frontend web-app
+    - host: trademind.es
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-app
+                port:
+                  number: 3000
     # Backend API — path-based routing to microservices
-    # Frontend (trademind.es) is served by Vercel — no K8s rule needed
+    # Frontend (trademind.es) is served by K8s web-app service
     - host: api.trademind.es
       http:
         paths:
