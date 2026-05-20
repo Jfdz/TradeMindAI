@@ -158,13 +158,13 @@ jobs:
     name: Security Scan
     needs: docker-build-push
     if: ${{ inputs.push_image }}
-    continue-on-error: true
     permissions:
       contents: read
       actions: read
       security-events: write
     secrets: inherit
     uses: ./.github/workflows/trivy-scan.yml
+    continue-on-error: true
     with:
       image-ref: ghcr.io/${{ github.repository }}/web-app:${{ inputs.ref }}
       dockerfile: services/web-app/Dockerfile
