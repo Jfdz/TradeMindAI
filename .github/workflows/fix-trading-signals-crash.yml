@@ -54,10 +54,11 @@ jobs:
             -o jsonpath='{.data.username}' | base64 -d)
           PGPASSWORD=$(kubectl get secret postgres-credentials -n trading-saas \
             -o jsonpath='{.data.password}' | base64 -d)
-          export PGUSER PGPASSWORD
+          PGDATABASE=$(kubectl get secret postgres-credentials -n trading-saas \
+            -o jsonpath='{.data.trading-core-db}' | base64 -d)
+          export PGUSER PGPASSWORD PGDATABASE
           export PGHOST=127.0.0.1
           export PGPORT=5433
-          export PGDATABASE=trading_core
 
           echo "Deleting duplicate signals from trading_core.trading_signals..."
           psql -v ON_ERROR_STOP=1 << 'SQL'
