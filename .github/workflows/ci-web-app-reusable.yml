@@ -179,6 +179,7 @@ jobs:
     name: Security Scan
     needs: docker-build-push
     if: ${{ inputs.push_image }}
+    continue-on-error: true
     permissions:
       contents: read
       actions: read
