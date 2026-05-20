@@ -20,7 +20,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Get postgres credentials
+      - name: Get postgres credentials and setup port-forward
         id: pg-creds
         run: |
           set -euo pipefail
@@ -36,10 +36,42 @@ jobs:
           echo "user=${POSTGRES_USER}" >> "$GITHUB_OUTPUT"
           echo "password=${POSTGRES_PASSWORD}" >> "$GITHUB_OUTPUT"
 
+          # Check if host is a k8s service name (contains .svc.cluster.local or similar)
+          if [[ "${POSTGRES_HOST}" == *".svc.cluster.local"* ]] || [[ "${POSTGRES_HOST}" == *".svc"* ]]; then
+            echo "Detected Kubernetes service name, will use port-forward"
+            echo "use_portforward=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "use_portforward=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup postgres port-forward
+        if: steps.pg-creds.outputs.use_portforward == 'true'
+        run: |
+          set -euo pipefail
+          echo "Setting up port-forward to postgres service..."
+          kubectl port-forward -n trading-saas svc/postgres 5432:5432 > /tmp/pf.log 2>&1 &
+          echo $! > /tmp/pf.pid
+
+          # Wait for port-forward to be ready
+          sleep 2
+          for i in {1..10}; do
+            if timeout 1 bash -c 'exec 3<>/dev/tcp/localhost/5432' 2>/dev/null; then
+              echo "✓ Port-forward ready on localhost:5432"
+              break
+            fi
+            if [ $i -eq 10 ]; then
+              echo "✗ Port-forward failed to start"
+              cat /tmp/pf.log
+              exit 1
+            fi
+            echo "Waiting for port-forward... ($i/10)"
+            sleep 1
+          done
+
       - name: Delete duplicate trading signals from database
         env:
-          PGHOST: ${{ steps.pg-creds.outputs.host }}
-          PGPORT: ${{ steps.pg-creds.outputs.port }}
+          PGHOST: ${{ steps.pg-creds.outputs.use_portforward == 'true' && 'localhost' || steps.pg-creds.outputs.host }}
+          PGPORT: 5432
           PGUSER: ${{ steps.pg-creds.outputs.user }}
           PGPASSWORD: ${{ steps.pg-creds.outputs.password }}
           PGDATABASE: trading_core
@@ -62,6 +94,16 @@ jobs:
           SQL
 
           echo "✓ Duplicates deleted"
+
+      - name: Cleanup port-forward
+        if: always()
+        run: |
+          if [ -f /tmp/pf.pid ]; then
+            PID=$(cat /tmp/pf.pid)
+            echo "Cleaning up port-forward (PID: ${PID})"
+            kill ${PID} 2>/dev/null || true
+            rm -f /tmp/pf.pid /tmp/pf.log
+          fi
 
       - name: Restart trading-core-service deployment
         run: |
