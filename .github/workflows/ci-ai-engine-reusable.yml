@@ -54,9 +54,29 @@ jobs:
         run: pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Dependency scan
+        # Ignored advisories have NO upstream fix version available (verified
+        # via pip-audit 2026-05-18). Re-evaluate on every dependency bump and
+        # drop any IDs once a fixed release ships.
+        #   CVE-2026-3219            — pre-existing accepted finding
+        #   PYSEC-2024-277           — joblib 1.5.3 (transitive via scikit-learn)
+        #   PYSEC-2025-189..197,210  — torch 2.12.0 (11 advisories)
+        #   PYSEC-2026-139           — torch 2.12.0
         run: |
           python -m pip install pip-audit
-          pip-audit -r requirements-dev.txt --ignore-vuln CVE-2026-3219
+          pip-audit -r requirements-dev.txt \
+            --ignore-vuln CVE-2026-3219 \
+            --ignore-vuln PYSEC-2024-277 \
+            --ignore-vuln PYSEC-2025-189 \
+            --ignore-vuln PYSEC-2025-190 \
+            --ignore-vuln PYSEC-2025-191 \
+            --ignore-vuln PYSEC-2025-192 \
+            --ignore-vuln PYSEC-2025-193 \
+            --ignore-vuln PYSEC-2025-194 \
+            --ignore-vuln PYSEC-2025-195 \
+            --ignore-vuln PYSEC-2025-196 \
+            --ignore-vuln PYSEC-2025-197 \
+            --ignore-vuln PYSEC-2025-210 \
+            --ignore-vuln PYSEC-2026-139
 
       - name: Install package
         run: pip install -e .
