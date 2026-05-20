@@ -20,12 +20,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Get postgres credentials
+        id: pg-creds
+        run: |
+          set -euo pipefail
+          echo "Fetching postgres credentials from secret..."
+
+          POSTGRES_HOST=$(kubectl get secret postgres-credentials -n trading-saas -o jsonpath='{.data.host}' | base64 -d)
+          POSTGRES_PORT=$(kubectl get secret postgres-credentials -n trading-saas -o jsonpath='{.data.port}' | base64 -d)
+          POSTGRES_USER=$(kubectl get secret postgres-credentials -n trading-saas -o jsonpath='{.data.username}' | base64 -d)
+          POSTGRES_PASSWORD=$(kubectl get secret postgres-credentials -n trading-saas -o jsonpath='{.data.password}' | base64 -d)
+
+          echo "host=${POSTGRES_HOST}" >> "$GITHUB_OUTPUT"
+          echo "port=${POSTGRES_PORT}" >> "$GITHUB_OUTPUT"
+          echo "user=${POSTGRES_USER}" >> "$GITHUB_OUTPUT"
+          echo "password=${POSTGRES_PASSWORD}" >> "$GITHUB_OUTPUT"
+
       - name: Delete duplicate trading signals from database
+        env:
+          PGHOST: ${{ steps.pg-creds.outputs.host }}
+          PGPORT: ${{ steps.pg-creds.outputs.port }}
+          PGUSER: ${{ steps.pg-creds.outputs.user }}
+          PGPASSWORD: ${{ steps.pg-creds.outputs.password }}
+          PGDATABASE: trading_core
         run: |
           set -euo pipefail
           echo "Deleting duplicate signals from trading_core.trading_signals..."
+          echo "Connecting to postgres at ${PGHOST}:${PGPORT}..."
 
-          kubectl exec -n trading-saas deployment/postgres -- psql -U postgres -d trading_core << 'SQL'
+          psql << 'SQL'
           DELETE FROM trading_core.trading_signals
           WHERE id IN (
             SELECT id FROM (
