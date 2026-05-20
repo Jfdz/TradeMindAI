@@ -52,7 +52,7 @@ class SignalGenerationServiceTest {
         assertEquals(0, generated.getTakeProfitPct().compareTo(new BigDecimal("1.50")));
         assertEquals(0, generated.getStopLossPct().compareTo(new BigDecimal("0.75")));
         assertEquals(new BigDecimal("1.50"), generated.getPredictedChangePct());
-        assertEquals(new BigDecimal("182.50"), generated.getEntryPrice());
+        assertEquals(0, generated.getEntryPrice().compareTo(new BigDecimal("182.50")));
         // targetPrice = 182.50 × 1.015 = 185.237500
         assertEquals(0, generated.getTargetPrice().compareTo(new BigDecimal("185.237500")));
         // stopLoss = 182.50 × (1 − 0.0075) = 181.131250
@@ -257,7 +257,7 @@ class SignalGenerationServiceTest {
                 new Confidence(new BigDecimal("0.70")), Timeframe.DAILY,
                 Instant.parse("2026-04-17T08:00:00Z"),
                 new BigDecimal("2.00"), new BigDecimal("4.00"),
-                new BigDecimal("2.30"), new BigDecimal("450.00"),
+                new BigDecimal("2.30"), new BigDecimal("450.000000"),
                 new BigDecimal("468.000000"), new BigDecimal("441.000000"),
                 new BigDecimal("4.0000"));
         RecordingRepository repository = new RecordingRepository(existing);
@@ -268,6 +268,52 @@ class SignalGenerationServiceTest {
 
         assertEquals(existing.getId(), generated.getId());
         assertEquals(0, repository.saveCallCount);
+    }
+
+    @Test
+    void preflight_findsExistingWhenUpstreamPriceCarriesFloatTailDigits() {
+        // Reproduces the prod bug: market-data returns a BigDecimal derived
+        // from a float (scale > 6), while the stored row's entry_price is
+        // NUMERIC(18,6) — scale 6. Without normalising at fetch time the
+        // preflight check (and the post-collision recovery) compare unequal
+        // BigDecimals and never find the existing row, so the DB unique index
+        // catches the duplicate and SignalGenerationService throws
+        // "DB unique violation but no equivalent row found".
+        UUID symbolId = UUID.fromString("88888888-8888-8888-8888-888888888888");
+        AiPrediction prediction = new AiPrediction(
+                "WMT",
+                SignalType.SELL,
+                new Confidence(new BigDecimal("0.45")),
+                new BigDecimal("-1.50"),
+                List.of(),
+                Instant.parse("2026-05-18T22:01:14Z"));
+
+        // Existing row as stored by Postgres NUMERIC(18,6) — already truncated.
+        // Derived prices set so backfillDerivedPricesIfMissing is a no-op and
+        // the test isolates the preflight equality behaviour.
+        TradingSignal existing = new TradingSignal(
+                UUID.fromString("eeeeeeee-1111-2222-3333-444444444444"),
+                symbolId, "WMT", SignalType.SELL,
+                new Confidence(new BigDecimal("0.45")), Timeframe.DAILY,
+                Instant.parse("2026-05-18T22:00:00Z"),
+                new BigDecimal("2.00"), new BigDecimal("1.50"),
+                new BigDecimal("-1.50"), new BigDecimal("133.339996"),
+                new BigDecimal("131.339896"), new BigDecimal("136.006796"),
+                new BigDecimal("1.5000"));
+        RecordingRepository repository = new RecordingRepository(existing);
+
+        // Upstream BigDecimal carries the full float mantissa (scale 14) —
+        // matches the prod log payload "133.33999633789062".
+        BigDecimal upstreamPrice = new BigDecimal("133.33999633789062");
+        SignalGenerationService service = new SignalGenerationService(
+                repository, new StubMarketDataPort(Map.of("WMT", upstreamPrice)));
+
+        TradingSignal generated = service.generate(symbolId, prediction);
+
+        assertEquals(existing.getId(), generated.getId(),
+                "preflight should find the stored scale-6 row even when upstream price carries float tail digits");
+        assertEquals(0, repository.saveCallCount,
+                "no save should be attempted once the dedup preflight resolves");
     }
 
     @Test
@@ -288,7 +334,7 @@ class SignalGenerationServiceTest {
                 new Confidence(new BigDecimal("0.70")), Timeframe.DAILY,
                 Instant.parse("2026-04-17T08:00:00Z"),
                 new BigDecimal("2.00"), new BigDecimal("4.00"),
-                new BigDecimal("2.30"), new BigDecimal("450.00"));
+                new BigDecimal("2.30"), new BigDecimal("450.000000"));
         RecordingRepository repository = new RecordingRepository(legacy);
         SignalGenerationService service = new SignalGenerationService(
                 repository, new StubMarketDataPort(Map.of("NVDA", new BigDecimal("450.00"))));
@@ -319,7 +365,7 @@ class SignalGenerationServiceTest {
                 new Confidence(new BigDecimal("0.70")), Timeframe.DAILY,
                 Instant.parse("2026-04-17T08:00:00Z"),
                 new BigDecimal("2.00"), new BigDecimal("4.00"),
-                new BigDecimal("2.30"), new BigDecimal("450.00"));
+                new BigDecimal("2.30"), new BigDecimal("450.000000"));
         RecordingRepository repository = new RecordingRepository(existing);
         // Different entry_price -> not a duplicate.
         SignalGenerationService service = new SignalGenerationService(
@@ -328,7 +374,7 @@ class SignalGenerationServiceTest {
         TradingSignal generated = service.generate(symbolId, prediction);
 
         assertEquals(1, repository.saveCallCount);
-        assertEquals(new BigDecimal("455.20"), generated.getEntryPrice());
+        assertEquals(0, generated.getEntryPrice().compareTo(new BigDecimal("455.20")));
     }
 
     @Test
