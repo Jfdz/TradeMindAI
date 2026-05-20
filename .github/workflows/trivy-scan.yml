@@ -67,6 +67,8 @@ jobs:
       - name: Acquire image and save to tar
         env:
           IMAGE_REF: ${{ steps.normalize.outputs.image-ref }}
+          DOCKERFILE: ${{ inputs.dockerfile }}
+          CONTEXT: ${{ inputs.context }}
         run: |
           set -euxo pipefail
           docker version
