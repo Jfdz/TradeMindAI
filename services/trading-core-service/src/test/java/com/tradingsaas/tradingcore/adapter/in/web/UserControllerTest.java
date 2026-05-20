@@ -110,6 +110,7 @@ class UserControllerTest {
     private static User user(UUID userId) {
         return new User(
                 userId,
+                null,
                 "user@example.com",
                 "$2a$10$hash",
                 "Jane",

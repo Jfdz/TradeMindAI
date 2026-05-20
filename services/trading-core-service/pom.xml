@@ -23,11 +23,10 @@
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <resilience4j.version>2.2.0</resilience4j.version>
         <testcontainers.version>1.19.8</testcontainers.version>
-        <jjwt.version>0.12.6</jjwt.version>
         <bucket4j.version>8.10.1</bucket4j.version>
         <postgresql.version>42.7.11</postgresql.version>
         <netty.version>4.1.133.Final</netty.version>
-        <tomcat.version>10.1.54</tomcat.version>
+        <tomcat.version>10.1.55</tomcat.version>
         <spring.security.version>6.5.9</spring.security.version>
         <spring.framework.version>6.2.11</spring.framework.version>
     </properties>
@@ -134,23 +133,10 @@
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
 
-        <!-- ── JWT ──────────────────────────────────────────────────────────── -->
+        <!-- ── OAuth2 Resource Server (Clerk JWT validation) ───────────────── -->
         <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-api</artifactId>
-            <version>${jjwt.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-impl</artifactId>
-            <version>${jjwt.version}</version>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-jackson</artifactId>
-            <version>${jjwt.version}</version>
-            <scope>runtime</scope>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
         </dependency>
 
         <!-- ── Rate Limiting ─────────────────────────────────────────────────── -->

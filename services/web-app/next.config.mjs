@@ -2,18 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /** @type {import('next').NextConfig} */
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-
-function getOrigin(url) {
-  try {
-    return new URL(url).origin;
-  } catch {
-    return null;
-  }
-}
-
-const apiOrigin = getOrigin(apiBaseUrl);
 
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -34,8 +23,11 @@ const securityHeaders = [
       "img-src 'self' data: blob: https: https://static2.finnhub.io",
       "style-src 'self' 'unsafe-inline'",
       "script-src 'self' 'unsafe-inline' https://s3.tradingview.com",
-      "frame-src https://*.tradingview.com",
-      `connect-src 'self' ${apiOrigin ?? "http://localhost:8082"} ws: wss: http://localhost:* http://127.0.0.1:* https://s3.tradingview.com`,
+      "frame-src https://*.tradingview.com https://*.clerk.accounts.dev",
+      // All browser→API calls go through /api/proxy (same-origin).
+      // Clerk's <SignIn /> and SDK make calls to *.clerk.accounts.dev (dev)
+      // or the custom Clerk domain (prod). ws:/wss: cover TradingView feeds.
+      "connect-src 'self' https://*.clerk.accounts.dev https://clerk.trademindai.com ws: wss: https://s3.tradingview.com http://localhost:* http://127.0.0.1:*",
     ].join("; "),
   },
 ];

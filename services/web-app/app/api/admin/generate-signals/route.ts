@@ -1,7 +1,5 @@
-import { getServerSession } from "next-auth";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-
-import { authOptions } from "@/lib/auth";
 
 // Read server env per-request, never at module load. Module-level reads are
 // captured when the route module is first evaluated during the build/trace
@@ -11,9 +9,14 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  }
 
-  if (!session?.isAdmin) {
+  const user = await currentUser();
+  const isAdmin = (user?.publicMetadata as { role?: string } | null)?.role === "admin";
+  if (!isAdmin) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
 

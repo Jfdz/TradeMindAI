@@ -64,6 +64,7 @@ class ManagePortfolioPositionUseCaseImplTest {
         UserJpaEntity user = new UserJpaEntity(
                 userId,
                 "user@example.com",
+                null,
                 "$2a$10$hash",
                 "Test",
                 "User",
