@@ -3,6 +3,10 @@ import { mockPortfolioApi } from "./helpers/mock-api";
 
 test.describe("portfolio page", () => {
   test.beforeEach(async ({ page }) => {
+    test.skip(
+      process.env.E2E_CLERK_TESTS_ENABLED !== "true",
+      "Clerk e2e disabled — authenticated dashboard specs require a real Clerk session",
+    );
     await mockPortfolioApi(page);
     await page.goto("/dashboard/portfolio");
     await expect(page.locator("body")).not.toContainText("Application error");
@@ -49,6 +53,10 @@ test.describe("portfolio page", () => {
 
 test.describe("add position page", () => {
   test.beforeEach(async ({ page }) => {
+    test.skip(
+      process.env.E2E_CLERK_TESTS_ENABLED !== "true",
+      "Clerk e2e disabled — authenticated dashboard specs require a real Clerk session",
+    );
     await page.goto("/dashboard/portfolio/add");
     await expect(page.getByRole("heading", { name: "Add Position" })).toBeVisible();
   });

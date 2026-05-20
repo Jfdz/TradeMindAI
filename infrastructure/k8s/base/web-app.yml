@@ -31,31 +31,41 @@ spec:
           env:
             - name: NODE_ENV
               value: production
-            - name: NEXTAUTH_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: web-app-config
-                  key: nextauth-url
-            - name: NEXTAUTH_SECRET
+            - name: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
               valueFrom:
                 secretKeyRef:
-                  name: nextauth-secret
-                  key: secret
-            - name: NEXT_PUBLIC_API_BASE_URL
+                  name: clerk-secrets
+                  key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+            - name: CLERK_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: clerk-secrets
+                  key: CLERK_SECRET_KEY
+            - name: NEXT_PUBLIC_CLERK_SIGN_IN_URL
               valueFrom:
                 configMapKeyRef:
                   name: web-app-config
-                  key: api-base-url
+                  key: NEXT_PUBLIC_CLERK_SIGN_IN_URL
+            - name: NEXT_PUBLIC_CLERK_SIGN_UP_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: web-app-config
+                  key: NEXT_PUBLIC_CLERK_SIGN_UP_URL
+            - name: NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: web-app-config
+                  key: NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL
+            - name: NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: web-app-config
+                  key: NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL
             - name: API_BASE_URL
               valueFrom:
                 configMapKeyRef:
                   name: web-app-config
-                  key: api-base-url-internal
-            - name: ADMIN_EMAILS
-              valueFrom:
-                configMapKeyRef:
-                  name: web-app-config
-                  key: ADMIN_EMAILS
+                  key: API_BASE_URL
             - name: AI_ENGINE_SERVICE_URL
               valueFrom:
                 configMapKeyRef:

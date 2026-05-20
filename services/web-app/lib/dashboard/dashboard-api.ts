@@ -64,7 +64,7 @@ export type PortfolioPageData = {
   holdings: EnrichedHolding[];
 };
 
-const API_BASE_URL = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
+const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8082";
 
 export async function fetchCandles(ticker: string, token?: string): Promise<DashboardCandle[]> {
   const from = new Date();

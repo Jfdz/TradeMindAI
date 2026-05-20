@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
 import { AISignalSection } from "@/components/stocks/ai-signal-section";
 import { AnalystRecommendationsBar } from "@/components/stocks/analyst-recommendations-bar";
 import { CompanyHeader } from "@/components/stocks/company-header";
@@ -25,12 +24,12 @@ type Props = {
 export const revalidate = 600;
 
 export default async function StockDetailPage({ params }: Props) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
+  const { getToken } = await auth();
+  const token = await getToken({ template: "backend" });
+  if (!token) {
     notFound();
   }
 
-  const token = (session as { accessToken?: string })?.accessToken;
   const { ticker } = await params;
 
   const [profileResult, earningsResult, recsResult, peersResult] =

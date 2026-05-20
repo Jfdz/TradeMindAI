@@ -1,20 +1,22 @@
-import { getServerSession } from "next-auth";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { ReasoningAuditExplorer } from "@/components/admin/reasoning-audit-explorer";
-import { authOptions } from "@/lib/auth";
 
 export const metadata = {
   title: "Reasoning audit — admin",
 };
 
 export default async function ReasoningAuditPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    redirect("/login?callbackUrl=/dashboard/admin/reasoning-audit");
+  const { userId } = await auth();
+  if (!userId) {
+    redirect("/auth/login?callbackUrl=/dashboard/admin/reasoning-audit");
   }
-  if (!session.isAdmin) {
+
+  const user = await currentUser();
+  const isAdmin = (user?.publicMetadata as { role?: string } | null)?.role === "admin";
+  if (!isAdmin) {
     return (
       <main className="mx-auto max-w-3xl px-6 py-12">
         <h1 className="text-2xl font-semibold text-text-1">Forbidden</h1>

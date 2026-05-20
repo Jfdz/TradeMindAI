@@ -4,6 +4,7 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 
 export default defineConfig({
+  globalSetup: "./tests/e2e/clerk-global-setup",
   testDir: "./tests/e2e",
   fullyParallel: true,
   retries: process.env.CI ? 2 : 0,

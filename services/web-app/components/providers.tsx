@@ -1,23 +1,19 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { SessionProvider, signOut, useSession } from "next-auth/react";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { ThemeHydrator } from "@/components/theme/theme-hydrator";
+import { AuthContext, ClerkAuthBridge } from "@/lib/auth-context";
 
-function SessionWatcher() {
-  const { data: session } = useSession();
-  useEffect(() => {
-    if (session?.error === "RefreshAccessTokenError") {
-      signOut({ callbackUrl: "/auth/login" });
-    }
-  }, [session?.error]);
-  return null;
-}
-
-export function Providers({ children }: { children: ReactNode }) {
+export function Providers({
+  children,
+  hasClerk,
+}: {
+  children: ReactNode;
+  hasClerk: boolean;
+}) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -31,13 +27,20 @@ export function Providers({ children }: { children: ReactNode }) {
       })
   );
 
-  return (
-    <SessionProvider>
-      <SessionWatcher />
-      <QueryClientProvider client={queryClient}>
-        <ThemeHydrator />
-        {children}
-      </QueryClientProvider>
-    </SessionProvider>
+  const inner = (
+    <QueryClientProvider client={queryClient}>
+      <ThemeHydrator />
+      {children}
+    </QueryClientProvider>
   );
+
+  if (!hasClerk) {
+    return (
+      <AuthContext.Provider value={{ user: null, signOut: async () => {} }}>
+        {inner}
+      </AuthContext.Provider>
+    );
+  }
+
+  return <ClerkAuthBridge>{inner}</ClerkAuthBridge>;
 }

@@ -10,6 +10,7 @@ export default defineConfig({
     globals: true,
     clearMocks: true,
     mockReset: true,
+    exclude: ["**/node_modules/**", "**/tests/e2e/**"],
   },
   resolve: {
     alias: {

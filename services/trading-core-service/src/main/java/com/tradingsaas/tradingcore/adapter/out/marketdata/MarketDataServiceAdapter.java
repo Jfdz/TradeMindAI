@@ -3,14 +3,18 @@ package com.tradingsaas.tradingcore.adapter.out.marketdata;
 import com.tradingsaas.tradingcore.domain.model.backtest.OhlcvBar;
 import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import io.netty.channel.ChannelOption;
 import jakarta.annotation.PostConstruct;
 import java.math.BigDecimal;
+import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.netty.http.client.HttpClient;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -37,8 +41,15 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
     @Autowired
     public MarketDataServiceAdapter(
             @Value("${services.market-data.url:http://localhost:8081}") String baseUrl,
-            @Value("${services.market-data.internal-secret:}") String internalSecret) {
-        this(WebClient.builder().baseUrl(baseUrl).build(), internalSecret, Clock.systemUTC());
+            @Value("${services.market-data.internal-secret:}") String internalSecret,
+            @Value("${services.market-data.connect-timeout-ms:5000}") int connectTimeoutMs,
+            @Value("${services.market-data.response-timeout-seconds:10}") int responseTimeoutSeconds) {
+        this(WebClient.builder()
+                .baseUrl(baseUrl)
+                .clientConnector(new ReactorClientHttpConnector(HttpClient.create()
+                        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMs)
+                        .responseTimeout(Duration.ofSeconds(responseTimeoutSeconds))))
+                .build(), internalSecret, Clock.systemUTC());
     }
 
     MarketDataServiceAdapter(WebClient webClient, String internalSecret, Clock clock) {
