@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Pin Maven Central to repo1.maven.apache.org/maven2 directly.
+  Pin Maven Central to Google's GCS-backed mirror.
 
-  The default endpoint repo.maven.apache.org is fronted by a CDN that
-  intermittently returns 403 Forbidden to GitHub Actions runner IPs,
-  failing `mvn -B dependency:go-offline` mid-Docker-build. repo1 is the
-  canonical origin and uses a different edge, so it does not exhibit
-  the same throttling.
+  The default endpoint repo.maven.apache.org is fronted by Cloudflare and
+  intermittently 403s requests from CI runner IPs. Sonatype's historical
+  repo1.maven.apache.org alias has no DNS (resolves nowhere), so it is not
+  a usable failover. Google's mirror is an officially-listed Maven Central
+  mirror backed by Google Cloud Storage on different infrastructure and
+  has not been observed throttling CI.
+
+  Reference: https://storage.googleapis.com/maven-central/index.html
 
   Loaded automatically because the Dockerfile copies this file to
   /root/.m2/settings.xml before the first mvn invocation.
@@ -17,9 +20,9 @@
                               https://maven.apache.org/xsd/settings-1.2.0.xsd">
   <mirrors>
     <mirror>
-      <id>maven-central-repo1</id>
-      <name>Maven Central — repo1 origin</name>
-      <url>https://repo1.maven.apache.org/maven2</url>
+      <id>maven-central-gcs</id>
+      <name>Maven Central — Google Cloud Storage mirror</name>
+      <url>https://maven-central.storage-download.googleapis.com/maven2</url>
       <mirrorOf>central</mirrorOf>
     </mirror>
   </mirrors>

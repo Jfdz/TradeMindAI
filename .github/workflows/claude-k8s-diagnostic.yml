@@ -18,10 +18,14 @@ jobs:
       - name: Run diagnostic
         id: diag
         run: |
-          /usr/local/bin/claude-k8s ${{ inputs.command }} > /tmp/diagnostic-output.txt 2>&1
+          # Do not let set -e swallow wrapper errors — the next step needs to
+          # commit the file (including stderr) so we can see why a command
+          # was rejected.
+          /usr/local/bin/claude-k8s ${{ inputs.command }} > /tmp/diagnostic-output.txt 2>&1 || true
           cat /tmp/diagnostic-output.txt
 
       - name: Commit and push output
+        if: always()
         run: |
           mkdir -p .github/.diagnostic
           cp /tmp/diagnostic-output.txt .github/.diagnostic/output.txt
