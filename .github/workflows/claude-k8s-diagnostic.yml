@@ -23,9 +23,10 @@ jobs:
 
       - name: Commit and push output
         run: |
-          cp /tmp/diagnostic-output.txt .claude/diagnostic-output.txt
+          mkdir -p .github/.diagnostic
+          cp /tmp/diagnostic-output.txt .github/.diagnostic/output.txt
           git config user.name "claude-bot"
           git config user.email "claude@anthropic.com"
-          git add .claude/diagnostic-output.txt
-          git commit -m "ci: k8s diagnostic output from workflow run" || true
+          git add .github/.diagnostic/output.txt
+          git commit -m "ci: k8s diagnostic output [skip ci]" || true
           git push origin main
