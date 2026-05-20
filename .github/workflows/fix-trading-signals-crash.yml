@@ -20,67 +20,48 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Get postgres credentials and setup port-forward
-        id: pg-creds
+      - name: Port-forward postgres and delete duplicate signals
+        shell: bash
         run: |
           set -euo pipefail
-          echo "Fetching postgres credentials from secret..."
 
-          POSTGRES_HOST=$(kubectl get secret postgres-credentials -n trading-saas -o jsonpath='{.data.host}' | base64 -d)
-          POSTGRES_PORT=$(kubectl get secret postgres-credentials -n trading-saas -o jsonpath='{.data.port}' | base64 -d)
-          POSTGRES_USER=$(kubectl get secret postgres-credentials -n trading-saas -o jsonpath='{.data.username}' | base64 -d)
-          POSTGRES_PASSWORD=$(kubectl get secret postgres-credentials -n trading-saas -o jsonpath='{.data.password}' | base64 -d)
+          # Port-forward + psql in the SAME step. A background kubectl from a
+          # previous step does not reliably survive into the next one on GH
+          # Actions runners, which is why the prior split produced
+          # "Connection refused" on localhost:5432. Mirror seed-market-data.yml:
+          # single step, trap-based cleanup, non-default local port (5433).
+          kubectl port-forward svc/postgres 5433:5432 -n trading-saas \
+            >/tmp/pf.log 2>&1 &
+          PF_PID=$!
+          trap 'kill "$PF_PID" 2>/dev/null || true; wait "$PF_PID" 2>/dev/null || true' EXIT
 
-          echo "host=${POSTGRES_HOST}" >> "$GITHUB_OUTPUT"
-          echo "port=${POSTGRES_PORT}" >> "$GITHUB_OUTPUT"
-          echo "user=${POSTGRES_USER}" >> "$GITHUB_OUTPUT"
-          echo "password=${POSTGRES_PASSWORD}" >> "$GITHUB_OUTPUT"
-
-          # Check if host is a k8s service name (contains .svc.cluster.local or similar)
-          if [[ "${POSTGRES_HOST}" == *".svc.cluster.local"* ]] || [[ "${POSTGRES_HOST}" == *".svc"* ]]; then
-            echo "Detected Kubernetes service name, will use port-forward"
-            echo "use_portforward=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "use_portforward=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Setup postgres port-forward
-        if: steps.pg-creds.outputs.use_portforward == 'true'
-        run: |
-          set -euo pipefail
-          echo "Setting up port-forward to postgres service..."
-          kubectl port-forward -n trading-saas svc/postgres 5432:5432 > /tmp/pf.log 2>&1 &
-          echo $! > /tmp/pf.pid
-
-          # Wait for port-forward to be ready
-          sleep 2
-          for i in {1..10}; do
-            if timeout 1 bash -c 'exec 3<>/dev/tcp/localhost/5432' 2>/dev/null; then
-              echo "✓ Port-forward ready on localhost:5432"
+          for i in $(seq 1 30); do
+            if (echo > /dev/tcp/127.0.0.1/5433) >/dev/null 2>&1; then
+              echo "✓ Port-forward ready on 127.0.0.1:5433"
               break
             fi
-            if [ $i -eq 10 ]; then
-              echo "✗ Port-forward failed to start"
-              cat /tmp/pf.log
+            if ! kill -0 "$PF_PID" 2>/dev/null; then
+              echo "port-forward died early; see log:" >&2
+              cat /tmp/pf.log >&2
               exit 1
             fi
-            echo "Waiting for port-forward... ($i/10)"
             sleep 1
           done
 
-      - name: Delete duplicate trading signals from database
-        env:
-          PGHOST: ${{ steps.pg-creds.outputs.use_portforward == 'true' && 'localhost' || steps.pg-creds.outputs.host }}
-          PGPORT: 5432
-          PGUSER: ${{ steps.pg-creds.outputs.user }}
-          PGPASSWORD: ${{ steps.pg-creds.outputs.password }}
-          PGDATABASE: trading_core
-        run: |
-          set -euo pipefail
-          echo "Deleting duplicate signals from trading_core.trading_signals..."
-          echo "Connecting to postgres at ${PGHOST}:${PGPORT}..."
+          # Read credentials directly into local env — never via $GITHUB_OUTPUT
+          # (outputs are logged when step-debug is on and persisted in the run).
+          PGUSER=$(kubectl get secret postgres-credentials -n trading-saas \
+            -o jsonpath='{.data.username}' | base64 -d)
+          PGPASSWORD=$(kubectl get secret postgres-credentials -n trading-saas \
+            -o jsonpath='{.data.password}' | base64 -d)
+          export PGUSER PGPASSWORD
+          export PGHOST=127.0.0.1
+          export PGPORT=5433
+          export PGDATABASE=trading_core
 
-          psql << 'SQL'
+          echo "Deleting duplicate signals from trading_core.trading_signals..."
+          psql -v ON_ERROR_STOP=1 << 'SQL'
+          BEGIN;
           DELETE FROM trading_core.trading_signals
           WHERE id IN (
             SELECT id FROM (
@@ -91,19 +72,10 @@ jobs:
               FROM trading_core.trading_signals
             ) t WHERE rn > 1
           );
+          COMMIT;
           SQL
 
           echo "✓ Duplicates deleted"
-
-      - name: Cleanup port-forward
-        if: always()
-        run: |
-          if [ -f /tmp/pf.pid ]; then
-            PID=$(cat /tmp/pf.pid)
-            echo "Cleaning up port-forward (PID: ${PID})"
-            kill ${PID} 2>/dev/null || true
-            rm -f /tmp/pf.pid /tmp/pf.log
-          fi
 
       - name: Restart trading-core-service deployment
         run: |
