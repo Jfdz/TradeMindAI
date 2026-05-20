@@ -1,1 +1,4 @@
-No resources found in trading-saas namespace.
+NAME                                    READY   STATUS             RESTARTS        AGE     IP            NODE                     NOMINATED NODE   READINESS GATES
+trading-core-service-664f9df54-7qrqd    0/1     CrashLoopBackOff   6 (4m57s ago)   14m     10.42.0.211   instance-20260423-1017   <none>           <none>
+trading-core-service-787f96d846-mjnwb   1/1     Running            0               4d16h   10.42.0.140   instance-20260423-1017   <none>           <none>
+trading-core-service-787f96d846-s66rz   1/1     Running            0               4d16h   10.42.0.141   instance-20260423-1017   <none>           <none>
