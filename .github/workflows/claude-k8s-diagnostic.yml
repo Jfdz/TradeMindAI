@@ -14,6 +14,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Diagnostic output lands on a dedicated, unprotected branch:
+          # both main and develop reject direct pushes via branch protection.
+          # claude-diagnostic exists solely for this workflow — overwritten
+          # every dispatch, never merged anywhere, never part of any CI path
+          # filter.
+          ref: claude-diagnostic
+          fetch-depth: 1
 
       - name: Run diagnostic
         id: diag
@@ -33,4 +41,4 @@ jobs:
           git config user.email "claude@anthropic.com"
           git add .github/.diagnostic/output.txt
           git commit -m "ci: k8s diagnostic output [skip ci]" || true
-          git push origin main
+          git push origin HEAD:claude-diagnostic
