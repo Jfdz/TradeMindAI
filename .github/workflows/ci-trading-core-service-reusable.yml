@@ -135,7 +135,6 @@ jobs:
       security-events: write
     secrets: inherit
     uses: ./.github/workflows/trivy-scan.yml
-    continue-on-error: true
     with:
       image-ref: ghcr.io/${{ github.repository }}/trading-core-service:${{ inputs.ref }}
       dockerfile: services/trading-core-service/Dockerfile

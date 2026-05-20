@@ -164,7 +164,6 @@ jobs:
       security-events: write
     secrets: inherit
     uses: ./.github/workflows/trivy-scan.yml
-    continue-on-error: true
     with:
       image-ref: ghcr.io/${{ github.repository }}/web-app:${{ inputs.ref }}
       dockerfile: services/web-app/Dockerfile
