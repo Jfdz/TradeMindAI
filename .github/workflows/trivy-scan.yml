@@ -76,10 +76,10 @@ jobs:
           # Callers pass either a registry-pullable ref (ghcr.io/...) or a
           # local-only name (trading-saas/...). Pull when possible; fall
           # back to building from the Dockerfile when the ref is local.
-          if ! docker pull "$IMAGE_REF"; then
+          docker pull "$IMAGE_REF" || (
             echo "Pull failed for $IMAGE_REF — building from $DOCKERFILE"
             docker build -t "$IMAGE_REF" -f "$DOCKERFILE" "$CONTEXT"
-          fi
+          )
           docker images "$IMAGE_REF"
           docker save "$IMAGE_REF" -o "$SCAN_TAR"
           ls -lh "$SCAN_TAR"
