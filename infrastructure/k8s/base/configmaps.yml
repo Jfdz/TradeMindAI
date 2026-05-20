@@ -29,7 +29,7 @@ data:
   LOGGING_LEVEL_ROOT: INFO
   APP_CORS_ALLOWED_ORIGINS: https://trademind.es
   CLERK_ISSUER_URI: https://clerk.trademind.es
-  CLERK_AUDIENCE: https://api.trademindai.com
+  CLERK_AUDIENCE: https://api.trademind.es
   SERVICES_MARKET_DATA_URL: http://market-data-service.trading-saas.svc.cluster.local:8081
   AI_ENGINE_SERVICE_URL: http://ai-engine.trading-saas.svc.cluster.local:8000
   MARKET_DATA_SERVICE_URL: http://market-data-service.trading-saas.svc.cluster.local:8081
