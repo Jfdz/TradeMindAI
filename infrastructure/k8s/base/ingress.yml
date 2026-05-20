@@ -95,6 +95,16 @@ spec:
                 name: trading-core-service
                 port:
                   number: 8082
+    - host: trademind.es
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-app
+                port:
+                  number: 3000
           - path: /api/v1/users
             pathType: Prefix
             backend:
@@ -131,6 +141,7 @@ spec:
   tls:
     - hosts:
         - api.trademind.es
+        - trademind.es
       secretName: trading-saas-tls
   rules:
     - host: api.trademind.es
