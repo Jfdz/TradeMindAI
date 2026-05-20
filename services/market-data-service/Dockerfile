@@ -1,6 +1,9 @@
 # Stage 1: Build
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
+# Route Maven Central via repo1 to dodge intermittent 403s from the
+# repo.maven.apache.org CDN edge on GitHub Actions runner IPs.
+COPY maven-settings.xml /root/.m2/settings.xml
 COPY pom.xml .
 RUN mvn -B dependency:go-offline
 COPY src ./src

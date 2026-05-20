@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Pin Maven Central to repo1.maven.apache.org/maven2 directly.
+
+  The default endpoint repo.maven.apache.org is fronted by a CDN that
+  intermittently returns 403 Forbidden to GitHub Actions runner IPs,
+  failing `mvn -B dependency:go-offline` mid-Docker-build. repo1 is the
+  canonical origin and uses a different edge, so it does not exhibit
+  the same throttling.
+
+  Loaded automatically because the Dockerfile copies this file to
+  /root/.m2/settings.xml before the first mvn invocation.
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.2.0
+                              https://maven.apache.org/xsd/settings-1.2.0.xsd">
+  <mirrors>
+    <mirror>
+      <id>maven-central-repo1</id>
+      <name>Maven Central — repo1 origin</name>
+      <url>https://repo1.maven.apache.org/maven2</url>
+      <mirrorOf>central</mirrorOf>
+    </mirror>
+  </mirrors>
+</settings>
