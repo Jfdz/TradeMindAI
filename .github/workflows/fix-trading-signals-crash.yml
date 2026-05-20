@@ -1,0 +1,67 @@
+name: Fix Trading Signals Duplicate Key Errors
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type 'yes' to confirm you want to delete duplicate signals and restart pods"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  fix-duplicates:
+    name: Delete duplicate signals and restart pods
+    if: github.event.inputs.confirmation == 'yes'
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Delete duplicate trading signals from database
+        run: |
+          set -euo pipefail
+          echo "Deleting duplicate signals from trading_core.trading_signals..."
+
+          kubectl exec -n trading-saas deployment/postgres -- psql -U postgres -d trading_core << 'SQL'
+          DELETE FROM trading_core.trading_signals
+          WHERE id IN (
+            SELECT id FROM (
+              SELECT id, ROW_NUMBER() OVER (
+                PARTITION BY ticker, signal_type, timeframe, DATE(generated_at), entry_price
+                ORDER BY generated_at DESC
+              ) AS rn
+              FROM trading_core.trading_signals
+            ) t WHERE rn > 1
+          );
+          SQL
+
+          echo "✓ Duplicates deleted"
+
+      - name: Restart trading-core-service deployment
+        run: |
+          set -euo pipefail
+          echo "Restarting trading-core-service pods..."
+          kubectl rollout restart deployment/trading-core-service -n trading-saas
+
+          echo "Waiting for rollout to complete..."
+          kubectl rollout status deployment/trading-core-service -n trading-saas --timeout=5m
+
+          echo "✓ Rollout complete"
+
+      - name: Verify pods are healthy
+        run: |
+          set -euo pipefail
+          echo "Checking pod status..."
+          kubectl get pods -n trading-saas -l app=trading-core-service -o wide
+
+          echo ""
+          echo "Waiting for all replicas to be ready..."
+          kubectl wait --for=condition=ready pod \
+            -l app=trading-core-service \
+            -n trading-saas \
+            --timeout=2m || true
+
+          echo "✓ Pod status check complete"
