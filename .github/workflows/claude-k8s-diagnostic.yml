@@ -15,11 +15,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # Diagnostic output lands on develop because main is branch-
-          # protected (no direct pushes). Develop is the conventional
-          # next-up branch; Claude reads from origin/develop directly so
-          # we do not block on a PR review cycle.
-          ref: develop
+          # Diagnostic output lands on a dedicated, unprotected branch:
+          # both main and develop reject direct pushes via branch protection.
+          # claude-diagnostic exists solely for this workflow — overwritten
+          # every dispatch, never merged anywhere, never part of any CI path
+          # filter.
+          ref: claude-diagnostic
           fetch-depth: 1
 
       - name: Run diagnostic
@@ -39,7 +40,5 @@ jobs:
           git config user.name "claude-bot"
           git config user.email "claude@anthropic.com"
           git add .github/.diagnostic/output.txt
-          # [skip ci] keeps per-service CI wrappers from firing on develop;
-          # path filters protect against accidental triggers, but be explicit.
           git commit -m "ci: k8s diagnostic output [skip ci]" || true
-          git push origin HEAD:develop
+          git push origin HEAD:claude-diagnostic
