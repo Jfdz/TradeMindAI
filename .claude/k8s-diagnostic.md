@@ -8,7 +8,7 @@ This repo ships a self-hosted-runner workflow that wraps `kubectl` in the cluste
 
 - Workflow: `.github/workflows/claude-k8s-diagnostic.yml` (workflow_dispatch only, runs on `self-hosted`).
 - Wrapper on the runner: `/usr/local/bin/claude-k8s <command>` — installed on the self-hosted runner, has cluster access.
-- Output sink: `.github/.diagnostic/output.txt` on **`develop`**, committed by `claude-bot` after every run (`ci: k8s diagnostic output [skip ci]`). Main is branch-protected, so the workflow cannot push there directly; develop is the conventional next-up branch and Claude reads from it without waiting for a PR review.
+- Output sink: `.github/.diagnostic/output.txt` on **`claude-diagnostic`**, committed by `claude-bot` after every run (`ci: k8s diagnostic output [skip ci]`). Both `main` and `develop` are branch-protected, so the workflow cannot push to either directly. `claude-diagnostic` is a dedicated unprotected branch that exists solely for this purpose — overwritten every dispatch, never merged anywhere, never matched by any CI path filter.
 
 ## How to use it from a Claude session
 
@@ -27,15 +27,15 @@ This repo ships a self-hosted-runner workflow that wraps `kubectl` in the cluste
 
    Note: exact subcommands depend on `claude-k8s`'s implementation. If a command fails, try the closest kubectl-style form (`logs`, `get pods`, `describe`, `top`, `events`, `rollout`).
 
-2. **Wait for the bot commit on `develop`**, then fetch and read:
+2. **Wait for the bot commit on `claude-diagnostic`**, then fetch and read:
    ```bash
-   git fetch origin develop && git show origin/develop:.github/.diagnostic/output.txt
+   git fetch origin claude-diagnostic && git show origin/claude-diagnostic:.github/.diagnostic/output.txt
    ```
-   Or use `mcp__github__get_file_contents` for the file at `path=.github/.diagnostic/output.txt`, `ref=develop`. The file is overwritten each run — read it as soon as the new commit appears.
+   Or use `mcp__github__get_file_contents` for the file at `path=.github/.diagnostic/output.txt`, `ref=claude-diagnostic`. The file is overwritten each run — read it as soon as the new commit appears.
 
 3. **Confirm freshness** before trusting the output:
    ```bash
-   git log -1 --format='%ci %s' origin/develop -- .github/.diagnostic/output.txt
+   git log -1 --format='%ci %s' origin/claude-diagnostic -- .github/.diagnostic/output.txt
    ```
    The commit timestamp must be after the trigger; otherwise you are reading a stale dump.
 
@@ -44,7 +44,7 @@ This repo ships a self-hosted-runner workflow that wraps `kubectl` in the cluste
 - **Always use this workflow** for cluster diagnostics. Do not ask the user to paste kubectl output unless the workflow itself is broken.
 - **Self-hosted runner availability**: if the run queues for >2 min, surface that to the user — the runner may be down.
 - **One concern per dispatch**. The file is overwritten, so chain commands by triggering, reading, then triggering again.
-- **Workflow file lives on `main`** (so `workflow_dispatch` always references the latest version). The diagnostic commit always lands on `develop` because main is branch-protected and `git push origin HEAD:develop` is hardcoded in the push step.
+- **Workflow file lives on `main`** (so `workflow_dispatch` always references the latest version). The diagnostic commit always lands on `claude-diagnostic` because both `main` and `develop` are branch-protected; the push step is hardcoded to `git push origin HEAD:claude-diagnostic`.
 - **The wrapper `claude-k8s` is opaque**; its source is not in the repo. Discover its supported subcommands empirically — start with `pods <svc>` and `logs <svc>`, then refine.
 - **For multi-step debugging** (e.g. pods → events → describe → logs), batch your reasoning offline: pick the single most informative command first, read the output, then pick the next. Each dispatch is one runner job.
 
