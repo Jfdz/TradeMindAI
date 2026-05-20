@@ -61,6 +61,7 @@ data:
   PORT: "3000"
   API_BASE_URL: http://trading-core-service.trading-saas.svc.cluster.local:8082
   AI_ENGINE_SERVICE_URL: http://ai-engine.trading-saas.svc.cluster.local:8000
+  MARKET_DATA_SERVICE_URL: http://market-data-service.trading-saas.svc.cluster.local:8081
   NEXT_PUBLIC_CLERK_SIGN_IN_URL: /auth/login
   NEXT_PUBLIC_CLERK_SIGN_UP_URL: /auth/register
   NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL: /dashboard
