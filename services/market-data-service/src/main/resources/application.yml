@@ -81,7 +81,9 @@ management:
   endpoint:
     health:
       show-details: never
-      show-components: never
+      show-components: when_authorized
+      probes:
+        enabled: true
   health:
     db:
       enabled: true
@@ -95,10 +97,28 @@ management:
 market-data:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
-  internal-secret: ${MARKET_DATA_INTERNAL_SECRET:}
+  internal-secret: ${INTERNAL_API_SECRET:${MARKET_DATA_INTERNAL_SECRET:}}
+  finnhub:
+    base-url: ${FINNHUB_BASE_URL:https://finnhub.io/api/v1}
+    api-key: ${FINNHUB_API_KEY:}
+    timeout-seconds: ${FINNHUB_TIMEOUT_SECONDS:10}
+    cache:
+      profile-ttl: ${FINNHUB_PROFILE_TTL:PT24H}
+      news-ttl: ${FINNHUB_NEWS_TTL:PT15M}
+      earnings-ttl: ${FINNHUB_EARNINGS_TTL:PT24H}
+      recommendations-ttl: ${FINNHUB_RECOMMENDATIONS_TTL:PT24H}
+      peers-ttl: ${FINNHUB_PEERS_TTL:PT24H}
   yahoo:
     base-url: https://query1.finance.yahoo.com
     timeout-seconds: 10
+  yahoo-rss:
+    enabled: ${YAHOO_RSS_ENABLED:false}
+    base-url: ${YAHOO_RSS_BASE_URL:https://feeds.finance.yahoo.com}
+    timeout-seconds: ${YAHOO_RSS_TIMEOUT_SECONDS:5}
+    user-agent: ${YAHOO_RSS_USER_AGENT:TradeMindAI/1.0 (+https://trademindai.local)}
+  news-aggregator:
+    parallel-timeout-seconds: ${NEWS_AGGREGATOR_TIMEOUT_SECONDS:5}
+    cache-ttl: ${NEWS_AGGREGATOR_CACHE_TTL:PT30M}
   symbols: ${STOCK_SYMBOLS:AAPL,MSFT,GOOGL,TSLA,AMZN,NVDA,META,AMD}
   ingestion:
     batch-size: ${DATA_INGESTION_BATCH_SIZE:50}
@@ -135,6 +155,94 @@ market-data:
         active: true
       - ticker: AMD
         name: Advanced Micro Devices, Inc.
+        exchange: NASDAQ
+        active: true
+      - ticker: NFLX
+        name: Netflix, Inc.
+        exchange: NASDAQ
+        active: true
+      - ticker: INTC
+        name: Intel Corporation
+        exchange: NASDAQ
+        active: true
+      - ticker: JPM
+        name: JPMorgan Chase & Co.
+        exchange: NYSE
+        active: true
+      - ticker: V
+        name: Visa Inc.
+        exchange: NYSE
+        active: true
+      - ticker: BA
+        name: The Boeing Company
+        exchange: NYSE
+        active: true
+      - ticker: DIS
+        name: The Walt Disney Company
+        exchange: NYSE
+        active: true
+      - ticker: WMT
+        name: Walmart Inc.
+        exchange: NYSE
+        active: true
+      - ticker: PYPL
+        name: PayPal Holdings, Inc.
+        exchange: NASDAQ
+        active: true
+      - ticker: COIN
+        name: Coinbase Global, Inc.
+        exchange: NASDAQ
+        active: true
+      - ticker: UBER
+        name: Uber Technologies, Inc.
+        exchange: NYSE
+        active: true
+      - ticker: SPOT
+        name: Spotify Technology S.A.
+        exchange: NYSE
+        active: true
+      - ticker: PLTR
+        name: Palantir Technologies Inc.
+        exchange: NYSE
+        active: true
+      - ticker: AVGO
+        name: Broadcom Inc.
+        exchange: NASDAQ
+        active: true
+      - ticker: ORCL
+        name: Oracle Corporation
+        exchange: NYSE
+        active: true
+      - ticker: CRM
+        name: Salesforce, Inc.
+        exchange: NYSE
+        active: true
+      - ticker: ADBE
+        name: Adobe Inc.
+        exchange: NASDAQ
+        active: true
+      - ticker: QCOM
+        name: QUALCOMM Incorporated
+        exchange: NASDAQ
+        active: true
+      - ticker: NOW
+        name: ServiceNow, Inc.
+        exchange: NYSE
+        active: true
+      - ticker: CRWD
+        name: CrowdStrike Holdings, Inc.
+        exchange: NASDAQ
+        active: true
+      - ticker: PANW
+        name: Palo Alto Networks, Inc.
+        exchange: NASDAQ
+        active: true
+      - ticker: FTNT
+        name: Fortinet, Inc.
+        exchange: NASDAQ
+        active: true
+      - ticker: CSCO
+        name: Cisco Systems, Inc.
         exchange: NASDAQ
         active: true
       - ticker: BTC-USD

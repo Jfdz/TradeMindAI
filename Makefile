@@ -66,6 +66,12 @@ test-%: ## Test a specific service (e.g. make test-ai-engine)
 			cd services/web-app && npm test -- --watchAll=false ;; \
 	esac
 
+eval-reasonings: ## Run the C8 reasoning eval corpus against ReasoningValidator
+	@echo "=== ai-engine reasoning eval ==="
+	cd services/ai-engine && python -m scripts.run_reasoning_eval \
+		--min-correctness 0.95 \
+		--max-false-positive-rate 0.05
+
 # ── Database ──────────────────────────────────────────────────────────────────
 
 db-shell: ## Open a psql shell to the database
@@ -83,6 +89,17 @@ setup: ## First-time developer setup
 
 seed: ## Seed the database with sample data
 	@bash scripts/seed-data.sh
+
+bootstrap: ## Full local bootstrap: infra + migrations + seed data + AI model
+	@echo "=== Step 1: Start infrastructure ==="
+	$(MAKE) infra-up
+	@echo "=== Step 2: Seed symbols and demo user ==="
+	@bash scripts/seed-data.sh
+	@echo "=== Step 3: Seed market data (requires yfinance, psycopg2) ==="
+	python3 scripts/seed_market_data.py
+	@echo "=== Step 4: Seed AI model ==="
+	cd services/ai-engine && python scripts/seed_model.py --model-path ./models
+	@echo "=== Bootstrap complete. Run 'make up' to start all services. ==="
 
 # ── Clean ─────────────────────────────────────────────────────────────────────
 

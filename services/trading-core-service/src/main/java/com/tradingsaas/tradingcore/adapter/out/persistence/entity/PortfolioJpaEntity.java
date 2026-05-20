@@ -27,8 +27,8 @@ public class PortfolioJpaEntity {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private UserJpaEntity user;
 
-    @Column(name = "initial_capital", nullable = false, precision = 18, scale = 2)
-    private BigDecimal initialCapital;
+    @Column(name = "total_capital", nullable = false, precision = 18, scale = 2)
+    private BigDecimal totalCapital;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -41,10 +41,10 @@ public class PortfolioJpaEntity {
 
     protected PortfolioJpaEntity() {}
 
-    public PortfolioJpaEntity(UUID id, UserJpaEntity user, BigDecimal initialCapital, Instant createdAt, Instant updatedAt) {
+    public PortfolioJpaEntity(UUID id, UserJpaEntity user, BigDecimal totalCapital, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.user = user;
-        this.initialCapital = initialCapital;
+        this.totalCapital = totalCapital;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -57,8 +57,12 @@ public class PortfolioJpaEntity {
         return user;
     }
 
-    public BigDecimal getInitialCapital() {
-        return initialCapital;
+    public BigDecimal getTotalCapital() {
+        return totalCapital;
+    }
+
+    public void setTotalCapital(BigDecimal totalCapital) {
+        this.totalCapital = totalCapital;
     }
 
     public Instant getCreatedAt() {

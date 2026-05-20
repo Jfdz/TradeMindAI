@@ -1,0 +1,120 @@
+name: Release Orchestrator
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/**'
+      - 'infrastructure/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Commit SHA to release (defaults to HEAD)
+        required: false
+        type: string
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  resolve-sha:
+    name: Resolve release SHA
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+    steps:
+      - name: Resolve
+        id: resolve
+        run: |
+          set -euo pipefail
+          SHA="${{ github.event.inputs.sha || github.sha }}"
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          echo "Releasing SHA: ${SHA}"
+
+  ci-market-data-service:
+    name: CI — market-data-service
+    needs: resolve-sha
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+      security-events: write
+    secrets: inherit
+    uses: ./.github/workflows/ci-market-data-service-reusable.yml
+    with:
+      ref: ${{ needs.resolve-sha.outputs.sha }}
+      push_image: true
+
+  ci-trading-core-service:
+    name: CI — trading-core-service
+    needs: resolve-sha
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+      security-events: write
+    secrets: inherit
+    uses: ./.github/workflows/ci-trading-core-service-reusable.yml
+    with:
+      ref: ${{ needs.resolve-sha.outputs.sha }}
+      push_image: true
+
+  ci-ai-engine:
+    name: CI — ai-engine
+    needs: resolve-sha
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+      security-events: write
+    secrets: inherit
+    uses: ./.github/workflows/ci-ai-engine-reusable.yml
+    with:
+      ref: ${{ needs.resolve-sha.outputs.sha }}
+      push_image: true
+
+  ci-web-app:
+    name: CI — web-app
+    needs: resolve-sha
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+      security-events: write
+    secrets: inherit
+    uses: ./.github/workflows/ci-web-app-reusable.yml
+    with:
+      ref: ${{ needs.resolve-sha.outputs.sha }}
+      push_image: true
+
+  deploy-staging:
+    name: Deploy to staging
+    needs:
+      - resolve-sha
+      - ci-market-data-service
+      - ci-trading-core-service
+      - ci-ai-engine
+      - ci-web-app
+    permissions:
+      contents: read
+      packages: read
+    secrets: inherit
+    uses: ./.github/workflows/deploy-staging-reusable.yml
+    with:
+      sha: ${{ needs.resolve-sha.outputs.sha }}
+
+  deploy-production:
+    name: Deploy to production (auto)
+    needs:
+      - resolve-sha
+      - deploy-staging
+    permissions:
+      contents: write
+      packages: read
+    secrets: inherit
+    uses: ./.github/workflows/deploy-production-reusable.yml
+    with:
+      sha: ${{ needs.resolve-sha.outputs.sha }}
+      environment: production-auto

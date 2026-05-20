@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter;
+import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter.LatestPricesResponse;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter.MarketDataPage;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter.MarketPricePageResponse;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter.MarketPriceResponse;
@@ -24,7 +25,8 @@ import org.springframework.http.ResponseEntity;
 class MarketDataProxyControllerTest {
 
     private final MarketDataServiceAdapter adapter = mock(MarketDataServiceAdapter.class);
-    private final MarketDataProxyController controller = new MarketDataProxyController(adapter);
+    private final SubscriptionAccessGuard subscriptionAccessGuard = mock(SubscriptionAccessGuard.class);
+    private final MarketDataProxyController controller = new MarketDataProxyController(adapter, subscriptionAccessGuard);
 
     @Test
     void returnsLatestPriceFromInternalMarketDataService() {
@@ -52,6 +54,17 @@ class MarketDataProxyControllerTest {
     }
 
     @Test
+    void acceptsSymbolsAliasForLatestPriceBatch() {
+        LatestPricesResponse prices = new LatestPricesResponse(List.of());
+        when(adapter.fetchLatestPrices(List.of("AAPL"), "DAILY")).thenReturn(prices);
+
+        LatestPricesResponse response = controller.latestPrices(null, List.of("AAPL"), "DAILY");
+
+        assertEquals(prices, response);
+        verify(adapter).fetchLatestPrices(List.of("AAPL"), "DAILY");
+    }
+
+    @Test
     void rejectsHistoricalRangeWhenFromAfterTo() {
         ResponseEntity<MarketDataPage<MarketPriceResponse>> response = controller.historicalPrices(
                 "AAPL", "DAILY", LocalDate.of(2026, 4, 29), LocalDate.of(2026, 1, 1), 0, 20);
@@ -71,6 +84,7 @@ class MarketDataProxyControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(100, response.getBody().size());
+        verify(subscriptionAccessGuard).requireHistoricalPriceAccess(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 4, 29));
     }
 
     @Test

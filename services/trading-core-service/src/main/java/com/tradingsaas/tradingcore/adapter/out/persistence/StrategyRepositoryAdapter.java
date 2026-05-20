@@ -42,6 +42,12 @@ class StrategyRepositoryAdapter implements StrategyRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public long countActiveByUserId(UUID userId) {
+        return strategyJpaRepository.countByUserIdAndActiveTrue(userId);
+    }
+
+    @Override
     @Transactional
     public void delete(Strategy strategy) {
         strategyJpaRepository.deleteByIdAndUserId(strategy.getId(), strategy.getUserId());

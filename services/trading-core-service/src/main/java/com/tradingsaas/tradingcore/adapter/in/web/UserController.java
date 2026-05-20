@@ -4,9 +4,11 @@ import com.tradingsaas.tradingcore.application.usecase.UserAccountService;
 import com.tradingsaas.tradingcore.domain.model.TokenClaims;
 import com.tradingsaas.tradingcore.domain.model.User;
 import com.tradingsaas.tradingcore.domain.model.UserNotificationPreferences;
+import com.tradingsaas.tradingcore.domain.port.out.UserLoginAuditPort;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,9 +25,11 @@ import org.springframework.http.HttpStatus;
 class UserController {
 
     private final UserAccountService userAccountService;
+    private final UserLoginAuditPort auditPort;
 
-    UserController(UserAccountService userAccountService) {
+    UserController(UserAccountService userAccountService, UserLoginAuditPort auditPort) {
         this.userAccountService = userAccountService;
+        this.auditPort = auditPort;
     }
 
     @GetMapping("/me")
@@ -64,6 +68,14 @@ class UserController {
                 request.strategyChanges(),
                 request.weeklyRecap()
         ));
+    }
+
+    @GetMapping("/me/sessions")
+    List<SessionResponse> listSessions(Authentication authentication) {
+        TokenClaims claims = claims(authentication);
+        return auditPort.listRecent(claims.userId(), 10).stream()
+                .map(e -> new SessionResponse(e.id(), e.loggedInAt(), e.ipAddress(), e.userAgent()))
+                .toList();
     }
 
     private TokenClaims claims(Authentication authentication) {
@@ -133,4 +145,10 @@ class UserController {
             );
         }
     }
+
+    record SessionResponse(
+            UUID id,
+            Instant loggedInAt,
+            String ipAddress,
+            String userAgent) {}
 }

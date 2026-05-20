@@ -2,6 +2,7 @@ package com.tradingsaas.tradingcore.adapter.in.messaging;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tradingsaas.tradingcore.domain.model.AiPrediction;
@@ -34,20 +35,85 @@ class PredictionResultListenerTest {
                 """);
 
         assertNotNull(useCase.lastSignal);
-        UUID expectedSymbolId = PredictionResultListener.symbolIdForTicker("aapl");
-        assertEquals(expectedSymbolId, useCase.lastSignal.getSymbolId());
+        assertNull(useCase.lastSignal.getSymbolId());
         assertEquals("AAPL", useCase.lastPrediction.getTicker());
         assertEquals(new BigDecimal("0.85"), useCase.lastPrediction.getConfidence().getValue());
+    }
+
+    @Test
+    void skipsInvalidPredictionRowsAndProcessesValidRows() throws Exception {
+        RecordingUseCase useCase = new RecordingUseCase();
+        PredictionResultListener listener = new PredictionResultListener(useCase, new ObjectMapper());
+
+        listener.onPredictionResult("""
+                {
+                  "tickers": ["", "msft"],
+                  "predictions": [
+                    {
+                      "ticker": "",
+                      "direction": "UP",
+                      "confidence": 0.75,
+                      "predicted_change_pct": 1.1,
+                      "raw_logits": [0.2, 0.7, 0.1]
+                    },
+                    {
+                      "ticker": "msft",
+                      "direction": "DOWN",
+                      "confidence": 0.65,
+                      "predicted_change_pct": -0.8,
+                      "raw_logits": [0.6, 0.2, 0.2]
+                    }
+                  ]
+                }
+                """);
+
+        assertNotNull(useCase.lastSignal);
+        assertEquals("MSFT", useCase.lastPrediction.getTicker());
+    }
+
+    @Test
+    void ignoresPredictionEventsWithoutPredictionRows() throws Exception {
+        RecordingUseCase useCase = new RecordingUseCase();
+        PredictionResultListener listener = new PredictionResultListener(useCase, new ObjectMapper());
+
+        listener.onPredictionResult("""
+                {
+                  "tickers": ["aapl"],
+                  "predictions": []
+                }
+                """);
+
+        assertNull(useCase.lastSignal);
+        assertNull(useCase.lastPrediction);
+    }
+
+    @Test
+    void acceptsAlternativePublisherFieldNames() throws Exception {
+        RecordingUseCase useCase = new RecordingUseCase();
+        PredictionResultListener listener = new PredictionResultListener(useCase, new ObjectMapper());
+
+        listener.onPredictionResult("""
+                {
+                  "predictions": [
+                    {
+                      "symbol": "nvda",
+                      "type": "DOWN",
+                      "confidence": 0.61,
+                      "predictedChangePct": -1.5,
+                      "rawLogits": [0.7, 0.2, 0.1]
+                    }
+                  ]
+                }
+                """);
+
+        assertNotNull(useCase.lastSignal);
+        assertEquals("NVDA", useCase.lastPrediction.getTicker());
+        assertEquals(new BigDecimal("-1.5"), useCase.lastPrediction.getPredictedChangePct());
     }
 
     private static final class RecordingUseCase implements GenerateSignalUseCase {
         private TradingSignal lastSignal;
         private AiPrediction lastPrediction;
-
-        @Override
-        public TradingSignal generate(UUID symbolId, String ticker) {
-            throw new UnsupportedOperationException();
-        }
 
         @Override
         public TradingSignal generate(UUID symbolId, AiPrediction prediction) {

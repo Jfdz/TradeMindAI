@@ -24,9 +24,36 @@ jobs:
           distribution: temurin
           cache: maven
 
-      - name: Dependency scan
-        run: mvn -q org.owasp:dependency-check-maven:12.2.0:check -DfailBuildOnCVSS=7 -DnvdApiKey="$NVD_API_KEY"
-        timeout-minutes: 30
+      - name: Cache dependency-check data
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: ${{ runner.os }}-dc-data-v12-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-dc-data-v12-
+
+      - name: Dependency scan (retry on transient NVD DB errors)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            echo "Running OWASP Dependency Check (attempt ${attempt}/3)"
+            if mvn -q org.owasp:dependency-check-maven:12.2.0:check \
+              -DfailBuildOnCVSS=7 \
+              -DnvdApiKey="$NVD_API_KEY"; then
+              exit 0
+            fi
+
+            echo "Dependency Check failed on attempt ${attempt}."
+            if [ "$attempt" -lt 3 ]; then
+              echo "Removing potentially corrupted local dependency-check data before retry."
+              rm -rf ~/.m2/repository/org/owasp/dependency-check-data
+              sleep 10
+            fi
+          done
+          echo "Dependency Check failed after 3 attempts."
+          exit 1
+        timeout-minutes: 45
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
 
@@ -55,9 +82,36 @@ jobs:
           distribution: temurin
           cache: maven
 
-      - name: Dependency scan
-        run: mvn -q org.owasp:dependency-check-maven:12.2.0:check -DfailBuildOnCVSS=7 -DnvdApiKey="$NVD_API_KEY"
-        timeout-minutes: 30
+      - name: Cache dependency-check data
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: ${{ runner.os }}-dc-data-v12-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-dc-data-v12-
+
+      - name: Dependency scan (retry on transient NVD DB errors)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            echo "Running OWASP Dependency Check (attempt ${attempt}/3)"
+            if mvn -q org.owasp:dependency-check-maven:12.2.0:check \
+              -DfailBuildOnCVSS=7 \
+              -DnvdApiKey="$NVD_API_KEY"; then
+              exit 0
+            fi
+
+            echo "Dependency Check failed on attempt ${attempt}."
+            if [ "$attempt" -lt 3 ]; then
+              echo "Removing potentially corrupted local dependency-check data before retry."
+              rm -rf ~/.m2/repository/org/owasp/dependency-check-data
+              sleep 10
+            fi
+          done
+          echo "Dependency Check failed after 3 attempts."
+          exit 1
+        timeout-minutes: 45
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
 

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.tradingsaas.tradingcore.application.usecase.portfolio.AddPortfolioPositionUseCase;
 import com.tradingsaas.tradingcore.application.usecase.portfolio.AddPortfolioPositionUseCase.AddPositionCommand;
 import com.tradingsaas.tradingcore.application.usecase.portfolio.ManagePortfolioPositionUseCase;
+import com.tradingsaas.tradingcore.application.usecase.portfolio.PortfolioClosedPositionOverview;
 import com.tradingsaas.tradingcore.application.usecase.portfolio.PortfolioHoldingOverview;
 import com.tradingsaas.tradingcore.application.usecase.portfolio.PortfolioOverview;
 import com.tradingsaas.tradingcore.application.usecase.portfolio.PortfolioOverviewService;
@@ -39,7 +40,9 @@ class PortfolioControllerTest {
                 new BigDecimal("20"),
                 new BigDecimal("10020"),
                 1.0,
+                "market-data",
                 List.of(new PortfolioHoldingOverview(
+                        UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
                         "AAPL",
                         new BigDecimal("2"),
                         new BigDecimal("100"),
@@ -49,13 +52,29 @@ class PortfolioControllerTest {
                         100.0,
                         "OPEN",
                         Instant.parse("2026-04-16T10:00:00Z"),
-                        null))));
+                        null,
+                        "Apple Inc.",
+                        "Technology",
+                        List.of())),
+                List.of(new PortfolioClosedPositionOverview(
+                        UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                        "MSFT",
+                        new BigDecimal("1"),
+                        new BigDecimal("120"),
+                        new BigDecimal("150"),
+                        new BigDecimal("5"),
+                        new BigDecimal("25"),
+                        Instant.parse("2026-04-10T10:00:00Z"),
+                        Instant.parse("2026-04-20T10:00:00Z")))));
 
         PortfolioController.PortfolioOverviewResponse response = controller.getPortfolio(auth(userId, "PREMIUM"));
 
         assertEquals(userId, response.userId());
+        assertEquals("market-data", response.dataSource());
         assertEquals(1, response.holdings().size());
+        assertEquals(1, response.closedPositions().size());
         assertEquals("AAPL", response.holdings().getFirst().symbol());
+        assertEquals("MSFT", response.closedPositions().getFirst().symbol());
     }
 
     @Test

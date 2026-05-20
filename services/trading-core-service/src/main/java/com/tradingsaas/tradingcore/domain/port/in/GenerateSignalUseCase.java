@@ -6,7 +6,5 @@ import java.util.UUID;
 
 public interface GenerateSignalUseCase {
 
-    TradingSignal generate(UUID symbolId, String ticker);
-
     TradingSignal generate(UUID symbolId, AiPrediction prediction);
 }

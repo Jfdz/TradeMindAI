@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -15,6 +16,10 @@ from ai_engine.adapters.in_.prediction import router as prediction_router
 from ai_engine.adapters.in_.training import router as training_router
 from alembic import command as alembic_command
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 logger = logging.getLogger(__name__)
 
 _SECURITY_HSTS = "max-age=31536000; includeSubDomains; preload"
@@ -51,6 +56,7 @@ async def lifespan(app: FastAPI):
     app.state.model_registry = None
     app.state.prediction_service = None
     app.state.consumers = []
+    app.state.consumer_retry_task = None
 
     try:
         await _apply_migrations()
@@ -64,6 +70,14 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    retry_task = app.state.consumer_retry_task
+    if retry_task is not None:
+        retry_task.cancel()
+        try:
+            await retry_task
+        except asyncio.CancelledError:
+            pass
+
     for consumer in app.state.consumers:
         try:
             await consumer.stop()
@@ -73,16 +87,81 @@ async def lifespan(app: FastAPI):
     app.state.model_loaded = False
 
 
+async def _attempt_start_consumers(app: FastAPI, settings) -> bool:
+    """Instantiate fresh consumers and connect to RabbitMQ. Returns True on success."""
+    try:
+        from ai_engine.adapters.in_.reasoning_request_consumer import (
+            ReasoningRequestConsumer,
+        )
+        from ai_engine.adapters.out.persist_reasoning_factory import (
+            create_persist_reasoning_use_case,
+        )
+        from ai_engine.adapters.out.rabbitmq_consumer import (
+            MarketDataEventConsumer,
+            PredictionRequestConsumer,
+        )
+
+        pred_consumer = PredictionRequestConsumer(
+            settings.rabbitmq_url,
+            _make_sync_predict(app),
+        )
+        mde_consumer = MarketDataEventConsumer(
+            settings.rabbitmq_url,
+            _make_market_data_trigger(app, settings),
+        )
+
+        # C9 — grounded reasoning pipeline trigger. Builds the full
+        # TradingCoreClient → LLM → validator → sink chain from Settings
+        # and binds it to the trading-core publisher's queue.
+        persist_use_case = create_persist_reasoning_use_case(settings)
+        reasoning_consumer = ReasoningRequestConsumer(
+            settings.rabbitmq_url,
+            persist_use_case,
+            queue_name=settings.reasoning_request_queue,
+        )
+
+        await pred_consumer.start()
+        await mde_consumer.start()
+        await reasoning_consumer.start()
+
+        app.state.consumers = [pred_consumer, mde_consumer, reasoning_consumer]
+        app.state.persist_reasoning_use_case = persist_use_case
+        app.state.publish_predictions = _publish_predictions
+        app.state.rabbitmq_url = settings.rabbitmq_url
+        app.state.consumers_ready = True
+        logger.info("RabbitMQ consumers started")
+        return True
+    except Exception:
+        logger.warning(
+            "RabbitMQ consumer startup attempt failed — will retry",
+            exc_info=True,
+        )
+        return False
+
+
+async def _consumer_retry_loop(app: FastAPI, settings) -> None:
+    """Retry consumer startup with exponential backoff until successful or cancelled."""
+    delay = 15
+    while not app.state.consumers_ready:
+        try:
+            await asyncio.sleep(delay)
+        except asyncio.CancelledError:
+            return
+        logger.warning("Retrying RabbitMQ consumer startup (delay was %ss)...", delay)
+        try:
+            await _attempt_start_consumers(app, settings)
+        except asyncio.CancelledError:
+            return
+        if not app.state.consumers_ready:
+            delay = min(delay * 2, 60)
+
+
 async def _start_consumers(app: FastAPI) -> None:
     """Initialise the prediction service, load the active model, and start RabbitMQ consumers.
 
     Gracefully skipped when config is missing (e.g. unit tests / first boot without .env).
     """
     try:
-        from ai_engine.adapters.out.rabbitmq_consumer import (
-            MarketDataEventConsumer,
-            PredictionRequestConsumer,
-        )
         from ai_engine.config import get_settings
         from ai_engine.core.use_cases.model_registry import ModelRegistry
         from ai_engine.core.use_cases.prediction_service import PredictionService
@@ -104,25 +183,13 @@ async def _start_consumers(app: FastAPI) -> None:
                 "Predictions will be unavailable until a model is activated."
             )
 
-        pred_consumer = PredictionRequestConsumer(
-            settings.rabbitmq_url,
-            _make_sync_predict(app),
-        )
-        mde_consumer = MarketDataEventConsumer(
-            settings.rabbitmq_url,
-            _make_market_data_trigger(app, settings),
-        )
-        app.state.consumers = [pred_consumer, mde_consumer]
-        app.state.publish_predictions = _publish_predictions
-        app.state.rabbitmq_url = settings.rabbitmq_url
-
-        await pred_consumer.start()
-        await mde_consumer.start()
-        app.state.consumers_ready = True
-        logger.info("RabbitMQ consumers started")
+        if not await _attempt_start_consumers(app, settings):
+            app.state.consumer_retry_task = asyncio.create_task(
+                _consumer_retry_loop(app, settings)
+            )
     except Exception:
         logger.error(
-            "RabbitMQ consumers failed to start — readiness probe will return 503",
+            "Consumer startup failed — readiness probe will return 503",
             exc_info=True,
         )
 
@@ -139,7 +206,10 @@ def _make_sync_predict(app: FastAPI):
             return []
         try:
             settings = get_settings()
-            client = MarketDataClient(settings.market_data_service_url)
+            client = MarketDataClient(
+                settings.market_data_service_url,
+                internal_secret=settings.market_data_internal_secret or settings.internal_secret,
+            )
             pairs = []
             for ticker in tickers:
                 try:
@@ -191,7 +261,10 @@ def _make_market_data_trigger(app: FastAPI, settings):
             return
 
         svc = app.state.prediction_service
-        client = MarketDataClient(settings.market_data_service_url)
+        client = MarketDataClient(
+            settings.market_data_service_url,
+            internal_secret=settings.market_data_internal_secret or settings.internal_secret,
+        )
 
         pairs = []
         for ticker in symbols:

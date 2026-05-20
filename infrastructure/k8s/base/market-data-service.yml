@@ -87,6 +87,16 @@ spec:
                 secretKeyRef:
                   name: internal-service-secret
                   key: market-data
+            - name: INTERNAL_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: internal-service-secret
+                  key: market-data
+            - name: FINNHUB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: finnhub-credentials
+                  key: api-key
           envFrom:
             - configMapRef:
                 name: market-data-service-config

@@ -127,4 +127,11 @@ def _get_service(request: Request):
 def _fetch_ohlcv(ticker: str):
     from ai_engine.adapters.out.market_data_client import MarketDataClient
     from ai_engine.config import get_settings
-    return MarketDataClient(get_settings().market_data_service_url).fetch_ohlcv(ticker)
+
+    settings = get_settings()
+    internal_secret = settings.market_data_internal_secret or settings.internal_secret
+    client = MarketDataClient(
+        settings.market_data_service_url,
+        internal_secret=internal_secret,
+    )
+    return client.fetch_ohlcv(ticker)

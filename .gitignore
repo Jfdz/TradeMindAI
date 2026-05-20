@@ -161,6 +161,9 @@ build/
 out/
 !**/src/**/out/
 !**/src/**/out/**
+# Re-ignore Python bytecode caches that get re-included by the negations
+# above (e.g. ai-engine has `src/.../adapters/out/`, which the rule unblocks).
+**/__pycache__/
 
 # ============================================================================
 # IDE Local Storage
@@ -190,3 +193,11 @@ out/
 # Claude Code & IDE
 # ============================================================================
 .claude/
+CLAUDE.md
+CLAUDE.original.md
+test_fix_plan copy.md
+test_fix_plan.md
+velvet-rolling-gosling.md
+docs/
+EXECUTION_PLAN.md
+PLAN.md

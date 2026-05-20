@@ -1,15 +1,20 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { BrandMark, MenuIcon, XIcon } from "@/components/site/icons";
+import { apiClient } from "@/lib/api-client";
+import { useAuthUser } from "@/lib/auth-context";
 import { dashboardNavItems } from "@/lib/trademind-content";
 import { cn } from "@/lib/utils";
+
+const SIGNAL_COUNT_STALE_MS = 60_000;
+const SIGNAL_COUNT_BADGE_LIMIT = 99;
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Overview",
@@ -19,30 +24,54 @@ const pageTitles: Record<string, string> = {
   "/dashboard/settings": "Settings",
 };
 
-export function DashboardShell({ children }: { children: ReactNode }) {
+function formatSignalBadge(count: number): string {
+  return count > SIGNAL_COUNT_BADGE_LIMIT ? `${SIGNAL_COUNT_BADGE_LIMIT}+` : String(count);
+}
+
+export function DashboardShell({ children }: { readonly children: ReactNode }) {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { user, signOut } = useAuthUser();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const { data: signalCount } = useQuery({
+    queryKey: ["dashboard-shell", "signal-count"],
+    queryFn: async () => {
+      const page = await apiClient.getSignals();
+      return page.totalElements ?? page.content.length;
+    },
+    staleTime: SIGNAL_COUNT_STALE_MS,
+  });
+  const navItems = useMemo(
+    () =>
+      dashboardNavItems.map((item) =>
+        item.href === "/dashboard/signals" && signalCount && signalCount > 0
+          ? { ...item, badge: formatSignalBadge(signalCount) }
+          : item,
+      ),
+    [signalCount],
+  );
 
   const pageTitle = useMemo(() => pageTitles[pathname] ?? "Dashboard", [pathname]);
   const initials = useMemo(() => {
-    const source = session?.user?.name || session?.user?.email || "TM";
+    const source = user?.fullName || user?.primaryEmailAddress?.emailAddress || "TM";
     return source
       .split(" ")
       .map((part) => part[0])
       .join("")
       .slice(0, 2)
       .toUpperCase();
-  }, [session?.user?.email, session?.user?.name]);
+  }, [user?.fullName, user?.primaryEmailAddress?.emailAddress]);
 
   return (
     <div className="min-h-screen bg-bg-0 text-text-1">
-      <div
+      <button
+        type="button"
         className={cn(
           "fixed inset-0 z-40 bg-black/60 transition-opacity lg:hidden",
           sidebarOpen ? "opacity-100" : "pointer-events-none opacity-0"
         )}
         onClick={() => setSidebarOpen(false)}
+        aria-label="Close sidebar"
       />
 
       <aside
@@ -72,7 +101,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </div>
 
         <nav className="mt-10 space-y-2">
-          {dashboardNavItems.map((item) => {
+          {navItems.map((item) => {
             const active = pathname === item.href;
 
             return (
@@ -98,7 +127,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
         <div className="mt-auto space-y-4 rounded-[20px] border border-border bg-bg-2 p-4">
           <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.22em] text-text-3">
-            <span>{session?.user?.name ?? "Free plan"}</span>
+            <span>{user?.fullName ?? "Free plan"}</span>
             <span className="rounded-full border border-cyan/25 bg-cyan-dim px-2 py-1 text-cyan">Free</span>
           </div>
           <div>
@@ -118,8 +147,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               {initials}
             </div>
             <div className="min-w-0">
-              <div className="truncate text-sm text-white">{session?.user?.name ?? "TradeMind User"}</div>
-              <div className="truncate text-xs text-text-3">{session?.user?.email ?? "user@tradermind.ai"}</div>
+              <div className="truncate text-sm text-white">{user?.fullName ?? "TradeMind User"}</div>
+              <div className="truncate text-xs text-text-3">{user?.primaryEmailAddress?.emailAddress ?? "user@tradermind.ai"}</div>
             </div>
           </div>
         </div>
@@ -148,7 +177,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 <span className="h-2 w-2 rounded-full bg-green animate-pulse-soft" />
                 Live
               </div>
-              <Button size="sm" variant="ghost" onClick={() => signOut({ callbackUrl: "/" })}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={async () => {
+                  await signOut({ redirectUrl: "/" });
+                }}
+              >
                 Exit
               </Button>
             </div>

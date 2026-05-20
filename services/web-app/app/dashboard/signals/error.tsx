@@ -2,6 +2,6 @@
 
 import { RouteError } from "@/components/route-error";
 
-export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function SignalsErrorPage({ error, reset }: { readonly error: Error & { readonly digest?: string }; readonly reset: () => void }) {
   return <RouteError error={error} reset={reset} eyebrow="Signals" title="Unable to load signals" />;
 }

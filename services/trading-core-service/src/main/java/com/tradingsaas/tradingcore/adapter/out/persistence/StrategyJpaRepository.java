@@ -13,5 +13,7 @@ interface StrategyJpaRepository extends JpaRepository<StrategyJpaEntity, UUID> {
 
     Optional<StrategyJpaEntity> findByIdAndUserId(UUID id, UUID userId);
 
+    long countByUserIdAndActiveTrue(UUID userId);
+
     void deleteByIdAndUserId(UUID id, UUID userId);
 }

@@ -69,9 +69,9 @@ function MetricTile({
   value,
   tone = "text-white",
 }: {
-  label: string;
-  value: string;
-  tone?: string;
+  readonly label: string;
+  readonly value: string;
+  readonly tone?: string;
 }) {
   return (
     <article className="rounded-[18px] border border-border bg-bg-2 p-4">
@@ -127,7 +127,7 @@ export function BacktestForm() {
           { label: "Max DD", value: formatPercent(job.maxDrawdown * 100), tone: "text-red" },
           { label: "Win Rate", value: formatPercent((job.winRate ?? 0) * 100), tone: "text-white" },
           { label: "Total Trades", value: `${job.trades.length}`, tone: "text-white" },
-          { label: "Profit Factor", value: isFinite(job.profitFactor) ? job.profitFactor.toFixed(2) : "Unlimited", tone: "text-gold" },
+          { label: "Profit Factor", value: Number.isFinite(job.profitFactor) ? job.profitFactor.toFixed(2) : "Unlimited", tone: "text-gold" },
         ]
       : [];
   }, [previewJob]);
@@ -146,7 +146,7 @@ export function BacktestForm() {
         quantity: Math.max(1, Math.floor((values.initialCapital * selectedStrategy.allocation) / getSymbolPrice(values.symbol))),
       });
 
-      window.setTimeout(async () => {
+      globalThis.setTimeout(async () => {
         try {
           const refreshed = await apiClient.getBacktest(response.id);
           setSubmission(refreshed);
@@ -288,7 +288,7 @@ export function BacktestForm() {
       </section>
 
       <aside className="space-y-6">
-        {!result ? (
+        {result === null || result === undefined ? (
           <article className="rounded-[24px] border border-border bg-bg-1/80 p-6 shadow-glow">
             <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Results</div>
             <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">No results yet</h3>

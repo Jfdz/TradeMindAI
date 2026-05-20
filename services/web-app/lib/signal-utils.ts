@@ -1,5 +1,26 @@
 import type { SignalResponse } from "./api-client";
 
+export function calculateExpectedMovePct(
+  entry: number | null | undefined,
+  target: number | null | undefined,
+): number | null {
+  if (
+    entry == null || target == null ||
+    Number.isNaN(entry) || Number.isNaN(target) || entry === 0
+  ) {
+    return null;
+  }
+  return Math.abs((target - entry) / entry) * 100;
+}
+
+export function resolveExpectedMovePct(
+  entry: number | null | undefined,
+  target: number | null | undefined,
+  fallbackPct: number | null | undefined,
+): number | null {
+  return calculateExpectedMovePct(entry, target) ?? fallbackPct ?? null;
+}
+
 export function formatConfidence(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
@@ -23,8 +44,25 @@ export function signalTypeColor(type: SignalResponse["type"]): string {
   return "#e8b84b";
 }
 
+export function formatPredictedChange(
+  pct: number | null | undefined,
+  type: string
+): { label: string; colorClass: string } {
+  const val = pct ?? 0;
+  if (type === "BUY") return { label: `▲ +${Math.abs(val).toFixed(2)}%`, colorClass: "text-emerald-400" };
+  if (type === "SELL") return { label: `▼ −${Math.abs(val).toFixed(2)}%`, colorClass: "text-rose-400" };
+  return { label: `→ ${val.toFixed(2)}%`, colorClass: "text-amber-400" };
+}
+
 export function buildSignalReasoning(signal: SignalResponse, latestPrice: number | null): string {
-  const predicted = signal.predictedChangePct ?? 0;
+  if (
+    (signal.reasoningStatus === "READY" || signal.reasoningStatus === "FALLBACK") &&
+    signal.reasoning
+  ) {
+    return signal.reasoning;
+  }
+
+  const predicted = resolveExpectedMovePct(signal.entryPrice, signal.targetPrice, signal.predictedChangePct) ?? 0;
   const move = `${Math.abs(predicted).toFixed(1)}%`;
   const priceText =
     latestPrice == null

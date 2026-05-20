@@ -7,6 +7,7 @@ import com.tradingsaas.tradingcore.domain.model.TokenClaims;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -14,11 +15,21 @@ import org.springframework.stereotype.Component;
 
 @Aspect
 @Component
-class RequiresSubscriptionAspect {
+public class RequiresSubscriptionAspect {
+
+    private final boolean enforce;
+
+    public RequiresSubscriptionAspect(@Value("${subscriptions.enforce:false}") boolean enforce) {
+        this.enforce = enforce;
+    }
 
     @Around("@annotation(requiresSubscription)")
     public Object checkSubscription(ProceedingJoinPoint pjp,
                                     RequiresSubscription requiresSubscription) throws Throwable {
+        if (!enforce) {
+            return pjp.proceed();
+        }
+
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !(auth.getPrincipal() instanceof TokenClaims claims)) {
             throw new AccessDeniedException("Authentication required");

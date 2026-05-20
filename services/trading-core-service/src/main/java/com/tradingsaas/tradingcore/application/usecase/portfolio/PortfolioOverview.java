@@ -6,24 +6,28 @@ import java.util.UUID;
 
 public record PortfolioOverview(
         UUID userId,
-        BigDecimal initialCapital,
+        BigDecimal totalCapital,
         BigDecimal cash,
         BigDecimal realizedPnl,
         BigDecimal unrealizedPnl,
         BigDecimal equity,
-        double winRate,
-        List<PortfolioHoldingOverview> holdings
+        Double winRate,
+        String dataSource,
+        List<PortfolioHoldingOverview> holdings,
+        List<PortfolioClosedPositionOverview> closedPositions
 ) {
 
-    public static PortfolioOverview empty(UUID userId, BigDecimal initialCapital) {
+    public static PortfolioOverview empty(UUID userId, boolean hasPortfolio) {
         return new PortfolioOverview(
                 userId,
-                initialCapital,
-                initialCapital,
+                null,
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
-                initialCapital,
-                0.0,
+                null,
+                null,
+                null,
+                hasPortfolio ? "none" : "missing-portfolio",
+                List.of(),
                 List.of()
         );
     }

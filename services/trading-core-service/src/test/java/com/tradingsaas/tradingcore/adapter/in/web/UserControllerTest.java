@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.tradingsaas.tradingcore.application.usecase.UserAccountService;
 import com.tradingsaas.tradingcore.domain.model.Subscription;
+import com.tradingsaas.tradingcore.domain.port.out.UserLoginAuditPort;
 import com.tradingsaas.tradingcore.domain.model.SubscriptionPlan;
 import com.tradingsaas.tradingcore.domain.model.TokenClaims;
 import com.tradingsaas.tradingcore.domain.model.User;
@@ -24,7 +25,7 @@ class UserControllerTest {
     void getProfileMapsCurrentUser() {
         UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         UserAccountService userAccountService = mock(UserAccountService.class);
-        UserController controller = new UserController(userAccountService);
+        UserController controller = new UserController(userAccountService, mock(UserLoginAuditPort.class));
         when(userAccountService.getProfile(userId)).thenReturn(user(userId));
 
         UserController.UserProfileResponse response = controller.getProfile(auth(userId, "PREMIUM"));
@@ -39,7 +40,7 @@ class UserControllerTest {
     void updateProfileDelegatesUsingAuthenticatedUserId() {
         UUID userId = UUID.fromString("22222222-2222-2222-2222-222222222222");
         UserAccountService userAccountService = mock(UserAccountService.class);
-        UserController controller = new UserController(userAccountService);
+        UserController controller = new UserController(userAccountService, mock(UserLoginAuditPort.class));
         User updated = user(userId);
         when(userAccountService.updateProfile(userId, "Jane", "Quant", "UTC")).thenReturn(updated);
 
@@ -55,7 +56,7 @@ class UserControllerTest {
     void notificationsEndpointsRoundTripPreferences() {
         UUID userId = UUID.fromString("33333333-3333-3333-3333-333333333333");
         UserAccountService userAccountService = mock(UserAccountService.class);
-        UserController controller = new UserController(userAccountService);
+        UserController controller = new UserController(userAccountService, mock(UserLoginAuditPort.class));
         UserNotificationPreferences preferences = new UserNotificationPreferences(
                 userId,
                 true,
@@ -93,7 +94,7 @@ class UserControllerTest {
 
     @Test
     void rejectsMissingTokenClaims() {
-        UserController controller = new UserController(mock(UserAccountService.class));
+        UserController controller = new UserController(mock(UserAccountService.class), mock(UserLoginAuditPort.class));
         Authentication authentication = mock(Authentication.class);
         when(authentication.getPrincipal()).thenReturn("not-claims");
 
@@ -109,6 +110,7 @@ class UserControllerTest {
     private static User user(UUID userId) {
         return new User(
                 userId,
+                null,
                 "user@example.com",
                 "$2a$10$hash",
                 "Jane",

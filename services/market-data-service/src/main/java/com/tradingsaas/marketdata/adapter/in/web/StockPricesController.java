@@ -8,7 +8,9 @@ import com.tradingsaas.marketdata.domain.model.TimeFrame;
 import com.tradingsaas.marketdata.domain.port.in.GetHistoricalPricesUseCase;
 import com.tradingsaas.marketdata.domain.port.in.GetLatestPriceUseCase;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -25,7 +27,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class StockPricesController {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
-    private static final int MAX_PAGE_SIZE = 100;
+    private static final int MAX_PAGE_SIZE = 500;
+    private static final int MAX_BATCH_SIZE = 100;
 
     private final GetHistoricalPricesUseCase getHistoricalPricesUseCase;
     private final GetLatestPriceUseCase getLatestPriceUseCase;
@@ -76,12 +79,32 @@ public class StockPricesController {
 
     @GetMapping("/latest")
     public ResponseEntity<LatestPricesResponse> getLatestBatch(
-            @RequestParam List<String> tickers,
+            @RequestParam(required = false) List<String> tickers,
+            @RequestParam(required = false) List<String> symbols,
             @RequestParam(defaultValue = "DAILY") TimeFrame timeframe) {
-        List<StockPriceResponse> prices = getLatestPriceUseCase.getLatestPrices(tickers, timeframe).stream()
+        List<String> requestedTickers = resolveTickers(tickers, symbols);
+        if (requestedTickers.isEmpty() || requestedTickers.size() > MAX_BATCH_SIZE) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        List<StockPriceResponse> prices = getLatestPriceUseCase.getLatestPrices(requestedTickers, timeframe).stream()
                 .map(this::toResponse)
                 .toList();
         return ResponseEntity.ok(new LatestPricesResponse(prices));
+    }
+
+    private List<String> resolveTickers(List<String> tickers, List<String> symbols) {
+        List<String> rawValues = symbols != null && !symbols.isEmpty() ? symbols : tickers;
+        if (rawValues == null) {
+            return List.of();
+        }
+        return rawValues.stream()
+                .flatMap(value -> Arrays.stream(value.split(",")))
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .map(value -> value.toUpperCase(Locale.ROOT))
+                .distinct()
+                .toList();
     }
 
     private StockPriceResponse toResponse(StockPrice price) {

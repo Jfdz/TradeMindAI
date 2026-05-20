@@ -1,5 +1,7 @@
 package com.tradingsaas.tradingcore.adapter.in.web;
 
+import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningNewsSnapshot;
+import com.tradingsaas.tradingcore.domain.model.ReasoningStatus;
 import com.tradingsaas.tradingcore.domain.model.TradingSignal;
 import com.tradingsaas.tradingcore.domain.port.in.GetSignalsUseCase;
 import java.math.BigDecimal;
@@ -54,7 +56,15 @@ class SignalController {
             Instant generatedAt,
             BigDecimal stopLossPct,
             BigDecimal takeProfitPct,
-            BigDecimal predictedChangePct) {
+            BigDecimal predictedChangePct,
+            BigDecimal entryPrice,
+            BigDecimal targetPrice,
+            BigDecimal stopLoss,
+            BigDecimal expectedMovePct,
+            String reasoning,
+            ReasoningStatus reasoningStatus,
+            Instant reasoningGeneratedAt,
+            ReasoningNewsSnapshot reasoningNews) {
 
         static SignalResponse fromDomain(TradingSignal signal) {
             return new SignalResponse(
@@ -66,7 +76,15 @@ class SignalController {
                     signal.getGeneratedAt(),
                     signal.getStopLossPct(),
                     signal.getTakeProfitPct(),
-                    signal.getPredictedChangePct());
+                    signal.getPredictedChangePct(),
+                    signal.getEntryPrice(),
+                    signal.getTargetPrice(),
+                    signal.getStopLoss(),
+                    signal.getExpectedMovePct(),
+                    signal.getReasoning(),
+                    signal.getReasoningStatus(),
+                    signal.getReasoningGeneratedAt(),
+                    ReasoningNewsSnapshot.fromArtifact(signal.getReasoningArtifact()));
         }
     }
 

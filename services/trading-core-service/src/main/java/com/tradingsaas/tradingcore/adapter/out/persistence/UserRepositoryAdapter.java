@@ -40,12 +40,19 @@ class UserRepositoryAdapter implements UserRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<User> findByClerkUserId(String clerkUserId) {
+        return userJpaRepository.findByClerkUserId(clerkUserId).map(mapper::toDomain);
+    }
+
+    @Override
     @Transactional
     public User save(User user) {
         Instant now = Instant.now();
         UserJpaEntity entity = new UserJpaEntity(
                 user.getId(),
                 user.getEmail(),
+                user.getClerkUserId(),
                 user.getPasswordHash(),
                 user.getFirstName(),
                 user.getLastName(),

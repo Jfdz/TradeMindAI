@@ -31,26 +31,41 @@ spec:
           env:
             - name: NODE_ENV
               value: production
-            - name: NEXTAUTH_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: web-app-config
-                  key: nextauth-url
-            - name: NEXTAUTH_SECRET
+            - name: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
               valueFrom:
                 secretKeyRef:
-                  name: nextauth-secret
-                  key: secret
-            - name: NEXT_PUBLIC_API_BASE_URL
+                  name: clerk-secrets
+                  key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+            - name: CLERK_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: clerk-secrets
+                  key: CLERK_SECRET_KEY
+            - name: NEXT_PUBLIC_CLERK_SIGN_IN_URL
               valueFrom:
                 configMapKeyRef:
                   name: web-app-config
-                  key: api-base-url
-            - name: ADMIN_EMAILS
+                  key: NEXT_PUBLIC_CLERK_SIGN_IN_URL
+            - name: NEXT_PUBLIC_CLERK_SIGN_UP_URL
               valueFrom:
                 configMapKeyRef:
                   name: web-app-config
-                  key: ADMIN_EMAILS
+                  key: NEXT_PUBLIC_CLERK_SIGN_UP_URL
+            - name: NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: web-app-config
+                  key: NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL
+            - name: NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: web-app-config
+                  key: NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL
+            - name: API_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: web-app-config
+                  key: API_BASE_URL
             - name: AI_ENGINE_SERVICE_URL
               valueFrom:
                 configMapKeyRef:
@@ -59,8 +74,21 @@ spec:
             - name: INTERNAL_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: internal-secret
-                  key: secret                   
+                  name: internal-service-secret
+                  key: market-data
+            - name: MARKET_DATA_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: web-app-config
+                  key: MARKET_DATA_SERVICE_URL
+            - name: MARKET_DATA_INTERNAL_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: internal-service-secret
+                  key: market-data
+          # FINNHUB_API_KEY removed: the web-app no longer calls Finnhub
+          # directly. /api/stocks/logos now proxies through trading-core
+          # to market-data, so only market-data needs the key.
           resources:
             requests:
               cpu: 250m
