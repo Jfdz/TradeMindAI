@@ -15,7 +15,6 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -46,7 +45,6 @@ public class SecurityConfig {
     private final long rateLimitBasicPm;
     private final long rateLimitPremiumPm;
     private final String clerkIssuerUri;
-    private final String clerkAudience;
 
     SecurityConfig(ObjectMapper objectMapper,
                    LettuceBasedProxyManager<String> rateLimitProxyManager,
@@ -55,8 +53,7 @@ public class SecurityConfig {
                    @Value("${trading-core.rate-limit.free-per-minute:5}") long rateLimitFreePm,
                    @Value("${trading-core.rate-limit.basic-per-minute:50}") long rateLimitBasicPm,
                    @Value("${trading-core.rate-limit.premium-per-minute:500}") long rateLimitPremiumPm,
-                   @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}") String clerkIssuerUri,
-                   @Value("${trading-core.clerk.audience}") String clerkAudience) {
+                   @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}") String clerkIssuerUri) {
         this.objectMapper = objectMapper;
         this.rateLimitProxyManager = rateLimitProxyManager;
         this.userRepository = userRepository;
@@ -65,7 +62,6 @@ public class SecurityConfig {
         this.rateLimitBasicPm = rateLimitBasicPm;
         this.rateLimitPremiumPm = rateLimitPremiumPm;
         this.clerkIssuerUri = clerkIssuerUri;
-        this.clerkAudience = clerkAudience;
     }
 
     @Bean
@@ -122,8 +118,7 @@ public class SecurityConfig {
                 .build();
 
         OAuth2TokenValidator<Jwt> issuerValidator = JwtValidators.createDefaultWithIssuer(clerkIssuerUri);
-        OAuth2TokenValidator<Jwt> audienceValidator = new AudienceValidator(clerkAudience);
-        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(issuerValidator, audienceValidator));
+        decoder.setJwtValidator(issuerValidator);
         return decoder;
     }
 
