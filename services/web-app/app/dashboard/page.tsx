@@ -2,22 +2,35 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
-import { useMemo, useState } from "react";
+import { useUser } from "@clerk/nextjs";
+import { useCallback, useMemo, useState } from "react";
 
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
+import { AiDecisionCard } from "@/components/dashboard/ai-decision-card";
+import { LiveSignalsStrip } from "@/components/dashboard/live-signals-strip";
 import { ArrowRightIcon } from "@/components/site/icons";
 import { Button } from "@/components/ui/button";
-import { type EnrichedHolding, type FilteredSignal } from "@/lib/dashboard/dashboard-api";
+import { LiveLed } from "@/components/ui/live-led";
+import type { DashboardCandle, EnrichedHolding, FilteredSignal } from "@/lib/dashboard/dashboard-api";
 import { fetchDashboardPageData } from "@/lib/dashboard/client-data";
+import { useAgeOutToast } from "@/lib/dashboard/use-age-out-toast";
+import { useStockLogos } from "@/lib/dashboard/use-stock-logos";
+import { buildSignalMarker, hasValidReasoningNews } from "@/lib/dashboard/signal-derivation";
 import { signedTone, TONE_NEUTRAL } from "@/lib/dashboard/format";
-import { formatConfidence } from "@/lib/signal-utils";
 import { cn } from "@/lib/utils";
 
 const EMPTY_SIGNALS: FilteredSignal[] = [];
 const EMPTY_HOLDINGS: EnrichedHolding[] = [];
+const EMPTY_CANDLES: DashboardCandle[] = [];
 const DASHBOARD_QUERY_KEY = ["dashboard"] as const;
 const SIGNALS_QUERY_KEY = ["signals"] as const;
+
+function timeGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
 
 function isMarketDataUnavailable(dataSource: string | null | undefined) {
   return dataSource === "unavailable";
@@ -53,9 +66,9 @@ function getUnrealizedPnlDetail(marketDataUnavailable: boolean, partialMarketDat
 }
 
 function getSignalTypeStyle(type: string): string {
-  if (type === "BUY") return "border-green/30 bg-[rgba(0,214,143,0.12)] text-green";
-  if (type === "SELL") return "border-red/30 bg-[rgba(255,77,106,0.12)] text-red";
-  return "border-gold/30 bg-[rgba(232,184,75,0.12)] text-gold";
+  if (type === "BUY") return "ring-1 ring-buy-ring bg-buy/10 text-emerald-200 border-buy/40 shadow-buy-glow";
+  if (type === "SELL") return "ring-1 ring-sell-ring bg-sell/10 text-rose-200 border-sell/40 shadow-sell-glow";
+  return "ring-1 ring-hold-ring bg-hold/10 text-amber-200 border-hold/40 shadow-hold-glow";
 }
 
 function Sparkline({ values, color }: { readonly values: number[]; readonly color: string }) {
@@ -86,7 +99,7 @@ function Sparkline({ values, color }: { readonly values: number[]; readonly colo
 
 export default function DashboardHomePage() {
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
+  const { user } = useUser();
   const { data, isLoading, error } = useQuery({
     queryKey: DASHBOARD_QUERY_KEY,
     queryFn: fetchDashboardPageData,
@@ -99,16 +112,14 @@ export default function DashboardHomePage() {
   const portfolio = data?.portfolio ?? null;
   const signals = data?.signals ?? EMPTY_SIGNALS;
   const holdings = data?.holdings ?? EMPTY_HOLDINGS;
-  const chartCandles = data?.chartCandles ?? [];
-  const chartMarker = data?.chartMarker ?? null;
-  const chartMarkers = useMemo(() => {
-    return chartMarker ? [chartMarker] : undefined;
-  }, [chartMarker]);
+  const chartCandles = data?.chartCandles ?? EMPTY_CANDLES;
 
-  const greeting = useMemo(() => {
-    const name = session?.user?.name?.split(" ")[0] ?? "Trader";
-    return `Good morning, ${name}`;
-  }, [session?.user?.name]);
+  const signalLogos = useStockLogos(useMemo(() => signals.map((s: FilteredSignal) => s.symbol), [signals]));
+
+  const displayName = useMemo(
+    () => user?.firstName ?? user?.primaryEmailAddress?.emailAddress?.split("@")[0] ?? "there",
+    [user?.firstName, user?.primaryEmailAddress?.emailAddress]
+  );
 
   const summaryCards = useMemo(() => {
     if (!portfolio) {
@@ -129,7 +140,13 @@ export default function DashboardHomePage() {
         tone: "text-green",
       },
       { label: "Open Positions", value: `${holdings.length}`, detail: "Backend portfolio book", tone: "text-white" },
-      { label: "Live Signals", value: `${liveSignals}`, detail: `${signals.length} total signals`, tone: "text-cyan" },
+      {
+        label: "Live Signals",
+        value: `${liveSignals}`,
+        detail: `${signals.length} total · ${liveSignals} within 24 h`,
+        tone: "text-cyan",
+        title: "Generated within the last 24 hours",
+      },
       {
         label: "Unrealized P&L",
         value: unrealizedPnl === null ? "N/A" : formatSignedMoney(unrealizedPnl),
@@ -139,7 +156,37 @@ export default function DashboardHomePage() {
     ];
   }, [holdings.length, portfolio, signals]);
 
-  const topSignal = signals[0] ?? null;
+  const liveSignals = useMemo(() => signals.filter((s) => s.live), [signals]);
+  const topLiveSignal = liveSignals[0] ?? null;
+  const [selectedSignalId, setSelectedSignalId] = useState<string | null>(null);
+  const selectedSignal = useMemo(
+    () => liveSignals.find((s) => s.id === selectedSignalId) ?? topLiveSignal,
+    [liveSignals, selectedSignalId, topLiveSignal]
+  );
+  const activeSymbol = selectedSignal?.symbol ?? null;
+
+  const clearSelection = useCallback(() => setSelectedSignalId(null), []);
+  useAgeOutToast(liveSignals, selectedSignalId, topLiveSignal, clearSelection);
+
+  const { data: dynamicCandles } = useQuery<DashboardCandle[]>({
+    queryKey: ["candles", activeSymbol],
+    queryFn: async () => {
+      if (!activeSymbol) return [];
+      const res = await fetch(`/api/dashboard/candles?symbol=${encodeURIComponent(activeSymbol)}`);
+      if (!res.ok) return [];
+      return res.json() as Promise<DashboardCandle[]>;
+    },
+    enabled: !!activeSymbol && selectedSignal?.id !== topLiveSignal?.id,
+    staleTime: 60_000,
+  });
+  const activeCandles = useMemo(
+    () => (selectedSignal?.id === topLiveSignal?.id ? chartCandles : (dynamicCandles ?? [])),
+    [selectedSignal?.id, topLiveSignal?.id, dynamicCandles, chartCandles]
+  );
+  const activeMarker = useMemo(
+    () => buildSignalMarker(selectedSignal, activeCandles),
+    [selectedSignal, activeCandles]
+  );
 
   const [generateResult, setGenerateResult] = useState<string | null>(null);
   const generateSignals = useMutation({
@@ -210,16 +257,20 @@ export default function DashboardHomePage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-[24px] border border-border bg-bg-1/80 p-6 shadow-glow">
+      <section className="rounded-[24px] border border-border bg-bg-1/80 bg-gradient-hero p-6 shadow-glow">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Overview</div>
+            <div className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">
+              <LiveLed label="LIVE · Overview" />
+            </div>
             <h2 className="mt-3 font-display text-[clamp(28px,4vw,44px)] font-bold tracking-[-0.05em] text-white">
-              {greeting}
+              <span className="bg-gradient-to-r from-cyan to-green bg-clip-text text-transparent">
+                {timeGreeting()}
+              </span>
+              {`, ${displayName}`}
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-text-2">
-              You have {signals.length} signals in the backend feed, {holdings.length} open positions, and a live book
-              that is now fully tied to the tradeMindAI data model.
+              {signals.length} signals tracked · {holdings.length} open positions
             </p>
             {isMarketDataUnavailable(portfolio.dataSource) && (
               <p className="mt-3 text-sm text-gold">
@@ -231,7 +282,7 @@ export default function DashboardHomePage() {
                 Partial pricing returned from market data. Some holdings and signals are still waiting on fresh prices.
               </p>
             )}
-            {session?.isAdmin && (
+            {(user?.publicMetadata as { role?: string } | undefined)?.role === "admin" && (
               <div className="mt-4 flex items-center gap-3">
                 <Button
                   size="sm"
@@ -242,6 +293,12 @@ export default function DashboardHomePage() {
                 >
                   {generateSignals.isPending ? "Generating..." : "Generate Signals"}
                 </Button>
+                <Link
+                  href="/dashboard/admin/reasoning-audit"
+                  className="text-xs text-cyan underline-offset-4 hover:underline"
+                >
+                  Reasoning audit →
+                </Link>
                 {generateSignals.isError && (
                   <span className="text-xs text-red">
                     {generateSignals.error instanceof Error ? generateSignals.error.message : "Failed"}
@@ -266,7 +323,7 @@ export default function DashboardHomePage() {
 
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {summaryCards.map((card) => (
-            <article key={card.label} className="rounded-[20px] border border-border bg-bg-2 p-5">
+            <article key={card.label} className="rounded-[20px] border border-border bg-bg-2 p-5 hover:shadow-neon-soft transition-shadow duration-200" title={card.title}>
               <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-3">{card.label}</div>
               <div className={cn("mt-3 font-display text-3xl font-bold tracking-[-0.05em]", card.tone)}>{card.value}</div>
               <div className="mt-2 text-sm text-text-2">{card.detail}</div>
@@ -281,7 +338,11 @@ export default function DashboardHomePage() {
             <div>
               <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-cyan">Live chart</div>
               <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">
-                {topSignal ? `${topSignal.symbol} ${topSignal.timeframe}` : "Portfolio market view"}
+                {liveSignals.length === 0
+                  ? "No live signals right now"
+                  : selectedSignal
+                    ? `${selectedSignal.symbol} ${selectedSignal.type} ${selectedSignal.timeframe}`
+                    : "Live chart"}
               </h3>
             </div>
             <Button asChild variant="outlineCyan" size="sm">
@@ -292,13 +353,23 @@ export default function DashboardHomePage() {
             </Button>
           </div>
 
-          <div className="mt-6 rounded-[22px] border border-border bg-bg-0/70 p-3">
-            {chartCandles.length > 0 ? (
-              <CandlestickChart candles={chartCandles} markers={chartMarkers} showVolume={false} height={320} />
+          {liveSignals.length > 0 && (
+            <div className="mt-4">
+              <LiveSignalsStrip
+                signals={liveSignals}
+                selectedSignalId={selectedSignalId ?? ""}
+                onSignalChange={setSelectedSignalId}
+              />
+            </div>
+          )}
+
+          <div className="mt-4 rounded-[22px] border border-border bg-bg-0/70 p-3">
+            {liveSignals.length === 0 ? (
+              <ChartPlaceholder>No live signals in the last 24 hours.</ChartPlaceholder>
+            ) : activeCandles.length > 0 ? (
+              <CandlestickChart candles={activeCandles} markers={activeMarker ? [activeMarker] : undefined} showVolume={false} height={320} />
             ) : (
-              <div className="flex h-[320px] items-center justify-center rounded-[18px] border border-dashed border-border text-sm text-text-2">
-                No chart data available yet.
-              </div>
+              <ChartPlaceholder>Loading chart data…</ChartPlaceholder>
             )}
           </div>
         </article>
@@ -308,39 +379,13 @@ export default function DashboardHomePage() {
           <h3 className="mt-3 font-display text-2xl font-semibold tracking-[-0.04em] text-white">Recent AI decisions</h3>
 
           <div className="mt-6 space-y-4">
-            {signals.slice(0, 4).map((signal) => (
-              <Link
+            {signals.filter(hasValidReasoningNews).slice(0, 4).map((signal) => (
+              <AiDecisionCard
                 key={signal.id}
-                href={`/dashboard/signals/${signal.id}`}
-                className="block rounded-[20px] border border-border bg-bg-2 p-4 transition hover:border-border-strong hover:bg-bg-3"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="font-display text-lg font-semibold tracking-[-0.03em] text-white">{signal.symbol}</div>
-                    <div className="mt-1 text-xs uppercase tracking-[0.22em] text-text-3">
-                      {signal.timeframe} · {signal.age}
-                    </div>
-                  </div>
-                  <div
-                    className={cn(
-                      "rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]",
-                      getSignalTypeStyle(signal.type)
-                    )}
-                  >
-                    {signal.type}
-                  </div>
-                </div>
-                <div className="mt-4 grid gap-3 text-sm text-text-2 sm:grid-cols-2">
-                  <div>
-                    <span className="text-text-3">Confidence</span>
-                    <div className="mt-1 font-mono text-white">{formatConfidence(signal.confidence)}</div>
-                  </div>
-                  <div>
-                    <span className="text-text-3">Reasoning</span>
-                    <div className="mt-1 line-clamp-2 text-text-1">{signal.reasoning}</div>
-                  </div>
-                </div>
-              </Link>
+                signal={signal}
+                logoUrl={signalLogos?.[signal.symbol]}
+                typeBadgeClass={getSignalTypeStyle(signal.type)}
+              />
             ))}
             {signals.length === 0 ? (
               <div className="rounded-[20px] border border-dashed border-border bg-bg-2 px-4 py-6 text-sm text-text-2">
@@ -400,7 +445,9 @@ export default function DashboardHomePage() {
                     </td>
                     <td className="border-t border-border px-4 py-4 text-text-2">{position.sector}</td>
                     <td className="border-t border-border px-4 py-4">
-                      <Sparkline values={position.trend} color={position.color} />
+                      {position.trend.length > 0
+                        ? <Sparkline values={position.trend} color={position.color} />
+                        : <span className="text-text-3 text-xs" title="Awaiting price history">—</span>}
                     </td>
                   </tr>
                 );
@@ -416,6 +463,14 @@ export default function DashboardHomePage() {
           </table>
         </div>
       </section>
+    </div>
+  );
+}
+
+function ChartPlaceholder({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex h-[320px] items-center justify-center rounded-[18px] border border-dashed border-border text-sm text-text-2">
+      {children}
     </div>
   );
 }

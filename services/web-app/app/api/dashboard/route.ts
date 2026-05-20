@@ -1,7 +1,7 @@
-import { getServerSession } from "next-auth";
+import type { SeriesMarker, Time } from "lightweight-charts";
+import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/auth";
 import type {
   LatestPricesResponse,
   MarketPriceResponse,
@@ -16,12 +16,12 @@ import { convertPricesToCandles, deriveSignal } from "@/lib/dashboard/signal-der
 import { assignSymbolColors } from "@/lib/dashboard/symbol-colors";
 import { signalTypeColor } from "@/lib/signal-utils";
 
-const API_BASE_URL = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
+const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8082";
 
 function buildChartMarker(
   lastCandle: DashboardCandle,
   targetSignal: ReturnType<typeof deriveSignal> | null,
-) {
+): SeriesMarker<Time> | null {
   if (!lastCandle || !targetSignal) {
     return null;
   }
@@ -32,8 +32,8 @@ function buildChartMarker(
     return "circle";
   };
   return {
-    time: lastCandle.time,
-    position: (signalType === "SELL" ? "aboveBar" : "belowBar") as "aboveBar" | "belowBar",
+    time: lastCandle.time as Time,
+    position: signalType === "SELL" ? "aboveBar" : "belowBar",
     color: signalTypeColor(signalType),
     shape: getShape(signalType),
     text: targetSignal.symbol,
@@ -81,8 +81,8 @@ async function backendJsonSafe<T>(
 }
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  const token = session?.accessToken;
+  const { getToken } = await auth();
+  const token = await getToken({ template: "backend" });
 
   if (!token) {
     return NextResponse.json({ message: "Authentication required" }, { status: 401 });
@@ -91,12 +91,12 @@ export async function GET() {
   try {
     const [portfolioResult, signalResult, symbolResponse] = await Promise.all([
       backendJsonSafe<PortfolioOverviewResponse>("/api/v1/portfolio", token),
-      backendJsonSafe<PagedResponse<SignalResponse>>("/api/v1/signals", token),
+      backendJsonSafe<PagedResponse<SignalResponse>>("/api/v1/signals?size=200&sort=generatedAt,desc", token),
       backendJson<PagedResponse<MarketSymbolResponse>>("/api/v1/symbols", token, true),
     ]);
 
     if (!portfolioResult.ok || !signalResult.ok) {
-      const failed = (!portfolioResult.ok ? portfolioResult : signalResult) as { ok: false; status: number };
+      const failed = (portfolioResult.ok ? signalResult : portfolioResult) as { ok: false; status: number };
       return failed.status === 401
         ? NextResponse.json({ message: "Authentication required" }, { status: 401 })
         : NextResponse.json({ message: `Upstream error ${failed.status}` }, { status: 502 });

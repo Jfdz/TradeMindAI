@@ -8,7 +8,7 @@ import type { ChartCandle, ChartMarker } from "@/lib/dashboard/signals";
 
 const timeframes = ["15m", "1H", "4H", "1D", "1W"] as const;
 
-function buildSeries(base: number, drift: number): { candles: ChartCandle[]; marker: ChartMarker } {
+function buildSeries(base: number, drift: number): { candles: ChartCandle[]; markers: ChartMarker[] } {
   const candles = Array.from({ length: 18 }, (_, index) => {
     const trend = base + (index - 8) * drift;
     const open = Number((trend - (index % 2 === 0 ? 1.6 : 0.8)).toFixed(2));
@@ -30,15 +30,26 @@ function buildSeries(base: number, drift: number): { candles: ChartCandle[]; mar
     };
   });
 
+  const entryIndex = 5;
+
   return {
     candles,
-    marker: {
-      time: candles[candles.length - 1].time,
-      position: "belowBar",
-      color: "#00c8d4",
-      shape: "arrowUp",
-      text: "BUY",
-    },
+    markers: [
+      {
+        time: candles[entryIndex].time,
+        position: "belowBar",
+        color: "#00c8d4",
+        shape: "arrowUp",
+        text: "BUY",
+      },
+      {
+        time: candles[candles.length - 1].time,
+        position: "aboveBar",
+        color: "#ff4d6a",
+        shape: "arrowDown",
+        text: "SELL",
+      },
+    ],
   };
 }
 
@@ -48,12 +59,12 @@ const frameSeries = {
   "4H": buildSeries(68480, 1.9),
   "1D": buildSeries(68540, 2.3),
   "1W": buildSeries(68620, 3.1),
-} satisfies Record<(typeof timeframes)[number], { candles: ChartCandle[]; marker: ChartMarker }>;
+} satisfies Record<(typeof timeframes)[number], { candles: ChartCandle[]; markers: ChartMarker[] }>;
 
 export function HeroChartPanel() {
   const [selectedFrame, setSelectedFrame] = useState<(typeof timeframes)[number]>("4H");
   const data = useMemo(() => frameSeries[selectedFrame], [selectedFrame]);
-  const markers = useMemo(() => [data.marker], [data.marker]);
+  const markers = useMemo(() => data.markers, [data.markers]);
 
   return (
     <div className="overflow-hidden rounded-[28px] border border-border bg-[linear-gradient(180deg,rgba(17,23,32,0.96),rgba(12,16,24,0.95))] shadow-glow">
@@ -69,6 +80,14 @@ export function HeroChartPanel() {
             <span className="text-text-1">68,412.5</span>
             <span className="text-green">+1.42%</span>
             <span className="text-text-2">Confidence 94.2%</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full border border-cyan/25 bg-cyan-dim px-2 py-1 font-mono text-[11px] text-cyan">
+              ↑ BUY · conf 87%
+            </span>
+            <span className="rounded-full border border-gold/25 bg-gold-dim px-2 py-1 font-mono text-[11px] text-gold">
+              HOLD · 3 active
+            </span>
           </div>
         </div>
 

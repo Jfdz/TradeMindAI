@@ -47,7 +47,7 @@ a {
 }
 
 ::selection {
-  background: rgba(0, 200, 212, 0.24);
+  background: rgba(0, 200, 212, 0.5);
   color: #ffffff;
 }
 

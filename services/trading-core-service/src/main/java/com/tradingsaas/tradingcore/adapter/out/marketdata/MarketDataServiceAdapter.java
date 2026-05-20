@@ -3,14 +3,18 @@ package com.tradingsaas.tradingcore.adapter.out.marketdata;
 import com.tradingsaas.tradingcore.domain.model.backtest.OhlcvBar;
 import com.tradingsaas.tradingcore.domain.port.out.HistoricalMarketDataPort;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import io.netty.channel.ChannelOption;
 import jakarta.annotation.PostConstruct;
 import java.math.BigDecimal;
+import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.netty.http.client.HttpClient;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -37,8 +41,15 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
     @Autowired
     public MarketDataServiceAdapter(
             @Value("${services.market-data.url:http://localhost:8081}") String baseUrl,
-            @Value("${services.market-data.internal-secret:}") String internalSecret) {
-        this(WebClient.builder().baseUrl(baseUrl).build(), internalSecret, Clock.systemUTC());
+            @Value("${services.market-data.internal-secret:}") String internalSecret,
+            @Value("${services.market-data.connect-timeout-ms:5000}") int connectTimeoutMs,
+            @Value("${services.market-data.response-timeout-seconds:10}") int responseTimeoutSeconds) {
+        this(WebClient.builder()
+                .baseUrl(baseUrl)
+                .clientConnector(new ReactorClientHttpConnector(HttpClient.create()
+                        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMs)
+                        .responseTimeout(Duration.ofSeconds(responseTimeoutSeconds))))
+                .build(), internalSecret, Clock.systemUTC());
     }
 
     MarketDataServiceAdapter(WebClient webClient, String internalSecret, Clock clock) {
@@ -68,9 +79,15 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
                         .build(symbol))
                 .headers(this::addInternalSecret)
                 .retrieve()
+                .onStatus(status -> status.value() == 404, res -> Mono.empty())
                 .onStatus(
                         status -> status.is4xxClientError() || status.is5xxServerError(),
-                        res -> Mono.empty()
+                        res -> res.bodyToMono(String.class)
+                                .defaultIfEmpty("<no body>")
+                                .flatMap(body -> {
+                                    log.warn("market-data returned {} for {}/DAILY history: {}", res.statusCode(), symbol, body);
+                                    return Mono.<Throwable>empty();
+                                })
                 )
                 .bodyToMono(PriceHistoryResponse.class)
                 .defaultIfEmpty(new PriceHistoryResponse(List.of()))
@@ -213,7 +230,16 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
                 .uri("/api/v1/prices/{ticker}/latest", symbol)
                 .headers(this::addInternalSecret)
                 .retrieve()
-                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), res -> Mono.empty())
+                .onStatus(status -> status.value() == 404, res -> Mono.empty())
+                .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        res -> res.bodyToMono(String.class)
+                                .defaultIfEmpty("<no body>")
+                                .flatMap(body -> {
+                                    log.warn("market-data returned {} checking hasData for {}: {}", res.statusCode(), symbol, body);
+                                    return Mono.<Throwable>empty();
+                                })
+                )
                 .bodyToMono(String.class)
                 .map(body -> true)
                 .defaultIfEmpty(false)
@@ -227,7 +253,16 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
                         .build(ticker))
                 .headers(this::addInternalSecret)
                 .retrieve()
-                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), res -> Mono.empty())
+                .onStatus(status -> status.value() == 404, res -> Mono.empty())
+                .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        res -> res.bodyToMono(String.class)
+                                .defaultIfEmpty("<no body>")
+                                .flatMap(body -> {
+                                    log.warn("market-data returned {} for {}/{} latest price: {}", res.statusCode(), ticker, timeframe, body);
+                                    return Mono.<Throwable>empty();
+                                })
+                )
                 .bodyToMono(MarketPriceResponse.class)
                 .block();
         return Optional.ofNullable(response);
@@ -244,7 +279,16 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
                         .build())
                 .headers(this::addInternalSecret)
                 .retrieve()
-                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), res -> Mono.empty())
+                .onStatus(status -> status.value() == 404, res -> Mono.empty())
+                .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        res -> res.bodyToMono(String.class)
+                                .defaultIfEmpty("<no body>")
+                                .flatMap(body -> {
+                                    log.warn("market-data returned {} for {}/{} latest prices batch: {}", res.statusCode(), tickers, timeframe, body);
+                                    return Mono.<Throwable>empty();
+                                })
+                )
                 .bodyToMono(LatestPricesResponse.class)
                 .defaultIfEmpty(new LatestPricesResponse(List.of()))
                 .block();
@@ -267,7 +311,16 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
                         .build(ticker))
                 .headers(this::addInternalSecret)
                 .retrieve()
-                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), res -> Mono.empty())
+                .onStatus(status -> status.value() == 404, res -> Mono.empty())
+                .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        res -> res.bodyToMono(String.class)
+                                .defaultIfEmpty("<no body>")
+                                .flatMap(body -> {
+                                    log.warn("market-data returned {} for {}/{} history [{}/{}]: {}", res.statusCode(), ticker, timeframe, from, to, body);
+                                    return Mono.<Throwable>empty();
+                                })
+                )
                 .bodyToMono(MarketPricePageResponse.class)
                 .defaultIfEmpty(new MarketPricePageResponse(List.of(), page, size, 0, 0))
                 .block();
@@ -298,10 +351,49 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
                         .build())
                 .headers(this::addInternalSecret)
                 .retrieve()
-                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), res -> Mono.empty())
+                .onStatus(status -> status.value() == 404, res -> Mono.empty())
+                .onStatus(
+                        status -> status.is4xxClientError() || status.is5xxServerError(),
+                        res -> res.bodyToMono(String.class)
+                                .defaultIfEmpty("<no body>")
+                                .flatMap(body -> {
+                                    log.warn("market-data returned {} for symbols [page={} size={}]: {}", res.statusCode(), page, size, body);
+                                    return Mono.<Throwable>empty();
+                                })
+                )
                 .bodyToMono(MarketSymbolPageResponse.class)
                 .defaultIfEmpty(new MarketSymbolPageResponse(List.of(), page, size, 0, 0))
                 .block();
+    }
+
+    public Optional<PriceFactsResponse> fetchPriceFacts(String ticker) {
+        try {
+            PriceFactsResponse response = webClient.get()
+                    .uri("/api/v1/price-facts/{ticker}", ticker)
+                    .headers(this::addInternalSecret)
+                    .exchangeToMono(res -> {
+                        int code = res.statusCode().value();
+                        if (res.statusCode().is2xxSuccessful()) {
+                            return res.bodyToMono(PriceFactsResponse.class);
+                        }
+                        if (code == 404) {
+                            return res.releaseBody().then(Mono.empty());
+                        }
+                        if (code == 422) {
+                            return res.releaseBody()
+                                    .then(Mono.error(new InsufficientHistoryUpstreamException(ticker)));
+                        }
+                        return res.releaseBody()
+                                .then(Mono.error(new MarketDataUpstreamException(
+                                        "market-data returned HTTP " + code + " for price-facts/" + ticker)));
+                    })
+                    .block();
+            return Optional.ofNullable(response);
+        } catch (InsufficientHistoryUpstreamException | MarketDataUpstreamException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw new MarketDataUpstreamException("market-data unavailable for price-facts/" + ticker, e);
+        }
     }
 
     private void addInternalSecret(org.springframework.http.HttpHeaders headers) {
@@ -352,4 +444,50 @@ public class MarketDataServiceAdapter implements HistoricalMarketDataPort {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Ohlcv(double open, double high, double low, double close, long volume) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record PriceFactsResponse(
+            String ticker,
+            String timeframe,
+            String snapshotAt,
+            int barsAvailable,
+            BigDecimal close,
+            BigDecimal previousClose,
+            BigDecimal pctChange1d,
+            BigDecimal pctChange5d,
+            BigDecimal pctChange30d,
+            BigDecimal high52w,
+            BigDecimal low52w,
+            BigDecimal sma20,
+            BigDecimal sma50,
+            BigDecimal sma200,
+            BigDecimal rsi14,
+            BigDecimal macdHistogram,
+            long volume,
+            BigDecimal volumeAvg20d,
+            BigDecimal support,
+            BigDecimal resistance) {}
+
+    public static final class InsufficientHistoryUpstreamException extends RuntimeException {
+        private final String ticker;
+
+        public InsufficientHistoryUpstreamException(String ticker) {
+            super("market-data signalled INSUFFICIENT_HISTORY for " + ticker);
+            this.ticker = ticker;
+        }
+
+        public String ticker() {
+            return ticker;
+        }
+    }
+
+    public static final class MarketDataUpstreamException extends RuntimeException {
+        public MarketDataUpstreamException(String message) {
+            super(message);
+        }
+
+        public MarketDataUpstreamException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
 }

@@ -1,13 +1,29 @@
-import { getSession } from "next-auth/react";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
+const PROXY_BASE = "/api/proxy";
 
 export type PagedResponse<T> = {
   content: T[];
-  page?: number;
+  number?: number;
   size?: number;
   totalElements?: number;
   totalPages?: number;
+  first?: boolean;
+  last?: boolean;
+};
+
+export type ReasoningStatus = "PENDING" | "READY" | "FALLBACK" | "FAILED";
+
+/**
+ * First news item that grounded the AI reasoning for a signal. Sourced
+ * from the persisted `reasoning_facts_snapshot.news[0]` (Track C
+ * audit blob). When the LLM ran with no news in window, or when the
+ * artifact is missing, this field is absent on the wire.
+ */
+export type ReasoningNewsSnapshot = {
+  headline: string | null;
+  url: string | null;
+  imageUrl: string | null;
+  source: string | null;
+  publishedAt: string | null;
 };
 
 export type SignalResponse = {
@@ -20,6 +36,14 @@ export type SignalResponse = {
   stopLossPct?: number | null;
   takeProfitPct?: number | null;
   predictedChangePct?: number | null;
+  entryPrice?: number | null;
+  targetPrice?: number | null;
+  stopLoss?: number | null;
+  expectedMovePct?: number | null;
+  reasoning?: string | null;
+  reasoningStatus?: ReasoningStatus | null;
+  reasoningGeneratedAt?: string | null;
+  reasoningNews?: ReasoningNewsSnapshot | null;
 };
 
 export type SubmitBacktestPayload = {
@@ -40,6 +64,7 @@ export type BacktestResultResponse = {
   sharpeRatio: number;
   sortinoRatio: number;
   maxDrawdown: number;
+  calmarRatio: number;
   profitFactor: number;
   winRate: number;
   trades: BacktestTradeResponse[];
@@ -77,6 +102,13 @@ export type NotificationPreferencesResponse = {
   updatedAt?: string;
 };
 
+export type SessionResponse = {
+  id: string;
+  loggedInAt: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+};
+
 export type UpdateUserProfilePayload = {
   firstName: string;
   lastName: string;
@@ -103,6 +135,9 @@ export type PortfolioHoldingResponse = {
   status: string;
   openedAt?: string;
   closedAt?: string | null;
+  name?: string;
+  sector?: string | null;
+  trend7d?: number[];
 };
 
 export type PortfolioClosedPositionResponse = {
@@ -176,24 +211,31 @@ export type LatestPricesResponse = {
 export class ApiError extends Error {
   readonly status: number;
   readonly body: string;
+  readonly isRateLimit: boolean;
+  readonly rateLimit?: { limit: number; remaining: number; resetEpoch: number };
 
-  constructor(status: number, body: string, statusText: string) {
+  constructor(status: number, body: string, statusText: string, headers?: Headers) {
     super(`Request failed with status ${status}: ${body || statusText}`);
     this.name = "ApiError";
     this.status = status;
     this.body = body;
+    this.isRateLimit = status === 429;
+    if (this.isRateLimit && headers) {
+      const limit = parseInt(headers.get("X-RateLimit-Limit") ?? "0", 10);
+      const remaining = parseInt(headers.get("X-RateLimit-Remaining") ?? "0", 10);
+      const reset = parseInt(headers.get("X-RateLimit-Reset") ?? "0", 10);
+      if (reset > 0) {
+        this.rateLimit = { limit, remaining, resetEpoch: reset };
+      }
+    }
   }
 }
 
 async function requestJson<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const session = await getSession();
-  const token = (session as { accessToken?: string } | null)?.accessToken;
-
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${PROXY_BASE}${path}`, {
     ...options,
     headers: {
       Accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.body ? { "Content-Type": "application/json" } : {}),
       ...(options.headers ?? {}),
     },
@@ -202,7 +244,7 @@ async function requestJson<T>(path: string, options: RequestInit = {}): Promise<
 
   if (!response.ok) {
     const body = await response.text().catch(() => "");
-    throw new ApiError(response.status, body, response.statusText);
+    throw new ApiError(response.status, body, response.statusText, response.headers);
   }
 
   // 204 No Content / empty body endpoints (e.g., POST /positions/{id}/close)
@@ -217,8 +259,15 @@ async function requestJson<T>(path: string, options: RequestInit = {}): Promise<
 }
 
 export const apiClient = {
-  async getSignals(): Promise<PagedResponse<SignalResponse>> {
-    return requestJson<PagedResponse<SignalResponse>>("/api/v1/signals");
+  async getSignals(opts?: {
+    page?: number;
+    size?: number;
+    sort?: string;
+  }): Promise<PagedResponse<SignalResponse>> {
+    const { page = 0, size = 10, sort = "generatedAt,desc" } = opts ?? {};
+    return requestJson<PagedResponse<SignalResponse>>(
+      `/api/v1/signals?page=${page}&size=${size}&sort=${sort}`
+    );
   },
 
   async checkSymbolAvailability(symbol: string): Promise<boolean> {
@@ -243,6 +292,26 @@ export const apiClient = {
 
   async getSignal(signalId: string): Promise<SignalResponse> {
     return requestJson<SignalResponse>(`/api/v1/signals/${signalId}`);
+  },
+
+  /**
+   * Company logo URL via the same proven client-side auth path the rest
+   * of the dashboard uses (browser → public API with the session Bearer).
+   * Returns null on any failure so the StockLogo component falls back to
+   * its initials chip. Deliberately NOT routed through a Next server
+   * handler — the server-side getServerSession proxy does not surface
+   * the accessToken in App Router route handlers, which is why logos
+   * were universally blank.
+   */
+  async getCompanyLogo(ticker: string): Promise<string | null> {
+    try {
+      const profile = await requestJson<{ logo: string | null }>(
+        `/api/v1/enrichment/profile/${encodeURIComponent(ticker)}`
+      );
+      return profile?.logo ?? null;
+    } catch {
+      return null;
+    }
   },
 
   async getLatestPrice(ticker: string): Promise<MarketPriceResponse | null> {
@@ -282,7 +351,7 @@ export const apiClient = {
         `/api/v1/prices/${ticker}/history?timeframe=DAILY&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&size=${size}`
       );
     } catch {
-      return { content: [], page: 0, size, totalElements: 0, totalPages: 0 };
+      return { content: [], number: 0, size, totalElements: 0, totalPages: 0 };
     }
   },
 
@@ -317,7 +386,7 @@ export const apiClient = {
     try {
       return await requestJson<PagedResponse<MarketSymbolResponse>>("/api/v1/symbols");
     } catch {
-      return { content: [], page: 0, size: 0, totalElements: 0, totalPages: 0 };
+      return { content: [], number: 0, size: 0, totalElements: 0, totalPages: 0 };
     }
   },
 
@@ -337,6 +406,10 @@ export const apiClient = {
       method: "PUT",
       body: JSON.stringify(payload),
     });
+  },
+
+  async listMySessions(): Promise<SessionResponse[]> {
+    return requestJson<SessionResponse[]>("/api/v1/users/me/sessions");
   },
 
   async getPortfolio(): Promise<PortfolioOverviewResponse> {

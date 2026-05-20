@@ -55,6 +55,26 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev
 | `GET` | `/api/v1/indicators/{ticker}` | No | Technical indicators |
 | `POST` | `/api/v1/ingestion/trigger` | ADMIN | Manual ingestion trigger |
 
+### Enrichment endpoints (require `X-Internal-Secret` header)
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/v1/enrichment/profile/{ticker}` | Company profile (name, logo, exchange, market cap, etc.) |
+| `GET` | `/api/v1/enrichment/news?category=general&limit=20` | Market-wide news |
+| `GET` | `/api/v1/enrichment/news/{ticker}?from=&to=&limit=20` | Company-specific news |
+| `GET` | `/api/v1/enrichment/earnings/{ticker}` | Latest earnings (EPS actual vs estimate) |
+| `GET` | `/api/v1/enrichment/recommendations/{ticker}` | Analyst buy/hold/sell consensus |
+| `GET` | `/api/v1/enrichment/peers/{ticker}` | Peer company tickers |
+
+Data sourced from Finnhub. Responses are Redis-cached (TTL configurable via `enrichment.cache.*`).
+
+### Environment variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `FINNHUB_API_KEY` | Yes | Finnhub API key (free tier available at https://finnhub.io) |
+| `enrichment.cache.ttl-minutes` | No | Cache TTL in minutes (default: 60) |
+
 ## Testing
 
 ```bash
@@ -66,3 +86,38 @@ mvn test
 ```bash
 docker build -t market-data-service .
 ```
+
+## Troubleshooting — stock logos and news thumbnails
+
+If logos render as initials in the web-app, or NewsFeed shows headlines
+without thumbnails:
+
+1. **Cluster secret check.** The `finnhub-credentials/api-key` Secret
+   must exist and be valid. Only `market-data-service` needs it; the
+   web-app proxies through trading-core.
+   ```bash
+   kubectl -n trading-saas get secret finnhub-credentials \
+     -o jsonpath='{.data.api-key}' | base64 -d | head -c 8
+   ```
+2. **Direct profile probe.** Confirm Finnhub returns a logo URL.
+   ```bash
+   kubectl -n trading-saas exec deploy/market-data-service -- \
+     curl -s -H "X-Internal-Secret: $TOKEN" \
+     http://localhost:8081/api/v1/enrichment/profile/AAPL | jq .logo
+   ```
+   Expect a non-empty `https://static2.finnhub.io/...` URL.
+3. **News image presence.** Hit the aggregated endpoint.
+   ```bash
+   kubectl -n trading-saas exec deploy/market-data-service -- \
+     curl -s -H "X-Internal-Secret: $TOKEN" \
+     "http://localhost:8081/api/v1/enrichment/news-aggregated/AAPL?limit=5" \
+     | jq '[.[] | .image] | map(. != null) | length'
+   ```
+   Expect at least 1 — `YahooRssNewsAdapter` extracts
+   `<media:thumbnail>` from the RSS feed and `FinnhubAdapter` passes
+   `dto.image()` through.
+4. **Grafana panel.** The ratio
+   `news_aggregator_image_present_total{present="true"}` /
+   `news_aggregator_image_present_total` should stay above ~0.5
+   across both providers. A sustained drop means an upstream
+   regression and should page.

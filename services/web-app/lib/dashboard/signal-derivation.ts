@@ -1,6 +1,12 @@
+import type { SeriesMarker, Time } from "lightweight-charts";
 import type { MarketPriceResponse, SignalResponse } from "@/lib/api-client";
-import { buildSignalReasoning } from "@/lib/signal-utils";
+import { buildSignalReasoning, resolveExpectedMovePct, signalTypeColor } from "@/lib/signal-utils";
+import { hasOwnImage } from "@/lib/enrichment/news-image-filter";
 import type { DashboardCandle, FilteredSignal } from "@/lib/dashboard/dashboard-api";
+
+export function hasValidReasoningNews(signal: SignalResponse): boolean {
+  return signal.reasoningNews != null && hasOwnImage(signal.reasoningNews.imageUrl);
+}
 
 export function formatAge(value: string) {
   const generatedAt = new Date(value).getTime();
@@ -70,10 +76,20 @@ function isLiveSignal(generatedAt: string): boolean {
   return ageMs < 1000 * 60 * 60 * 24;
 }
 
+function deriveStatus(generatedAt: string): "NEW" | "LIVE" | "ACTIVE" {
+  const ageMs = Date.now() - new Date(generatedAt).getTime();
+  if (ageMs < 60 * 60 * 1000) return "NEW";
+  if (ageMs < 24 * 60 * 60 * 1000) return "LIVE";
+  return "ACTIVE";
+}
+
 export function deriveSignal(signal: SignalResponse, latestPrice: number | null): FilteredSignal {
-  const entry = latestPrice;
-  const takeProfit = calculateTakeProfit(signal.type, signal.takeProfitPct, entry);
-  const stopLoss = calculateStopLoss(signal.type, signal.stopLossPct, entry);
+  const entry = signal.entryPrice ?? latestPrice;
+  const takeProfit =
+    signal.targetPrice ?? calculateTakeProfit(signal.type, signal.takeProfitPct, entry);
+  const stopLoss =
+    signal.stopLoss ?? calculateStopLoss(signal.type, signal.stopLossPct, entry);
+  const expectedMovePct = resolveExpectedMovePct(entry, takeProfit, signal.predictedChangePct);
   const live = isLiveSignal(signal.generatedAt);
 
   return {
@@ -82,8 +98,9 @@ export function deriveSignal(signal: SignalResponse, latestPrice: number | null)
     entry,
     takeProfit,
     stopLoss,
+    expectedMovePct,
     live,
-    status: live ? "LIVE" : "PENDING",
+    status: deriveStatus(signal.generatedAt),
     age: formatAge(signal.generatedAt),
     generatedLabel: new Date(signal.generatedAt).toLocaleString("en-US", {
       month: "short",
@@ -93,6 +110,21 @@ export function deriveSignal(signal: SignalResponse, latestPrice: number | null)
       minute: "2-digit",
     }),
     reasoning: buildSignalReasoning(signal, latestPrice),
+  };
+}
+
+export function buildSignalMarker(
+  signal: FilteredSignal | null,
+  candles: DashboardCandle[]
+): SeriesMarker<Time> | null {
+  if (!signal || candles.length === 0 || signal.type === "HOLD") return null;
+  const last = candles[candles.length - 1];
+  return {
+    time: last.time as Time,
+    position: signal.type === "SELL" ? "aboveBar" : "belowBar",
+    color: signalTypeColor(signal.type),
+    shape: signal.type === "SELL" ? "arrowDown" : "arrowUp",
+    text: signal.symbol,
   };
 }
 

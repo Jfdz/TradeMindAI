@@ -4,12 +4,12 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
-export default function Error({
+export default function ErrorComponent({
   error,
   reset,
 }: {
-  error: Error & { digest?: string };
-  reset: () => void;
+  readonly error: Error & { digest?: string };
+  readonly reset: () => void;
 }) {
   useEffect(() => {
     console.error("Client error:", error);

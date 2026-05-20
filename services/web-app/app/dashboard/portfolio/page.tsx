@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { StockLogo } from "@/components/ui/stock-logo";
 import {
   ApiError,
   apiClient,
@@ -14,6 +15,7 @@ import {
 } from "@/lib/api-client";
 import type { EnrichedHolding } from "@/lib/dashboard/dashboard-api";
 import { fetchPortfolioPageData } from "@/lib/dashboard/client-data";
+import { useStockLogos } from "@/lib/dashboard/use-stock-logos";
 import {
   TONE_NEGATIVE,
   TONE_NEUTRAL,
@@ -224,6 +226,11 @@ function ClosePositionPanel({
         onAlreadyClosed();
         return;
       }
+      if (error instanceof ApiError && error.isRateLimit) {
+        const seconds = error.rateLimit ? Math.max(0, Math.ceil((error.rateLimit.resetEpoch * 1000 - Date.now()) / 1000)) : 60;
+        toast.warning(`Rate limit reached — try again in ${seconds}s or upgrade your plan.`);
+        return;
+      }
       setErr(error instanceof Error ? error.message : "Failed to close position");
     } finally {
       setSubmitting(false);
@@ -305,7 +312,10 @@ export default function PortfolioPage() {
 
   const portfolio = data?.portfolio ?? null;
   const holdings = data?.holdings ?? EMPTY_HOLDINGS;
-  const closedPositions = portfolio?.closedPositions ?? [];
+  const closedPositions = useMemo(() => portfolio?.closedPositions ?? [], [portfolio]);
+  const closedLogos = useStockLogos(
+    useMemo(() => closedPositions.map((position) => position.symbol), [closedPositions]),
+  );
 
   const summary = useMemo(() => {
     if (!portfolio) {
@@ -535,7 +545,12 @@ export default function PortfolioPage() {
                           <div className="flex items-center gap-3">
                             <span className="h-3 w-3 rounded-full" style={{ backgroundColor: position.color }} />
                             <div>
-                              <div className="font-semibold text-white">{position.symbol}</div>
+                              <Link
+                                href={`/dashboard/stocks/${position.symbol}`}
+                                className="font-semibold text-white hover:text-cyan transition-colors"
+                              >
+                                {position.symbol}
+                              </Link>
                               <div className="text-xs text-text-3">{position.name}</div>
                             </div>
                           </div>
@@ -596,7 +611,19 @@ export default function PortfolioPage() {
               <tbody>
                 {closedPositions.map((position: PortfolioClosedPositionResponse, index: number) => (
                   <tr key={position.id} className={index % 2 === 0 ? "bg-white/[0.015]" : ""}>
-                    <td className="border-t border-border px-4 py-4 font-semibold text-white">{position.symbol}</td>
+                    <td className="border-t border-border px-4 py-4">
+                      <Link
+                        href={`/dashboard/stocks/${position.symbol}`}
+                        className="flex items-center gap-3 font-semibold text-white transition-colors hover:text-cyan"
+                      >
+                        <StockLogo
+                          ticker={position.symbol}
+                          logoUrl={closedLogos?.[position.symbol]}
+                          size={28}
+                        />
+                        {position.symbol}
+                      </Link>
+                    </td>
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">{position.quantity}</td>
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.averageCost)}</td>
                     <td className="border-t border-border px-4 py-4 font-mono text-text-1">{formatMoney(position.exitPrice)}</td>

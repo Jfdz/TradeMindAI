@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -17,11 +18,12 @@ import com.tradingsaas.tradingcore.config.SecurityConfig;
 import com.tradingsaas.tradingcore.domain.exception.InsufficientSubscriptionException;
 import com.tradingsaas.tradingcore.domain.model.RiskParameters;
 import com.tradingsaas.tradingcore.domain.model.Strategy;
+import com.tradingsaas.tradingcore.domain.model.Subscription;
 import com.tradingsaas.tradingcore.domain.model.SubscriptionPlan;
 import com.tradingsaas.tradingcore.domain.model.TokenClaims;
+import com.tradingsaas.tradingcore.domain.model.User;
 import com.tradingsaas.tradingcore.domain.port.in.ManageStrategiesUseCase;
-import com.tradingsaas.tradingcore.domain.port.out.JwtTokenPort;
-import com.tradingsaas.tradingcore.domain.port.out.TokenBlacklistPort;
+import com.tradingsaas.tradingcore.domain.port.out.UserRepository;
 import com.tradingsaas.tradingcore.application.usecase.SubscriptionUsageLedgerService;
 import io.github.bucket4j.BucketConfiguration;
 import io.github.bucket4j.ConsumptionProbe;
@@ -29,6 +31,7 @@ import io.github.bucket4j.distributed.BucketProxy;
 import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,18 +41,24 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(controllers = StrategyController.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, SubscriptionUsageLedgerWebConfig.class})
+@Import({SecurityConfig.class, SubscriptionUsageLedgerWebConfig.class})
 @TestPropertySource(properties = {
         "trading-core.cors.allowed-origins=https://trading-saas.example.com",
         "trading-core.rate-limit.free-per-minute=2",
         "trading-core.rate-limit.basic-per-minute=5",
-        "trading-core.rate-limit.premium-per-minute=10"
+        "trading-core.rate-limit.premium-per-minute=10",
+        "spring.security.oauth2.resourceserver.jwt.issuer-uri=https://clerk.example.dev",
+        "trading-core.clerk.audience=https://api.trademind.es"
 })
 class StrategySubscriptionSecurityTest {
+
+    private static final UUID FREE_USER_ID  = UUID.fromString("11111111-1111-1111-1111-111111111111");
+    private static final UUID BASIC_USER_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
 
     @Autowired
     private MockMvc mockMvc;
@@ -61,10 +70,10 @@ class StrategySubscriptionSecurityTest {
     private ManageStrategiesUseCase manageStrategiesUseCase;
 
     @MockBean
-    private JwtTokenPort jwtTokenPort;
+    private JwtDecoder jwtDecoder;
 
     @MockBean
-    private TokenBlacklistPort tokenBlacklistPort;
+    private UserRepository userRepository;
 
     @MockBean
     private SubscriptionUsageLedgerService subscriptionUsageLedgerService;
@@ -76,13 +85,12 @@ class StrategySubscriptionSecurityTest {
 
     @BeforeEach
     void setUp() {
-        when(tokenBlacklistPort.isBlacklisted(anyString())).thenReturn(false);
-        when(jwtTokenPort.validateAccessToken("good-token"))
-                .thenReturn(new TokenClaims(UUID.fromString("11111111-1111-1111-1111-111111111111"), "user@example.com", "FREE"));
-        when(jwtTokenPort.validateAccessToken("basic-token"))
-                .thenReturn(new TokenClaims(UUID.fromString("22222222-2222-2222-2222-222222222222"), "basic@example.com", "BASIC"));
         when(rateLimitProxyManager.builder().build(anyString(), org.mockito.ArgumentMatchers.<Supplier<BucketConfiguration>>any()))
                 .thenReturn(bucket);
+        when(userRepository.findByClerkUserId("clerk_free"))
+                .thenReturn(Optional.of(freeUser()));
+        when(userRepository.findByClerkUserId("clerk_basic"))
+                .thenReturn(Optional.of(basicUser()));
     }
 
     @Test
@@ -92,7 +100,7 @@ class StrategySubscriptionSecurityTest {
                 .thenThrow(new InsufficientSubscriptionException(SubscriptionPlan.BASIC));
 
         mockMvc.perform(post("/api/v1/strategies")
-                        .header("Authorization", "Bearer good-token")
+                        .with(jwt().jwt(j -> j.subject("clerk_free").claim("email", "user@example.com")))
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(strategyRequest())))
                 .andExpect(status().isPaymentRequired())
@@ -101,7 +109,7 @@ class StrategySubscriptionSecurityTest {
                 .andExpect(header().string("X-RateLimit-Limit", "2"));
 
         verify(subscriptionUsageLedgerService).record(
-                new TokenClaims(UUID.fromString("11111111-1111-1111-1111-111111111111"), "user@example.com", "FREE"),
+                new TokenClaims(FREE_USER_ID, "user@example.com", "FREE"),
                 "strategy_create",
                 "POST",
                 "/api/v1/strategies",
@@ -115,7 +123,7 @@ class StrategySubscriptionSecurityTest {
                 .thenReturn(strategy());
 
         mockMvc.perform(post("/api/v1/strategies")
-                        .header("Authorization", "Bearer basic-token")
+                        .with(jwt().jwt(j -> j.subject("clerk_basic").claim("email", "basic@example.com")))
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(strategyRequest())))
                 .andExpect(status().isCreated())
@@ -125,7 +133,7 @@ class StrategySubscriptionSecurityTest {
 
         verify(manageStrategiesUseCase).createStrategy(any(), anyString(), any());
         verify(subscriptionUsageLedgerService).record(
-                new TokenClaims(UUID.fromString("22222222-2222-2222-2222-222222222222"), "basic@example.com", "BASIC"),
+                new TokenClaims(BASIC_USER_ID, "basic@example.com", "BASIC"),
                 "strategy_create",
                 "POST",
                 "/api/v1/strategies",
@@ -165,5 +173,19 @@ class StrategySubscriptionSecurityTest {
                 Instant.parse("2026-04-17T10:00:00Z"),
                 Instant.parse("2026-04-17T10:00:00Z")
         );
+    }
+
+    private static User freeUser() {
+        Instant now = Instant.parse("2026-04-01T00:00:00Z");
+        Subscription sub = new Subscription(UUID.randomUUID(), FREE_USER_ID, SubscriptionPlan.FREE, now, null);
+        return new User(FREE_USER_ID, "clerk_free", "user@example.com", null,
+                "Free", "User", "UTC", sub, now, true);
+    }
+
+    private static User basicUser() {
+        Instant now = Instant.parse("2026-04-01T00:00:00Z");
+        Subscription sub = new Subscription(UUID.randomUUID(), BASIC_USER_ID, SubscriptionPlan.BASIC, now, null);
+        return new User(BASIC_USER_ID, "clerk_basic", "basic@example.com", null,
+                "Basic", "User", "UTC", sub, now, true);
     }
 }

@@ -5,6 +5,7 @@ export type TickerQuote = {
   price: string;
   change: string;
   positive: boolean;
+  date?: string;
 };
 
 export type FeatureCard = {
@@ -45,21 +46,9 @@ export const publicNavLinks: { href: string; label: string }[] = [
   { href: "/", label: "Home" },
   { href: "/pricing", label: "Pricing" },
   { href: "/dashboard/signals", label: "Signals" },
-  { href: "/dashboard", label: "About" },
+  { href: "/about", label: "About" },
 ];
 
-export const tickerQuotes: TickerQuote[] = [
-  { pair: "BTC/USDT", price: "68,412.5", change: "+1.42%", positive: true },
-  { pair: "ETH/USDT", price: "3,328.4", change: "+0.88%", positive: true },
-  { pair: "SOL/USDT", price: "153.9", change: "-0.14%", positive: false },
-  { pair: "NVDA", price: "846.20", change: "+2.14%", positive: true },
-  { pair: "AAPL", price: "178.50", change: "+0.74%", positive: true },
-  { pair: "TSLA", price: "187.80", change: "-1.26%", positive: false },
-  { pair: "SPY", price: "512.60", change: "+0.31%", positive: true },
-  { pair: "QQQ", price: "448.70", change: "+0.57%", positive: true },
-  { pair: "EUR/USD", price: "1.0712", change: "+0.09%", positive: true },
-  { pair: "GOLD", price: "2,345.8", change: "-0.22%", positive: false },
-];
 
 export const landingFeatures: FeatureCard[] = [
   {
@@ -160,9 +149,8 @@ export const footerColumns: FooterColumn[] = [
   {
     title: "Resources",
     links: [
-      { label: "Documentation", href: "/dashboard/settings" },
-      { label: "Risk disclosure", href: "/" },
-      { label: "Status", href: "/api/health" },
+      { label: "Settings", href: "/dashboard/settings" },
+      { label: "Risk disclosure", href: "/about#risk" },
     ],
   },
 ];

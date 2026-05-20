@@ -5,11 +5,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter;
 import com.tradingsaas.tradingcore.adapter.out.persistence.PortfolioJpaRepository;
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.PortfolioJpaEntity;
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.PortfolioPositionJpaEntity;
@@ -32,7 +36,8 @@ class PortfolioOverviewServiceTest {
         UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
         HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
-        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort);
+        MarketDataServiceAdapter marketDataAdapter = emptyMarketDataAdapter();
+        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort, marketDataAdapter);
 
         PortfolioJpaEntity portfolio = portfolio(userId, BigDecimal.valueOf(10_000));
         PortfolioPositionJpaEntity openPosition = position(
@@ -81,7 +86,8 @@ class PortfolioOverviewServiceTest {
         UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
         HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
-        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort);
+        MarketDataServiceAdapter marketDataAdapter = emptyMarketDataAdapter();
+        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort, marketDataAdapter);
 
         PortfolioJpaEntity portfolio = portfolio(userId, BigDecimal.valueOf(10_000));
         PortfolioPositionJpaEntity aaplPosition = position(
@@ -136,7 +142,8 @@ class PortfolioOverviewServiceTest {
         UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
         HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
-        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort);
+        MarketDataServiceAdapter marketDataAdapter = emptyMarketDataAdapter();
+        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort, marketDataAdapter);
 
         PortfolioJpaEntity portfolio = portfolio(userId, BigDecimal.valueOf(10_000));
         portfolio.getPositions().add(position(
@@ -164,7 +171,8 @@ class PortfolioOverviewServiceTest {
         UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
         HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
-        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort);
+        MarketDataServiceAdapter marketDataAdapter = emptyMarketDataAdapter();
+        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort, marketDataAdapter);
 
         PortfolioJpaEntity portfolio = portfolio(userId, BigDecimal.valueOf(10_000));
         portfolio.getPositions().add(position(
@@ -198,7 +206,8 @@ class PortfolioOverviewServiceTest {
         UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
         HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
-        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort);
+        MarketDataServiceAdapter marketDataAdapter = emptyMarketDataAdapter();
+        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort, marketDataAdapter);
 
         PortfolioJpaEntity portfolio = portfolio(userId, BigDecimal.valueOf(10_000));
 
@@ -220,7 +229,8 @@ class PortfolioOverviewServiceTest {
         UUID userId = UUID.fromString("22222222-2222-2222-2222-222222222222");
         PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
         HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
-        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort);
+        MarketDataServiceAdapter marketDataAdapter = emptyMarketDataAdapter();
+        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort, marketDataAdapter);
 
         when(portfolioRepository.findByUser_Id(userId)).thenReturn(Optional.empty());
 
@@ -240,7 +250,8 @@ class PortfolioOverviewServiceTest {
         UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
         HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
-        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort);
+        MarketDataServiceAdapter marketDataAdapter = emptyMarketDataAdapter();
+        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort, marketDataAdapter);
 
         PortfolioJpaEntity portfolio = portfolio(userId, BigDecimal.valueOf(10_000));
         portfolio.getPositions().add(position(
@@ -269,7 +280,8 @@ class PortfolioOverviewServiceTest {
         UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
         HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
-        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort);
+        MarketDataServiceAdapter marketDataAdapter = emptyMarketDataAdapter();
+        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort, marketDataAdapter);
 
         PortfolioJpaEntity portfolio = portfolio(userId, BigDecimal.valueOf(10_000));
         PortfolioPositionJpaEntity aaplPosition = position(
@@ -323,10 +335,122 @@ class PortfolioOverviewServiceTest {
         assertEquals(0, overview.equity().compareTo(new BigDecimal("700.00")));
     }
 
+    @Test
+    void holdingsAreEnrichedWithNameAndSectorFromMarketData() {
+        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
+        HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
+        MarketDataServiceAdapter marketDataAdapter = Mockito.mock(MarketDataServiceAdapter.class);
+        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort, marketDataAdapter);
+
+        PortfolioJpaEntity portfolio = portfolio(userId, BigDecimal.valueOf(10_000));
+        portfolio.getPositions().add(position(
+                portfolio, "AAPL", new BigDecimal("2"), new BigDecimal("100.00"),
+                "OPEN", null, null, Instant.parse("2026-04-16T10:00:00Z")));
+
+        when(portfolioRepository.findByUser_Id(userId)).thenReturn(Optional.of(portfolio));
+        when(marketDataPort.loadLatestPricesResult(List.of("AAPL")))
+                .thenReturn(HistoricalMarketDataPort.LatestPricesResult.available(
+                        Map.of("AAPL", new BigDecimal("110.00"))));
+
+        MarketDataServiceAdapter.MarketSymbolPageResponse symbolPage =
+                new MarketDataServiceAdapter.MarketSymbolPageResponse(
+                        List.of(new MarketDataServiceAdapter.MarketSymbolResponse("AAPL", "Apple Inc.", "NASDAQ", "Technology", true)),
+                        0, 50, 1L, 1);
+        when(marketDataAdapter.fetchSymbols(anyInt(), anyInt())).thenReturn(symbolPage);
+        when(marketDataAdapter.fetchHistoricalPricesBatch(anyList(), anyString(), any(), any(), anyInt()))
+                .thenReturn(Map.of());
+
+        PortfolioOverview overview = service.getOverview(userId, "premium");
+
+        PortfolioHoldingOverview holding = overview.holdings().getFirst();
+        assertEquals("Apple Inc.", holding.name());
+        assertEquals("Technology", holding.sector());
+        assertEquals(List.of(), holding.trend7d());
+    }
+
+    @Test
+    void holdingTrendIsPopulatedFromHistoricalPrices() {
+        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
+        HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
+        MarketDataServiceAdapter marketDataAdapter = Mockito.mock(MarketDataServiceAdapter.class);
+        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort, marketDataAdapter);
+
+        PortfolioJpaEntity portfolio = portfolio(userId, BigDecimal.valueOf(10_000));
+        portfolio.getPositions().add(position(
+                portfolio, "NVDA", new BigDecimal("1"), new BigDecimal("500.00"),
+                "OPEN", null, null, Instant.parse("2026-04-16T10:00:00Z")));
+
+        when(portfolioRepository.findByUser_Id(userId)).thenReturn(Optional.of(portfolio));
+        when(marketDataPort.loadLatestPricesResult(List.of("NVDA")))
+                .thenReturn(HistoricalMarketDataPort.LatestPricesResult.available(
+                        Map.of("NVDA", new BigDecimal("520.00"))));
+
+        when(marketDataAdapter.fetchSymbols(anyInt(), anyInt()))
+                .thenReturn(new MarketDataServiceAdapter.MarketSymbolPageResponse(List.of(), 0, 50, 0L, 0));
+
+        MarketDataServiceAdapter.Ohlcv ohlcv = new MarketDataServiceAdapter.Ohlcv(510.0, 525.0, 508.0, 519.0, 100_000L);
+        List<MarketDataServiceAdapter.MarketPriceResponse> history = List.of(
+                new MarketDataServiceAdapter.MarketPriceResponse("NVDA", LocalDate.of(2026, 5, 5), "DAILY", ohlcv, new BigDecimal("519.00")),
+                new MarketDataServiceAdapter.MarketPriceResponse("NVDA", LocalDate.of(2026, 5, 6), "DAILY", ohlcv, new BigDecimal("520.00"))
+        );
+        when(marketDataAdapter.fetchHistoricalPricesBatch(anyList(), anyString(), any(), any(), anyInt()))
+                .thenReturn(Map.of("NVDA", history));
+
+        PortfolioOverview overview = service.getOverview(userId, "premium");
+
+        PortfolioHoldingOverview holding = overview.holdings().getFirst();
+        assertEquals(2, holding.trend7d().size());
+        assertEquals(new BigDecimal("519.00"), holding.trend7d().get(0));
+        assertEquals(new BigDecimal("520.00"), holding.trend7d().get(1));
+    }
+
+    @Test
+    void enrichmentFailureDoesNotAffectPricingResult() {
+        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        PortfolioJpaRepository portfolioRepository = Mockito.mock(PortfolioJpaRepository.class);
+        HistoricalMarketDataPort marketDataPort = Mockito.mock(HistoricalMarketDataPort.class);
+        MarketDataServiceAdapter marketDataAdapter = Mockito.mock(MarketDataServiceAdapter.class);
+        PortfolioOverviewService service = new PortfolioOverviewService(portfolioRepository, marketDataPort, marketDataAdapter);
+
+        PortfolioJpaEntity portfolio = portfolio(userId, BigDecimal.valueOf(10_000));
+        portfolio.getPositions().add(position(
+                portfolio, "AAPL", new BigDecimal("2"), new BigDecimal("100.00"),
+                "OPEN", null, null, Instant.parse("2026-04-16T10:00:00Z")));
+
+        when(portfolioRepository.findByUser_Id(userId)).thenReturn(Optional.of(portfolio));
+        when(marketDataPort.loadLatestPricesResult(List.of("AAPL")))
+                .thenReturn(HistoricalMarketDataPort.LatestPricesResult.available(
+                        Map.of("AAPL", new BigDecimal("110.00"))));
+        when(marketDataAdapter.fetchSymbols(anyInt(), anyInt()))
+                .thenThrow(new RuntimeException("enrichment unavailable"));
+
+        PortfolioOverview overview = service.getOverview(userId, "premium");
+
+        assertEquals("market-data", overview.dataSource());
+        assertEquals(1, overview.holdings().size());
+        PortfolioHoldingOverview holding = overview.holdings().getFirst();
+        assertEquals(new BigDecimal("110.00"), holding.lastPrice());
+        assertEquals("AAPL", holding.name());
+        assertNull(holding.sector());
+        assertEquals(List.of(), holding.trend7d());
+    }
+
+    private static MarketDataServiceAdapter emptyMarketDataAdapter() {
+        MarketDataServiceAdapter adapter = Mockito.mock(MarketDataServiceAdapter.class);
+        when(adapter.fetchSymbols(anyInt(), anyInt()))
+                .thenReturn(new MarketDataServiceAdapter.MarketSymbolPageResponse(List.of(), 0, 50, 0L, 0));
+        when(adapter.fetchHistoricalPricesBatch(anyList(), anyString(), any(), any(), anyInt()))
+                .thenReturn(Map.of());
+        return adapter;
+    }
+
     private static PortfolioJpaEntity portfolio(UUID userId, BigDecimal totalCapital) {
         UserJpaEntity user = new UserJpaEntity(
                 userId,
                 "user@example.com",
+                null,
                 "$2a$10$hash",
                 "Test",
                 "User",

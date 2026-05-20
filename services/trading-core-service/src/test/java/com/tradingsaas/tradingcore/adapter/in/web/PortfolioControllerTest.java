@@ -52,7 +52,10 @@ class PortfolioControllerTest {
                         100.0,
                         "OPEN",
                         Instant.parse("2026-04-16T10:00:00Z"),
-                        null)),
+                        null,
+                        "Apple Inc.",
+                        "Technology",
+                        List.of())),
                 List.of(new PortfolioClosedPositionOverview(
                         UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
                         "MSFT",

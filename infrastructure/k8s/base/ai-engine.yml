@@ -31,6 +31,26 @@ spec:
           env:
             - name: APP_ENV
               value: production
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: anthropic-credentials
+                  key: ANTHROPIC_API_KEY
+            - name: LLM_PROVIDER
+              value: anthropic_api_key
+            - name: TRADING_CORE_SERVICE_URL
+              value: http://trading-core-service.trading-saas.svc.cluster.local:8082
+            # Must match trading-core's INTERNAL_API_SECRET source so the
+            # X-Internal-Secret header sent on /api/v1/internal/** calls
+            # validates. trading-core mounts INTERNAL_API_SECRET from
+            # internal-service-secret/market-data, so ai-engine sources
+            # the same Secret/key here. Standardizing on this Secret avoids
+            # the two-Secret drift that 401s the reasoning pipeline.
+            - name: TRADING_CORE_INTERNAL_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: internal-service-secret
+                  key: market-data
             - name: DB_HOST
               valueFrom:
                 secretKeyRef:
@@ -77,8 +97,8 @@ spec:
             - name: INTERNAL_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: internal-secret
-                  key: secret
+                  name: internal-service-secret
+                  key: market-data
             - name: MARKET_DATA_INTERNAL_SECRET
               valueFrom:
                 secretKeyRef:

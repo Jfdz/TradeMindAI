@@ -52,6 +52,11 @@ metadata:
   labels:
     app: daily-signal-inference
 spec:
+  # C4 — hard kill switch on the auto-burning nightly LLM run. While
+  # suspended, no scheduled jobs fire; the dashboard "Generate Signals"
+  # button (C3) is the only trigger. Flip to false to resume — see
+  # infrastructure/RUNBOOK.md for the toggle commands.
+  suspend: true
   # 21:00 UTC = 17:00 EST = 1h after US market close (no DST adjustment).
   schedule: "0 21 * * 1-5"
   concurrencyPolicy: Forbid
@@ -73,8 +78,8 @@ spec:
                 - name: INTERNAL_SECRET
                   valueFrom:
                     secretKeyRef:
-                      name: internal-secret
-                      key: secret
+                      name: internal-service-secret
+                      key: market-data
               command:
                 - sh
                 - -c

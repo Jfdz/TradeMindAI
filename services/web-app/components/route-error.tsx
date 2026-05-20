@@ -2,19 +2,25 @@
 
 import { useEffect } from "react";
 
+import { RateLimitBanner } from "@/components/rate-limit-banner";
 import { Button } from "@/components/ui/button";
+import { ApiError } from "@/lib/api-client";
 
 type RouteErrorProps = {
-  error: Error & { digest?: string };
-  reset: () => void;
-  eyebrow: string;
-  title: string;
+  readonly error: Error & { digest?: string };
+  readonly reset: () => void;
+  readonly eyebrow: string;
+  readonly title: string;
 };
 
 export function RouteError({ error, reset, eyebrow, title }: RouteErrorProps) {
   useEffect(() => {
     console.error(error);
   }, [error]);
+
+  if (error instanceof ApiError && error.isRateLimit) {
+    return <RateLimitBanner error={error} reset={reset} />;
+  }
 
   return (
     <section className="rounded-[24px] border border-border bg-bg-1/80 p-6 shadow-glow">

@@ -1,5 +1,6 @@
 package com.tradingsaas.tradingcore.adapter.out.persistence.entity;
 
+import com.tradingsaas.tradingcore.domain.model.ReasoningStatus;
 import com.tradingsaas.tradingcore.domain.model.SignalType;
 import com.tradingsaas.tradingcore.domain.model.Timeframe;
 import jakarta.persistence.Column;
@@ -10,7 +11,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "trading_signals", schema = "trading_core")
@@ -49,17 +54,101 @@ public class TradingSignalJpaEntity {
     @Column(name = "predicted_change_pct", precision = 8, scale = 4)
     private BigDecimal predictedChangePct;
 
+    @Column(name = "entry_price", precision = 18, scale = 6)
+    private BigDecimal entryPrice;
+
+    @Column(name = "target_price", precision = 18, scale = 6)
+    private BigDecimal targetPrice;
+
+    @Column(name = "stop_loss", precision = 18, scale = 6)
+    private BigDecimal stopLoss;
+
+    @Column(name = "expected_move_pct", precision = 8, scale = 4)
+    private BigDecimal expectedMovePct;
+
+    @Column(name = "reasoning", columnDefinition = "TEXT")
+    private String reasoning;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "reasoning_status", nullable = false, length = 16)
+    private ReasoningStatus reasoningStatus;
+
+    @Column(name = "reasoning_generated_at")
+    private Instant reasoningGeneratedAt;
+
+    // -- C6 audit columns (V20). All nullable. Populated by ai-engine
+    // -- via PUT /api/v1/internal/signals/{id}/reasoning.
+
+    @Column(name = "reasoning_outcome", length = 50)
+    private String reasoningOutcome;
+
+    @Column(name = "reasoning_provider", length = 50)
+    private String reasoningProvider;
+
+    @Column(name = "reasoning_model_version", length = 100)
+    private String reasoningModelVersion;
+
+    @Column(name = "reasoning_retry_count", nullable = false)
+    private int reasoningRetryCount;
+
+    @Column(name = "reasoning_refusal_reason", columnDefinition = "TEXT")
+    private String reasoningRefusalReason;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "reasoning_facts_snapshot", columnDefinition = "JSONB")
+    private Map<String, Object> reasoningFactsSnapshot;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "reasoning_price_refs", columnDefinition = "JSONB")
+    private List<String> reasoningPriceRefs;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "reasoning_news_refs", columnDefinition = "JSONB")
+    private List<String> reasoningNewsRefs;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "reasoning_validator_violations", columnDefinition = "JSONB")
+    private List<Map<String, Object>> reasoningValidatorViolations;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "reasoning_raw_audit", columnDefinition = "JSONB")
+    private Map<String, Object> reasoningRawAudit;
+
     protected TradingSignalJpaEntity() {}
 
     public TradingSignalJpaEntity(UUID id, UUID symbolId, SignalType signalType, BigDecimal confidence,
                                   Timeframe timeframe, Instant generatedAt,
                                   BigDecimal stopLossPct, BigDecimal takeProfitPct) {
-        this(id, symbolId, null, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, null);
+        this(id, symbolId, null, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, null, null, null, null, null, null, ReasoningStatus.PENDING, null);
     }
 
     public TradingSignalJpaEntity(UUID id, UUID symbolId, String ticker, SignalType signalType, BigDecimal confidence,
                                   Timeframe timeframe, Instant generatedAt,
                                   BigDecimal stopLossPct, BigDecimal takeProfitPct, BigDecimal predictedChangePct) {
+        this(id, symbolId, ticker, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, predictedChangePct, null, null, null, null, null, ReasoningStatus.PENDING, null);
+    }
+
+    public TradingSignalJpaEntity(UUID id, UUID symbolId, String ticker, SignalType signalType, BigDecimal confidence,
+                                  Timeframe timeframe, Instant generatedAt,
+                                  BigDecimal stopLossPct, BigDecimal takeProfitPct, BigDecimal predictedChangePct,
+                                  BigDecimal entryPrice) {
+        this(id, symbolId, ticker, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, predictedChangePct, entryPrice, null, null, null, null, ReasoningStatus.PENDING, null);
+    }
+
+    public TradingSignalJpaEntity(UUID id, UUID symbolId, String ticker, SignalType signalType, BigDecimal confidence,
+                                  Timeframe timeframe, Instant generatedAt,
+                                  BigDecimal stopLossPct, BigDecimal takeProfitPct, BigDecimal predictedChangePct,
+                                  BigDecimal entryPrice, String reasoning, ReasoningStatus reasoningStatus,
+                                  Instant reasoningGeneratedAt) {
+        this(id, symbolId, ticker, signalType, confidence, timeframe, generatedAt, stopLossPct, takeProfitPct, predictedChangePct, entryPrice, null, null, null, reasoning, reasoningStatus, reasoningGeneratedAt);
+    }
+
+    public TradingSignalJpaEntity(UUID id, UUID symbolId, String ticker, SignalType signalType, BigDecimal confidence,
+                                  Timeframe timeframe, Instant generatedAt,
+                                  BigDecimal stopLossPct, BigDecimal takeProfitPct, BigDecimal predictedChangePct,
+                                  BigDecimal entryPrice, BigDecimal targetPrice, BigDecimal stopLoss,
+                                  BigDecimal expectedMovePct, String reasoning, ReasoningStatus reasoningStatus,
+                                  Instant reasoningGeneratedAt) {
         this.id = id;
         this.symbolId = symbolId;
         this.ticker = ticker;
@@ -70,6 +159,13 @@ public class TradingSignalJpaEntity {
         this.stopLossPct = stopLossPct;
         this.takeProfitPct = takeProfitPct;
         this.predictedChangePct = predictedChangePct;
+        this.entryPrice = entryPrice;
+        this.targetPrice = targetPrice;
+        this.stopLoss = stopLoss;
+        this.expectedMovePct = expectedMovePct;
+        this.reasoning = reasoning;
+        this.reasoningStatus = reasoningStatus;
+        this.reasoningGeneratedAt = reasoningGeneratedAt;
     }
 
     public UUID getId() { return id; }
@@ -82,4 +178,40 @@ public class TradingSignalJpaEntity {
     public BigDecimal getStopLossPct() { return stopLossPct; }
     public BigDecimal getTakeProfitPct() { return takeProfitPct; }
     public BigDecimal getPredictedChangePct() { return predictedChangePct; }
+    public BigDecimal getEntryPrice() { return entryPrice; }
+    public BigDecimal getTargetPrice() { return targetPrice; }
+    public BigDecimal getStopLoss() { return stopLoss; }
+    public BigDecimal getExpectedMovePct() { return expectedMovePct; }
+    public String getReasoning() { return reasoning; }
+    public ReasoningStatus getReasoningStatus() { return reasoningStatus; }
+    public Instant getReasoningGeneratedAt() { return reasoningGeneratedAt; }
+
+    public String getReasoningOutcome() { return reasoningOutcome; }
+    public String getReasoningProvider() { return reasoningProvider; }
+    public String getReasoningModelVersion() { return reasoningModelVersion; }
+    public int getReasoningRetryCount() { return reasoningRetryCount; }
+    public String getReasoningRefusalReason() { return reasoningRefusalReason; }
+    public Map<String, Object> getReasoningFactsSnapshot() { return reasoningFactsSnapshot; }
+    public List<String> getReasoningPriceRefs() { return reasoningPriceRefs; }
+    public List<String> getReasoningNewsRefs() { return reasoningNewsRefs; }
+    public List<Map<String, Object>> getReasoningValidatorViolations() { return reasoningValidatorViolations; }
+    public Map<String, Object> getReasoningRawAudit() { return reasoningRawAudit; }
+
+    public void setReasoning(String reasoning) { this.reasoning = reasoning; }
+    public void setReasoningStatus(ReasoningStatus reasoningStatus) { this.reasoningStatus = reasoningStatus; }
+    public void setReasoningGeneratedAt(Instant reasoningGeneratedAt) { this.reasoningGeneratedAt = reasoningGeneratedAt; }
+    public void setTargetPrice(BigDecimal targetPrice) { this.targetPrice = targetPrice; }
+    public void setStopLoss(BigDecimal stopLoss) { this.stopLoss = stopLoss; }
+    public void setExpectedMovePct(BigDecimal expectedMovePct) { this.expectedMovePct = expectedMovePct; }
+
+    public void setReasoningOutcome(String reasoningOutcome) { this.reasoningOutcome = reasoningOutcome; }
+    public void setReasoningProvider(String reasoningProvider) { this.reasoningProvider = reasoningProvider; }
+    public void setReasoningModelVersion(String reasoningModelVersion) { this.reasoningModelVersion = reasoningModelVersion; }
+    public void setReasoningRetryCount(int reasoningRetryCount) { this.reasoningRetryCount = reasoningRetryCount; }
+    public void setReasoningRefusalReason(String reasoningRefusalReason) { this.reasoningRefusalReason = reasoningRefusalReason; }
+    public void setReasoningFactsSnapshot(Map<String, Object> reasoningFactsSnapshot) { this.reasoningFactsSnapshot = reasoningFactsSnapshot; }
+    public void setReasoningPriceRefs(List<String> reasoningPriceRefs) { this.reasoningPriceRefs = reasoningPriceRefs; }
+    public void setReasoningNewsRefs(List<String> reasoningNewsRefs) { this.reasoningNewsRefs = reasoningNewsRefs; }
+    public void setReasoningValidatorViolations(List<Map<String, Object>> reasoningValidatorViolations) { this.reasoningValidatorViolations = reasoningValidatorViolations; }
+    public void setReasoningRawAudit(Map<String, Object> reasoningRawAudit) { this.reasoningRawAudit = reasoningRawAudit; }
 }
