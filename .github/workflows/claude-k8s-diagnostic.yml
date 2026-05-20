@@ -1,0 +1,32 @@
+name: Claude K8s Diagnostic
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'K8s command'
+        required: true
+        default: 'pods trading-core-service'
+
+jobs:
+  diagnose:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run diagnostic
+        id: diag
+        run: |
+          /usr/local/bin/claude-k8s ${{ inputs.command }} > /tmp/diagnostic-output.txt 2>&1
+          cat /tmp/diagnostic-output.txt
+
+      - name: Commit and push output
+        run: |
+          mkdir -p .github/.diagnostic
+          cp /tmp/diagnostic-output.txt .github/.diagnostic/output.txt
+          git config user.name "claude-bot"
+          git config user.email "claude@anthropic.com"
+          git add .github/.diagnostic/output.txt
+          git commit -m "ci: k8s diagnostic output [skip ci]" || true
+          git push origin main

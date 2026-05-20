@@ -1,8 +1,7 @@
 import type { SeriesMarker, Time } from "lightweight-charts";
-import { getServerSession } from "next-auth";
+import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/auth";
 import type {
   LatestPricesResponse,
   MarketPriceResponse,
@@ -17,7 +16,7 @@ import { convertPricesToCandles, deriveSignal } from "@/lib/dashboard/signal-der
 import { assignSymbolColors } from "@/lib/dashboard/symbol-colors";
 import { signalTypeColor } from "@/lib/signal-utils";
 
-const API_BASE_URL = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082";
+const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8082";
 
 function buildChartMarker(
   lastCandle: DashboardCandle,
@@ -82,8 +81,8 @@ async function backendJsonSafe<T>(
 }
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  const token = session?.accessToken;
+  const { getToken } = await auth();
+  const token = await getToken({ template: "backend" });
 
   if (!token) {
     return NextResponse.json({ message: "Authentication required" }, { status: 401 });

@@ -1,15 +1,15 @@
 # trading-core-service
 
-Core business service handling JWT authentication, subscription tiers, AI-powered trading signal generation, and strategy risk management.
+Core business service handling Clerk authentication, subscription tiers, AI-powered trading signal generation, and strategy risk management.
 
 ## Overview
 
-This service is the business heart of the platform. It manages user accounts, authenticates with JWT, enforces subscription-based rate limiting, orchestrates signal generation by calling the AI engine, and provides strategy CRUD with risk parameter management.
+This service is the business heart of the platform. It manages user accounts, authenticates via Clerk (OAuth2 Resource Server, RS256 JWKS), enforces subscription-based rate limiting, orchestrates signal generation by calling the AI engine, and provides strategy CRUD with risk parameter management.
 
 ## Tech Stack
 
 - Java 21, Spring Boot 3.3
-- Spring Security 6 + JWT (jjwt)
+- Spring Security 6 + OAuth2 Resource Server (Clerk JWKS)
 - Spring Data JPA + Flyway
 - Resilience4j (circuit breaker, retry)
 - bucket4j + Redis (rate limiting)
@@ -36,19 +36,18 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev
 | Variable | Description | Default |
 |---|---|---|
 | `POSTGRES_HOST` | PostgreSQL host | `localhost` |
-| `JWT_SECRET` | JWT signing key (min 32 chars) | — |
+| `CLERK_ISSUER_URI` | Clerk JWKS issuer URI (no trailing slash) | — |
+| `CLERK_AUDIENCE` | Expected JWT `aud` claim | `https://api.trademindai.com` |
 | `REDIS_HOST` | Redis host | `localhost` |
 | `AI_ENGINE_SERVICE_URL` | AI engine URL | `http://localhost:8000` |
 | `AI_ENGINE_TIMEOUT` | AI prediction request timeout | `5s` |
 
 ## API Endpoints
 
+Auth is handled by Clerk. All `Yes`-auth routes require `Authorization: Bearer <clerk_jwt>` (RS256, template `"backend"`). JIT provisioning runs on first authenticated request.
+
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `POST` | `/api/v1/auth/register` | No | User registration |
-| `POST` | `/api/v1/auth/login` | No | JWT login |
-| `POST` | `/api/v1/auth/refresh` | No | Token refresh |
-| `POST` | `/api/v1/auth/logout` | Yes | Logout + blacklist |
 | `GET` | `/api/v1/signals` | Yes | List signals (paginated) |
 | `GET` | `/api/v1/signals/{id}` | Yes | Single signal |
 | `POST` | `/api/v1/strategies` | Yes | Create strategy |
