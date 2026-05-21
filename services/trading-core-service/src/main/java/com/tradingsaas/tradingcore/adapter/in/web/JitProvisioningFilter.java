@@ -51,6 +51,8 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
 
         User user = resolveUser(clerkUserId, email, jwt);
         if (user == null) {
+            log.warn("JIT provisioning failed for clerkUserId={} — no email claim in JWT and user not in DB; treating as unauthenticated", clerkUserId);
+            SecurityContextHolder.clearContext();
             chain.doFilter(request, response);
             return;
         }
