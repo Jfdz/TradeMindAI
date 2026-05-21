@@ -22,7 +22,7 @@ const securityHeaders = [
       "object-src 'none'",
       "img-src 'self' data: blob: https: https://static2.finnhub.io",
       "style-src 'self' 'unsafe-inline'",
-      "script-src 'self' 'unsafe-inline' https://s3.tradingview.com",
+      "script-src 'self' 'unsafe-inline' https://s3.tradingview.com https://clerk.trademind.es",
       "frame-src https://*.tradingview.com https://*.clerk.accounts.dev https://clerk.trademind.es https://challenges.cloudflare.com",
       // All browser→API calls go through /api/proxy (same-origin).
       // Clerk's <SignIn /> and SDK make calls to *.clerk.accounts.dev (dev)
