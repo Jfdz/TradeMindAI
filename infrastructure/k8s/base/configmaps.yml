@@ -33,7 +33,7 @@ data:
   SERVICES_MARKET_DATA_URL: http://market-data-service.trading-saas.svc.cluster.local:8081
   AI_ENGINE_SERVICE_URL: http://ai-engine.trading-saas.svc.cluster.local:8000
   MARKET_DATA_SERVICE_URL: http://market-data-service.trading-saas.svc.cluster.local:8081
-  TRADING_CORE_ADMIN_EMAILS: noreply@trademind.es,demo@trademind.ai
+  TRADING_CORE_ADMIN_EMAILS: noreply@trademind.es,demo@trademind.ai,jfdzn28@icloud.com
 
 ---
 apiVersion: v1
