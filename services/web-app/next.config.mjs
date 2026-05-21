@@ -23,11 +23,11 @@ const securityHeaders = [
       "img-src 'self' data: blob: https: https://static2.finnhub.io",
       "style-src 'self' 'unsafe-inline'",
       "script-src 'self' 'unsafe-inline' https://s3.tradingview.com",
-      "frame-src https://*.tradingview.com https://*.clerk.accounts.dev",
+      "frame-src https://*.tradingview.com https://*.clerk.accounts.dev https://clerk.trademind.es https://challenges.cloudflare.com",
       // All browser→API calls go through /api/proxy (same-origin).
       // Clerk's <SignIn /> and SDK make calls to *.clerk.accounts.dev (dev)
       // or the custom Clerk domain (prod). ws:/wss: cover TradingView feeds.
-      "connect-src 'self' https://*.clerk.accounts.dev https://clerk.trademindai.com ws: wss: https://s3.tradingview.com http://localhost:* http://127.0.0.1:*",
+      "connect-src 'self' https://*.clerk.accounts.dev https://clerk.trademind.es https://challenges.cloudflare.com ws: wss: https://s3.tradingview.com http://localhost:* http://127.0.0.1:*",
     ].join("; "),
   },
 ];
