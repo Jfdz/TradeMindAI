@@ -8,6 +8,7 @@ import { Suspense, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PaginationControls } from "@/components/dashboard/pagination-controls";
 import { StockLogo } from "@/components/ui/stock-logo";
+import { apiClient } from "@/lib/api-client";
 import { fetchSignalsPageData } from "@/lib/dashboard/client-data";
 import { useStockLogos } from "@/lib/dashboard/use-stock-logos";
 import { formatConfidence } from "@/lib/signal-utils";
@@ -46,6 +47,106 @@ function pickStatusBadgeClass(status: "NEW" | "LIVE" | "ACTIVE") {
     return "border-cyan-bright/50 bg-cyan-bright/[0.10] text-cyan-bright shadow-neon-soft animate-pulse-soft";
   if (status === "LIVE") return "border-green/40 bg-green/[0.10] text-green";
   return "border-border bg-bg-2 text-text-2";
+}
+
+function pickOutcomeBadgeClass(outcome: "WIN" | "LOSS" | "OPEN") {
+  if (outcome === "WIN") return "border-green/40 bg-green/[0.10] text-green";
+  if (outcome === "LOSS") return "border-red/40 bg-red/[0.10] text-red";
+  return "border-border bg-bg-2 text-text-2";
+}
+
+function formatSignedPct(value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) return null;
+  const pct = value * 100;
+  return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
+}
+
+function ResultCell({
+  outcome,
+  maxProfit,
+  maxDrawdown,
+}: {
+  outcome: "WIN" | "LOSS" | "OPEN" | null | undefined;
+  maxProfit: number | null | undefined;
+  maxDrawdown: number | null | undefined;
+}) {
+  if (!outcome) {
+    return <span className="text-text-3" title="No outcome (HOLD or not yet evaluated)">—</span>;
+  }
+  const up = formatSignedPct(maxProfit);
+  const down = formatSignedPct(maxDrawdown);
+  return (
+    <div className="flex flex-col gap-1">
+      <span className={cn("w-fit rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]", pickOutcomeBadgeClass(outcome))}>
+        {outcome}
+      </span>
+      {(up || down) && (
+        <span className="font-mono text-[11px] text-text-3">
+          {up && <span className="text-green">{up}</span>}
+          {up && down && " / "}
+          {down && <span className="text-red">{down}</span>}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function formatBand(band: "HIGH" | "STANDARD") {
+  return band === "HIGH" ? "Confidence ≥80%" : "Confidence <80%";
+}
+
+function PerformanceStatsPanel() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["signal-performance-stats"],
+    queryFn: () => apiClient.getSignalPerformanceStats(),
+  });
+
+  if (isLoading || !data || data.length === 0) {
+    return null;
+  }
+
+  // Surface the actionable slices: BUY/SELL by confidence band, resolved only.
+  const rows = data.filter((stat) => stat.sampleSize > 0 && stat.signalType !== "HOLD");
+  if (rows.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="rounded-[24px] border border-border bg-bg-1/80 p-6 shadow-glow">
+      <div className="text-[11px] uppercase tracking-[0.22em] text-cyan">Track record</div>
+      <h3 className="mt-2 font-display text-xl font-semibold tracking-[-0.03em] text-white">
+        Resolved signal performance
+      </h3>
+      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {rows.map((stat) => (
+          <div
+            key={`${stat.signalType}-${stat.confidenceBand}`}
+            className="rounded-2xl border border-border bg-bg-2/40 p-4"
+          >
+            <div className="flex items-center justify-between">
+              <span className={cn("rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]", pickSignalBadgeClass(stat.signalType))}>
+                {stat.signalType}
+              </span>
+              <span className="text-xs text-text-3">{formatBand(stat.confidenceBand)}</span>
+            </div>
+            <div className="mt-3 font-display text-3xl font-bold tracking-[-0.04em] text-white">
+              {(stat.winRate * 100).toFixed(0)}%
+              <span className="ml-2 text-xs font-normal text-text-3">win rate</span>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs text-text-2">
+              <span>n={stat.sampleSize}</span>
+              {stat.avgReturnPct != null && (
+                <span className="text-green">avg {formatSignedPct(stat.avgReturnPct)}</span>
+              )}
+              {stat.avgDrawdownPct != null && (
+                <span className="text-red">dd {formatSignedPct(stat.avgDrawdownPct)}</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function SignalsContent() {
@@ -107,6 +208,8 @@ function SignalsContent() {
         </div>
       </section>
 
+      <PerformanceStatsPanel />
+
       <section className="rounded-[24px] border border-border bg-bg-1/80 p-6 shadow-glow">
         {(() => {
           if (isLoading) {
@@ -138,6 +241,7 @@ function SignalsContent() {
                       <th className="px-4 py-3 text-left">Stop Loss</th>
                       <th className="px-4 py-3 text-left">Confidence</th>
                       <th className="px-4 py-3 text-left">Status</th>
+                      <th className="px-4 py-3 text-left">Result</th>
                       <th className="px-4 py-3 text-left">Reasoning</th>
                       <th className="px-4 py-3 text-left">Time</th>
                     </tr>
@@ -204,6 +308,13 @@ function SignalsContent() {
                             {signal.status}
                           </span>
                         </td>
+                        <td className="border-t border-border px-4 py-4">
+                          <ResultCell
+                            outcome={signal.outcome}
+                            maxProfit={signal.maxProfit}
+                            maxDrawdown={signal.maxDrawdown}
+                          />
+                        </td>
                         <td className="border-t border-border px-4 py-4 text-sm leading-6 text-text-2">
                           {!signal.reasoningStatus || signal.reasoningStatus === "PENDING" ? (
                             <div className="space-y-1.5">
@@ -222,7 +333,7 @@ function SignalsContent() {
                     ))}
                     {filteredSignals.length === 0 ? (
                       <tr>
-                        <td className="border-t border-border px-4 py-10 text-center text-sm text-text-2" colSpan={10}>
+                        <td className="border-t border-border px-4 py-10 text-center text-sm text-text-2" colSpan={11}>
                           No signals match the current filter.
                         </td>
                       </tr>

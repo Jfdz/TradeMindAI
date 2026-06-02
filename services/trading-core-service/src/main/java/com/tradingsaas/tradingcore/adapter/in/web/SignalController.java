@@ -2,11 +2,18 @@ package com.tradingsaas.tradingcore.adapter.in.web;
 
 import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningNewsSnapshot;
 import com.tradingsaas.tradingcore.domain.model.ReasoningStatus;
+import com.tradingsaas.tradingcore.domain.model.SignalOutcome;
+import com.tradingsaas.tradingcore.domain.model.SignalPerformance;
+import com.tradingsaas.tradingcore.domain.model.SignalPerformanceStat;
 import com.tradingsaas.tradingcore.domain.model.TradingSignal;
+import com.tradingsaas.tradingcore.domain.port.in.GetSignalPerformanceUseCase;
 import com.tradingsaas.tradingcore.domain.port.in.GetSignalsUseCase;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -23,28 +30,43 @@ import org.springframework.web.bind.annotation.RestController;
 class SignalController {
 
     private final GetSignalsUseCase getSignalsUseCase;
+    private final GetSignalPerformanceUseCase getSignalPerformanceUseCase;
 
-    SignalController(GetSignalsUseCase getSignalsUseCase) {
+    SignalController(GetSignalsUseCase getSignalsUseCase,
+                     GetSignalPerformanceUseCase getSignalPerformanceUseCase) {
         this.getSignalsUseCase = getSignalsUseCase;
+        this.getSignalPerformanceUseCase = getSignalPerformanceUseCase;
     }
 
     @GetMapping
     Page<SignalResponse> listSignals(@PageableDefault(sort = "generatedAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return getSignalsUseCase.getSignals(pageable).map(SignalResponse::fromDomain);
+        Page<TradingSignal> page = getSignalsUseCase.getSignals(pageable);
+        List<UUID> ids = page.getContent().stream().map(TradingSignal::getId).toList();
+        Map<UUID, SignalPerformance> performance = getSignalPerformanceUseCase.findFor(ids);
+        return page.map(signal -> SignalResponse.fromDomain(signal, performance.get(signal.getId())));
     }
 
     @GetMapping("/latest")
     SignalResponse getLatest() {
         return getSignalsUseCase.getLatest()
-                .map(SignalResponse::fromDomain)
+                .map(signal -> SignalResponse.fromDomain(
+                        signal, getSignalPerformanceUseCase.findOne(signal.getId()).orElse(null)))
                 .orElseThrow(() -> new SignalNotFoundException("No trading signals found"));
     }
 
     @GetMapping("/{id}")
     SignalResponse getById(@PathVariable UUID id) {
         return getSignalsUseCase.getById(id)
-                .map(SignalResponse::fromDomain)
+                .map(signal -> SignalResponse.fromDomain(
+                        signal, getSignalPerformanceUseCase.findOne(id).orElse(null)))
                 .orElseThrow(() -> new SignalNotFoundException("Signal not found: " + id));
+    }
+
+    @GetMapping("/performance/stats")
+    List<PerformanceStatResponse> performanceStats() {
+        return getSignalPerformanceUseCase.stats().stream()
+                .map(PerformanceStatResponse::fromDomain)
+                .collect(Collectors.toList());
     }
 
     record SignalResponse(
@@ -64,9 +86,14 @@ class SignalController {
             String reasoning,
             ReasoningStatus reasoningStatus,
             Instant reasoningGeneratedAt,
-            ReasoningNewsSnapshot reasoningNews) {
+            ReasoningNewsSnapshot reasoningNews,
+            String outcome,
+            BigDecimal maxProfit,
+            BigDecimal maxDrawdown,
+            BigDecimal price30d) {
 
-        static SignalResponse fromDomain(TradingSignal signal) {
+        static SignalResponse fromDomain(TradingSignal signal, SignalPerformance performance) {
+            SignalOutcome outcome = performance != null ? performance.outcome() : null;
             return new SignalResponse(
                     signal.getId(),
                     signal.getTicker() != null ? signal.getTicker() : signal.getSymbolId().toString(),
@@ -84,7 +111,32 @@ class SignalController {
                     signal.getReasoning(),
                     signal.getReasoningStatus(),
                     signal.getReasoningGeneratedAt(),
-                    ReasoningNewsSnapshot.fromArtifact(signal.getReasoningArtifact()));
+                    ReasoningNewsSnapshot.fromArtifact(signal.getReasoningArtifact()),
+                    outcome != null ? outcome.name() : null,
+                    performance != null ? performance.maxProfit() : null,
+                    performance != null ? performance.maxDrawdown() : null,
+                    performance != null ? performance.price30d() : null);
+        }
+    }
+
+    record PerformanceStatResponse(
+            String signalType,
+            String confidenceBand,
+            long sampleSize,
+            long wins,
+            BigDecimal winRate,
+            BigDecimal avgReturnPct,
+            BigDecimal avgDrawdownPct) {
+
+        static PerformanceStatResponse fromDomain(SignalPerformanceStat stat) {
+            return new PerformanceStatResponse(
+                    stat.signalType().name(),
+                    stat.confidenceBand(),
+                    stat.sampleSize(),
+                    stat.wins(),
+                    stat.winRate(),
+                    stat.avgMaxProfit(),
+                    stat.avgMaxDrawdown());
         }
     }
 

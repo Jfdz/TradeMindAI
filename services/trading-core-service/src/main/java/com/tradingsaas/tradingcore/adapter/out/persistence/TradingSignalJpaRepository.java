@@ -59,6 +59,19 @@ public interface TradingSignalJpaRepository extends JpaRepository<TradingSignalJ
     Page<TradingSignalJpaEntity> findByTickerIgnoreCaseOrderByGeneratedAtDesc(
             String ticker, Pageable pageable);
 
+    // Daily performance review: tradeable signals generated within the review window.
+    // HOLD is excluded (no target/stop thesis to resolve). Resolved rows are filtered
+    // out in-memory by the runner using the performance table.
+    @Query("SELECT e FROM TradingSignalJpaEntity e "
+            + "WHERE e.generatedAt > :cutoff "
+            + "AND e.signalType <> :excluded "
+            + "AND e.ticker IS NOT NULL "
+            + "ORDER BY e.generatedAt DESC")
+    List<TradingSignalJpaEntity> findReviewCandidates(
+            @Param("cutoff") Instant cutoff,
+            @Param("excluded") SignalType excluded,
+            Pageable pageable);
+
     @Query("SELECT DISTINCT e.ticker FROM TradingSignalJpaEntity e "
             + "WHERE e.ticker IS NOT NULL ORDER BY e.ticker ASC")
     List<String> findDistinctTickers();
