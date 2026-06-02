@@ -44,6 +44,24 @@ export type SignalResponse = {
   reasoningStatus?: ReasoningStatus | null;
   reasoningGeneratedAt?: string | null;
   reasoningNews?: ReasoningNewsSnapshot | null;
+  // Performance tracking (V23). Absent on HOLD signals and on signals the
+  // daily review job has not yet evaluated.
+  outcome?: SignalOutcome | null;
+  maxProfit?: number | null;
+  maxDrawdown?: number | null;
+  price30d?: number | null;
+};
+
+export type SignalOutcome = "WIN" | "LOSS" | "OPEN";
+
+export type SignalPerformanceStat = {
+  signalType: "BUY" | "SELL" | "HOLD";
+  confidenceBand: "HIGH" | "STANDARD";
+  sampleSize: number;
+  wins: number;
+  winRate: number;
+  avgReturnPct: number | null;
+  avgDrawdownPct: number | null;
 };
 
 export type SubmitBacktestPayload = {
@@ -292,6 +310,10 @@ export const apiClient = {
 
   async getSignal(signalId: string): Promise<SignalResponse> {
     return requestJson<SignalResponse>(`/api/v1/signals/${signalId}`);
+  },
+
+  async getSignalPerformanceStats(): Promise<SignalPerformanceStat[]> {
+    return requestJson<SignalPerformanceStat[]>("/api/v1/signals/performance/stats");
   },
 
   /**
