@@ -1,10 +1,11 @@
 import path from "node:path";
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  esbuild: {
-    jsx: "automatic",
-  },
+  // Vitest 4's Rolldown transform ignores the old `esbuild.jsx` option, so JSX
+  // in .tsx test files must be transformed by the React plugin.
+  plugins: [react()],
   test: {
     environment: "node",
     globals: true,
