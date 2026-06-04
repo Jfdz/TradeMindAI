@@ -49,6 +49,8 @@ SYSTEM_PROMPT = (
     "10 TRACK RECORD: integer counts in <track_record> (wins/losses/resolved) "
     "may be cited verbatim; never invent them. They are past outcomes, not a "
     "forecast.\n"
+    "11 INSIDER: integer counts in <insider> (insider_buys/insider_sells/"
+    "net_shares) may be cited verbatim; never invent them.\n"
     "\n"
     "Call emit_reasoning exactly once. No free text."
 )
@@ -134,6 +136,15 @@ def render_context_block(signal: SignalInput, context: ReasoningContext) -> str:
     else:
         perf_lines = "(no resolved track record)"
 
+    ins = context.insider_activity
+    if ins is not None:
+        insider_lines = (
+            f"insider_buys: {ins.buy_count}  insider_sells: {ins.sell_count}  "
+            f"net_shares: {ins.net_shares}"
+        )
+    else:
+        insider_lines = "(no insider activity)"
+
     pct = signal.predicted_change_pct
     pct_str = "null" if pct is None else f"{pct}"
     target_str = "null" if signal.target_price is None else f"{signal.target_price}"
@@ -174,5 +185,6 @@ def render_context_block(signal: SignalInput, context: ReasoningContext) -> str:
         f"<news>\n{news_lines}\n</news>\n"
         f"<analyst>\n{analyst_lines}\n</analyst>\n"
         f"<track_record>\n{perf_lines}\n</track_record>\n"
+        f"<insider>\n{insider_lines}\n</insider>\n"
         "</context>\n\n"
     )

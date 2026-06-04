@@ -3,6 +3,7 @@ package com.tradingsaas.marketdata.enrichment.domain.port.out;
 import com.tradingsaas.marketdata.enrichment.domain.model.AnalystRecommendation;
 import com.tradingsaas.marketdata.enrichment.domain.model.CompanyProfile;
 import com.tradingsaas.marketdata.enrichment.domain.model.EarningsEvent;
+import com.tradingsaas.marketdata.enrichment.domain.model.InsiderActivity;
 import com.tradingsaas.marketdata.enrichment.domain.model.NewsItem;
 import java.time.Instant;
 import java.util.List;
@@ -20,4 +21,6 @@ public interface MarketEnrichmentProvider {
     List<AnalystRecommendation> fetchRecommendations(String ticker);
 
     List<String> fetchPeers(String ticker);
+
+    InsiderActivity fetchInsiderActivity(String ticker);
 }

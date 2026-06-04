@@ -205,6 +205,56 @@ class ReasoningContextControllerTest {
     }
 
     @Test
+    void returnsInsiderActivityCounts() {
+        when(marketData.fetchPriceFacts("AAPL")).thenReturn(Optional.of(sampleFacts()));
+        when(enrichment.fetchAggregatedTickerNews(eq("AAPL"), any(Instant.class), any(Instant.class), anyInt()))
+                .thenReturn(List.of());
+        when(enrichment.fetchInsiderActivity("AAPL"))
+                .thenReturn(Optional.of(new EnrichmentServiceAdapter.InsiderActivityResponse("AAPL", 7, 3, 12345L)));
+
+        ResponseEntity<ReasoningContextResponse> response =
+                controller.getReasoningContext("AAPL", 48, 8);
+
+        var insider = response.getBody().insiderActivity();
+        assertNotNull(insider);
+        assertEquals(7, insider.buyCount());
+        assertEquals(3, insider.sellCount());
+        assertEquals(12345L, insider.netShares());
+        assertFalse(response.getBody().errors().contains("insider_unavailable"));
+    }
+
+    @Test
+    void insiderActivityIsNullWhenNoTransactions() {
+        when(marketData.fetchPriceFacts("AAPL")).thenReturn(Optional.of(sampleFacts()));
+        when(enrichment.fetchAggregatedTickerNews(eq("AAPL"), any(Instant.class), any(Instant.class), anyInt()))
+                .thenReturn(List.of());
+        when(enrichment.fetchInsiderActivity("AAPL"))
+                .thenReturn(Optional.of(new EnrichmentServiceAdapter.InsiderActivityResponse("AAPL", 0, 0, 0L)));
+
+        ResponseEntity<ReasoningContextResponse> response =
+                controller.getReasoningContext("AAPL", 48, 8);
+
+        assertNull(response.getBody().insiderActivity());
+        assertFalse(response.getBody().errors().contains("insider_unavailable"));
+    }
+
+    @Test
+    void returns200WithInsiderErrorTagWhenInsiderThrows() {
+        when(marketData.fetchPriceFacts("AAPL")).thenReturn(Optional.of(sampleFacts()));
+        when(enrichment.fetchAggregatedTickerNews(eq("AAPL"), any(Instant.class), any(Instant.class), anyInt()))
+                .thenReturn(List.of(sampleNews()));
+        when(enrichment.fetchInsiderActivity("AAPL"))
+                .thenThrow(new RuntimeException("insider downstream timeout"));
+
+        ResponseEntity<ReasoningContextResponse> response =
+                controller.getReasoningContext("AAPL", 48, 8);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNull(response.getBody().insiderActivity());
+        assertTrue(response.getBody().errors().contains("insider_unavailable"));
+    }
+
+    @Test
     void returnsRecentPerformanceWinLossCounts() {
         when(marketData.fetchPriceFacts("AAPL")).thenReturn(Optional.of(sampleFacts()));
         when(enrichment.fetchAggregatedTickerNews(eq("AAPL"), any(Instant.class), any(Instant.class), anyInt()))

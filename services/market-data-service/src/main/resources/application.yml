@@ -108,6 +108,7 @@ market-data:
       earnings-ttl: ${FINNHUB_EARNINGS_TTL:PT24H}
       recommendations-ttl: ${FINNHUB_RECOMMENDATIONS_TTL:PT24H}
       peers-ttl: ${FINNHUB_PEERS_TTL:PT24H}
+      insider-ttl: ${FINNHUB_INSIDER_TTL:PT12H}
   yahoo:
     base-url: https://query1.finance.yahoo.com
     timeout-seconds: 10

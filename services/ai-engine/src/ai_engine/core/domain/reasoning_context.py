@@ -104,6 +104,20 @@ class RecentPerformance:
 
 
 @dataclass(frozen=True, slots=True)
+class InsiderActivity:
+    """Aggregated recent insider-transaction activity (Fase 4 enrichment).
+
+    Integer counts only → validator-safe, same as `AnalystConsensus`. `buy_count`
+    / `sell_count` count filings with a positive / negative share change;
+    `net_shares` is the signed sum. Absent when the provider had no coverage.
+    """
+
+    buy_count: int
+    sell_count: int
+    net_shares: int
+
+
+@dataclass(frozen=True, slots=True)
 class ReasoningContext:
     """Full payload assembled for one reasoning generation."""
 
@@ -118,6 +132,7 @@ class ReasoningContext:
     # backward-compatible.
     analyst_consensus: AnalystConsensus | None = None
     recent_performance: RecentPerformance | None = None
+    insider_activity: InsiderActivity | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -2,6 +2,7 @@ package com.tradingsaas.tradingcore.adapter.in.web;
 
 import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse;
 import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse.AnalystConsensus;
+import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse.InsiderActivity;
 import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse.RecentPerformance;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.EnrichmentServiceAdapter;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.EnrichmentServiceAdapter.AnalystRecommendationResponse;
@@ -140,6 +141,23 @@ public class ReasoningContextController {
             errors.add("recent_performance_unavailable");
         }
 
+        // Best-effort insider-activity enrichment (Fase 4). Same fail-soft
+        // posture — an empty result is supplementary, not a degradation; only a
+        // provider failure tags an error.
+        InsiderActivity insiderActivity = null;
+        try {
+            insiderActivity = enrichmentAdapter.fetchInsiderActivity(ticker)
+                    .filter(r -> r.buyCount() > 0 || r.sellCount() > 0)
+                    .map(r -> new InsiderActivity(r.buyCount(), r.sellCount(), r.netShares()))
+                    .orElse(null);
+        } catch (RuntimeException e) {
+            log.warn(
+                    "event=reasoning_context.insider_failed ticker={} message={}",
+                    ticker,
+                    e.getMessage());
+            errors.add("insider_unavailable");
+        }
+
         return ResponseEntity.ok(new ReasoningContextResponse(
                 ticker.toUpperCase(),
                 now,
@@ -147,6 +165,7 @@ public class ReasoningContextController {
                 news,
                 analystConsensus,
                 recentPerformance,
+                insiderActivity,
                 List.copyOf(errors)));
     }
 

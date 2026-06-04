@@ -25,6 +25,7 @@ from ai_engine.core.domain.reasoning_context import (
     SCHEMA_VERSION,
     AnalystConsensus,
     ContextResult,
+    InsiderActivity,
     NewsItem,
     PriceFacts,
     ReasoningContext,
@@ -180,6 +181,15 @@ class TradingCoreClient:
                 resolved_count=int(perf_raw.get("resolvedCount", 0)),
             )
 
+        insider_raw = payload.get("insiderActivity")
+        insider_activity = None
+        if isinstance(insider_raw, dict):
+            insider_activity = InsiderActivity(
+                buy_count=int(insider_raw.get("buyCount", 0)),
+                sell_count=int(insider_raw.get("sellCount", 0)),
+                net_shares=int(insider_raw.get("netShares", 0)),
+            )
+
         generated_at_raw = payload.get("generatedAt")
         if not generated_at_raw:
             raise ValueError("generatedAt is missing")
@@ -194,6 +204,7 @@ class TradingCoreClient:
             errors=errors,
             analyst_consensus=analyst_consensus,
             recent_performance=recent_performance,
+            insider_activity=insider_activity,
         )
         return ContextResult.available(ctx)
 
