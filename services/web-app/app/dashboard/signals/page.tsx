@@ -10,6 +10,7 @@ import { PaginationControls } from "@/components/dashboard/pagination-controls";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { apiClient } from "@/lib/api-client";
 import { fetchSignalsPageData } from "@/lib/dashboard/client-data";
+import { computePeakPrice, pickPeakColor } from "@/lib/dashboard/signal-derivation";
 import { useStockLogos } from "@/lib/dashboard/use-stock-logos";
 import { formatConfidence } from "@/lib/signal-utils";
 import { cn } from "@/lib/utils";
@@ -55,31 +56,31 @@ function formatSignedPct(value: number | null | undefined) {
   return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
 }
 
-// Color the latest close against the signal's take-profit target:
-// a hit target is green, a miss is red. HOLD (and any missing input)
-// has no directional target, so it stays neutral.
-function pickCloseColor(signalType: string, close: number | null, takeProfit: number | null) {
-  if (close == null || takeProfit == null) return "text-text-1";
-  if (signalType === "BUY") return close >= takeProfit ? "text-green" : "text-red";
-  if (signalType === "SELL") return close <= takeProfit ? "text-green" : "text-red";
-  return "text-text-1";
-}
-
-function CloseCell({
+// Best price the trade reached (peak high for BUY, trough low for SELL),
+// colored green once it reached the take-profit target, red if it never did.
+// The value and the color share the same basis so a green number is always
+// at/through the target. Neutral when not yet evaluated or HOLD.
+function PeakPriceCell({
   signalType,
-  close,
+  entryPrice,
+  maxProfit,
   takeProfit,
 }: {
   signalType: string;
-  close: number | null;
+  entryPrice: number | null | undefined;
+  maxProfit: number | null | undefined;
   takeProfit: number | null;
 }) {
-  if (close == null || Number.isNaN(close)) {
-    return <span className="text-text-3" title="Awaiting market data">—</span>;
+  const peak = computePeakPrice(signalType, entryPrice, maxProfit);
+  if (peak == null || Number.isNaN(peak)) {
+    return <span className="text-text-3" title="Not yet evaluated">—</span>;
   }
   return (
-    <span className={cn("font-mono", pickCloseColor(signalType, close, takeProfit))}>
-      {close.toLocaleString("en-US", {
+    <span
+      className={cn("font-mono", pickPeakColor(signalType, peak, takeProfit))}
+      title="Best price reached since the signal (30-day high for BUY, low for SELL)"
+    >
+      {peak.toLocaleString("en-US", {
         style: "currency",
         currency: "USD",
         maximumFractionDigits: 2,
@@ -238,7 +239,7 @@ function SignalsContent() {
                       <th className="px-4 py-3 text-left">Stop Loss</th>
                       <th className="px-4 py-3 text-left">Confidence</th>
                       <th className="px-4 py-3 text-left">Status</th>
-                      <th className="px-4 py-3 text-left">Close</th>
+                      <th className="px-4 py-3 text-left" title="Best price reached since the signal (30-day high for BUY, low for SELL)">Best Price</th>
                       <th className="px-4 py-3 text-left">Reasoning</th>
                       <th className="px-4 py-3 text-left">Time</th>
                     </tr>
@@ -306,9 +307,10 @@ function SignalsContent() {
                           </span>
                         </td>
                         <td className="border-t border-border px-4 py-4">
-                          <CloseCell
+                          <PeakPriceCell
                             signalType={signal.type}
-                            close={signal.latestPrice}
+                            entryPrice={signal.entryPrice}
+                            maxProfit={signal.maxProfit}
                             takeProfit={signal.takeProfit}
                           />
                         </td>
