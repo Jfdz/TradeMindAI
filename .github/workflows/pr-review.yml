@@ -82,5 +82,3 @@ jobs:
             - Skip findings below LOW. Zero findings is a valid and correct outcome.
             - If the diff is empty or only touches docs/config, post one summary comment:
               "No code changes found — skipping review."
-</content>
-</invoke>
