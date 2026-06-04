@@ -8,14 +8,17 @@ import static org.mockito.Mockito.when;
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.AnalystRecommendationResponse;
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.CompanyProfileResponse;
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.EarningsEventResponse;
+import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.InsiderActivityResponse;
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.NewsItemResponse;
 import com.tradingsaas.marketdata.enrichment.domain.model.AnalystRecommendation;
 import com.tradingsaas.marketdata.enrichment.domain.model.CompanyProfile;
 import com.tradingsaas.marketdata.enrichment.domain.model.EarningsEvent;
+import com.tradingsaas.marketdata.enrichment.domain.model.InsiderActivity;
 import com.tradingsaas.marketdata.enrichment.domain.model.NewsItem;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetCompanyNewsUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetCompanyProfileUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetEarningsUseCase;
+import com.tradingsaas.marketdata.enrichment.domain.port.in.GetInsiderActivityUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetPeersUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetRecommendationsUseCase;
 import java.math.BigDecimal;
@@ -33,9 +36,10 @@ class EnrichmentControllerTest {
     private final GetEarningsUseCase earningsUseCase = mock(GetEarningsUseCase.class);
     private final GetRecommendationsUseCase recommendationsUseCase = mock(GetRecommendationsUseCase.class);
     private final GetPeersUseCase peersUseCase = mock(GetPeersUseCase.class);
+    private final GetInsiderActivityUseCase insiderUseCase = mock(GetInsiderActivityUseCase.class);
 
     private final EnrichmentController controller = new EnrichmentController(
-            profileUseCase, newsUseCase, earningsUseCase, recommendationsUseCase, peersUseCase);
+            profileUseCase, newsUseCase, earningsUseCase, recommendationsUseCase, peersUseCase, insiderUseCase);
 
     @Test
     void getProfileReturnsProfileResponse() {
@@ -118,5 +122,20 @@ class EnrichmentControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(List.of("MSFT", "GOOGL", "META"), response.getBody());
+    }
+
+    @Test
+    void getInsiderReturnsActivityResponse() {
+        when(insiderUseCase.getInsiderActivity("AAPL"))
+                .thenReturn(new InsiderActivity("AAPL", 7, 3, 12345L));
+
+        ResponseEntity<InsiderActivityResponse> response = controller.getInsider("AAPL");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("AAPL", response.getBody().ticker());
+        assertEquals(7, response.getBody().buyCount());
+        assertEquals(3, response.getBody().sellCount());
+        assertEquals(12345L, response.getBody().netShares());
     }
 }

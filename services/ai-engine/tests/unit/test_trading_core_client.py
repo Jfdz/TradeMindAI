@@ -269,3 +269,26 @@ def test_fetch_recent_performance_is_none_when_absent(monkeypatch):
 
     assert result.context is not None
     assert result.context.recent_performance is None
+
+
+def test_fetch_parses_insider_activity_when_present(monkeypatch):
+    payload = _full_payload()
+    payload["insiderActivity"] = {"buyCount": 7, "sellCount": 3, "netShares": 12345}
+    monkeypatch.setattr(module.httpx, "get", lambda *a, **kw: _FakeResponse(200, payload))
+
+    result = _make_client().fetch_reasoning_context("AAPL")
+
+    insider = result.context.insider_activity
+    assert insider is not None
+    assert insider.buy_count == 7
+    assert insider.sell_count == 3
+    assert insider.net_shares == 12345
+
+
+def test_fetch_insider_activity_is_none_when_absent(monkeypatch):
+    monkeypatch.setattr(module.httpx, "get", lambda *a, **kw: _FakeResponse(200, _full_payload()))
+
+    result = _make_client().fetch_reasoning_context("AAPL")
+
+    assert result.context is not None
+    assert result.context.insider_activity is None

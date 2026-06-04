@@ -1,6 +1,8 @@
 package com.tradingsaas.marketdata.enrichment.adapter.out.external;
 
 import com.tradingsaas.marketdata.enrichment.adapter.out.external.FinnhubDtos.EarningsDto;
+import com.tradingsaas.marketdata.enrichment.adapter.out.external.FinnhubDtos.InsiderTransactionDto;
+import com.tradingsaas.marketdata.enrichment.adapter.out.external.FinnhubDtos.InsiderTransactionsDto;
 import com.tradingsaas.marketdata.enrichment.adapter.out.external.FinnhubDtos.NewsDto;
 import com.tradingsaas.marketdata.enrichment.adapter.out.external.FinnhubDtos.ProfileDto;
 import com.tradingsaas.marketdata.enrichment.adapter.out.external.FinnhubDtos.RecommendationDto;
@@ -8,6 +10,7 @@ import com.tradingsaas.marketdata.enrichment.domain.exception.EnrichmentUnavaila
 import com.tradingsaas.marketdata.enrichment.domain.model.AnalystRecommendation;
 import com.tradingsaas.marketdata.enrichment.domain.model.CompanyProfile;
 import com.tradingsaas.marketdata.enrichment.domain.model.EarningsEvent;
+import com.tradingsaas.marketdata.enrichment.domain.model.InsiderActivity;
 import com.tradingsaas.marketdata.enrichment.domain.model.NewsItem;
 import com.tradingsaas.marketdata.enrichment.domain.port.out.MarketEnrichmentProvider;
 import com.tradingsaas.marketdata.enrichment.domain.port.out.NewsProviderPort;
@@ -257,6 +260,58 @@ public class FinnhubAdapter implements MarketEnrichmentProvider, NewsProviderPor
             log.warn("event=finnhub.peers.upstream_error ticker={} status={}", ticker, e.getStatusCode().value());
             throw new EnrichmentUnavailableException(ticker, "upstream_" + e.getStatusCode().value(), e);
         }
+    }
+
+    @Override
+    public InsiderActivity fetchInsiderActivity(String ticker) {
+        try {
+            InsiderTransactionsDto dto = webClient.get()
+                    .uri(b -> b.path("/stock/insider-transactions").queryParam("symbol", ticker).build())
+                    .header(TOKEN_HEADER, apiKey)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .bodyToMono(InsiderTransactionsDto.class)
+                    .block();
+
+            record("insider", "ok");
+            return aggregateInsider(ticker, dto);
+        } catch (WebClientResponseException.Unauthorized e) {
+            record("insider", "unauthorized");
+            log.error("event=finnhub.insider.unauthorized ticker={} key_present={}", ticker, !apiKey.isBlank());
+            throw new EnrichmentUnavailableException(ticker, "unauthorized", e);
+        } catch (WebClientResponseException.TooManyRequests e) {
+            record("insider", "rate_limited");
+            log.warn("event=finnhub.insider.rate_limited ticker={} retryAfter={}",
+                    ticker, e.getHeaders().getFirst("Retry-After"));
+            throw new EnrichmentUnavailableException(ticker, "rate_limited", e);
+        } catch (WebClientResponseException e) {
+            record("insider", "upstream_error");
+            log.warn("event=finnhub.insider.upstream_error ticker={} status={}", ticker, e.getStatusCode().value());
+            throw new EnrichmentUnavailableException(ticker, "upstream_" + e.getStatusCode().value(), e);
+        }
+    }
+
+    private static InsiderActivity aggregateInsider(String ticker, InsiderTransactionsDto dto) {
+        String upper = ticker.toUpperCase();
+        if (dto == null || dto.data() == null || dto.data().isEmpty()) {
+            return new InsiderActivity(upper, 0, 0, 0L);
+        }
+        int buys = 0;
+        int sells = 0;
+        long net = 0L;
+        for (InsiderTransactionDto tx : dto.data()) {
+            Long change = tx.change();
+            if (change == null || change == 0L) {
+                continue;
+            }
+            if (change > 0L) {
+                buys++;
+            } else {
+                sells++;
+            }
+            net += change;
+        }
+        return new InsiderActivity(upper, buys, sells, net);
     }
 
     public boolean isApiKeyPresent() {

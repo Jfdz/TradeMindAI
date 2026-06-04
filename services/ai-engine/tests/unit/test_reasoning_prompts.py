@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 
 from ai_engine.core.domain.reasoning_context import (
     AnalystConsensus,
+    InsiderActivity,
     ReasoningContext,
     RecentPerformance,
 )
@@ -65,7 +66,10 @@ def test_refusal_reason_uses_type_union_not_anyof():
 def test_prompt_and_schema_stay_within_token_budget():
     # C1.7 — drift guard. Caveman-terse prompt + compacted schema must
     # not creep back toward the verbose originals (~88 / ~488 tokens).
-    assert len(SYSTEM_PROMPT) < 1500
+    # Bound raised to 1800 chars (~450 tokens) to accommodate the grounded
+    # enrichment rules (9 analyst, 10 track record, 11 insider); still far
+    # below Haiku's 4096-token cacheable-prefix ceiling.
+    assert len(SYSTEM_PROMPT) < 1800
     assert len(json.dumps(REASONING_TOOL_SCHEMA)) < 1200
 
 
@@ -185,3 +189,24 @@ def test_user_prompt_includes_track_record_block():
 def test_user_prompt_handles_absent_track_record_with_placeholder():
     prompt = build_user_prompt(build_signal_input(), build_reasoning_context())
     assert "(no resolved track record)" in prompt
+
+
+def test_system_prompt_mentions_insider_rule():
+    # Rule 11 — the LLM may cite the integer insider counts verbatim.
+    assert "INSIDER:" in SYSTEM_PROMPT
+
+
+def test_user_prompt_includes_insider_block():
+    ctx = dataclasses.replace(
+        _context_with_news(),
+        insider_activity=InsiderActivity(buy_count=7, sell_count=3, net_shares=12345),
+    )
+    prompt = build_user_prompt(build_signal_input(), ctx)
+    assert "insider_buys: 7" in prompt
+    assert "insider_sells: 3" in prompt
+    assert "net_shares: 12345" in prompt
+
+
+def test_user_prompt_handles_absent_insider_with_placeholder():
+    prompt = build_user_prompt(build_signal_input(), build_reasoning_context())
+    assert "(no insider activity)" in prompt

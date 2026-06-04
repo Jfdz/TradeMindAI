@@ -54,4 +54,18 @@ final class FinnhubDtos {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record PeersResponse(List<String> peers) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record InsiderTransactionsDto(
+            @JsonProperty("symbol") String ticker,
+            List<InsiderTransactionDto> data) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record InsiderTransactionDto(
+            String name,
+            // Signed share change for the filing: positive = acquired (buy),
+            // negative = disposed (sell). Nullable when the provider omits it.
+            @JsonProperty("change") Long change,
+            @JsonProperty("transactionCode") String transactionCode,
+            @JsonProperty("transactionDate") String transactionDate) {}
 }

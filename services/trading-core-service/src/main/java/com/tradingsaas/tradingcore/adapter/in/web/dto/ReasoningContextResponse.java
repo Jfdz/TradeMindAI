@@ -23,6 +23,7 @@ public record ReasoningContextResponse(
         List<NewsItemResponse> news,
         AnalystConsensus analystConsensus,
         RecentPerformance recentPerformance,
+        InsiderActivity insiderActivity,
         List<String> errors) {
 
     /**
@@ -49,4 +50,11 @@ public record ReasoningContextResponse(
      * {@code resolvedCount} is {@code wins + losses}.
      */
     public record RecentPerformance(int wins, int losses, int resolvedCount) {}
+
+    /**
+     * Aggregated recent insider-transaction activity (Fase 4). Integer counts
+     * only, so they are validator-safe to cite. {@code netShares} is the signed
+     * sum of share changes; null when the provider had no coverage or failed.
+     */
+    public record InsiderActivity(int buyCount, int sellCount, long netShares) {}
 }

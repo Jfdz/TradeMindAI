@@ -145,6 +145,16 @@ public class EnrichmentServiceAdapter {
         return result != null ? result : List.of();
     }
 
+    public Optional<InsiderActivityResponse> fetchInsiderActivity(String ticker) {
+        return Optional.ofNullable(webClient.get()
+                .uri("/api/v1/enrichment/insider/{ticker}", ticker)
+                .headers(this::addInternalSecret)
+                .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), res -> Mono.empty())
+                .bodyToMono(InsiderActivityResponse.class)
+                .block());
+    }
+
     private void addInternalSecret(org.springframework.http.HttpHeaders headers) {
         if (internalSecret != null && !internalSecret.isBlank()) {
             headers.set(INTERNAL_SECRET_HEADER, internalSecret);
@@ -196,4 +206,11 @@ public class EnrichmentServiceAdapter {
             int sell,
             int strongBuy,
             int strongSell) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record InsiderActivityResponse(
+            String ticker,
+            int buyCount,
+            int sellCount,
+            long netShares) {}
 }
