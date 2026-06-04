@@ -1,0 +1,86 @@
+name: PR Review (Claude Code)
+
+# Automatic code + security review on every PR targeting develop or main.
+# Posts inline findings as review comments. Never modifies code.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [develop, main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Code + Security Review
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Bun
+        run: npm install -g bun
+
+      - name: Run Claude PR Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: "--model claude-sonnet-4-6 --dangerously-skip-permissions"
+          path_to_bun_executable: bun
+          show_full_output: "true"
+          prompt: |
+            You are doing an automated code and security review of this pull request.
+
+            STACK: Java 21 / Spring Boot 3.x (backend services) + Next.js 14 / TypeScript (web-app).
+
+            TASK:
+            1. Get the full PR diff: `gh pr diff ${{ github.event.pull_request.number }}`
+            2. Review the diff for:
+               a) CORRECTNESS — logic errors, null safety, unhandled exceptions, race conditions,
+                  incorrect return values, off-by-one errors, wrong conditionals.
+               b) SECURITY — OWASP Top 10: injection (SQL/command/LDAP), broken auth, XSS,
+                  IDOR, security misconfiguration, exposed secrets/credentials in code,
+                  missing input validation, insecure deserialization.
+               c) PERFORMANCE — N+1 queries, missing DB indexes, O(n²) loops where O(n) possible,
+                  blocking I/O on event loop, unbounded collection growth.
+               d) SIMPLIFICATION — dead code, duplicated logic, unnecessary complexity, an
+                  existing library function that replaces 10+ lines of custom code.
+            3. For each finding, post an inline review comment at the exact file + line using:
+               `gh pr review ${{ github.event.pull_request.number }} --comment --body "..."` or
+               `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments`
+               with `path`, `line`, `side: RIGHT`, `body`.
+
+            COMMENT FORMAT (each finding):
+            ```
+            **[SEVERITY]** Brief title
+
+            **What:** One sentence describing the specific problem at this location.
+            **Why:** One sentence on the risk or consequence.
+            **Fix:** Concrete remediation — prefer a code snippet when < 5 lines.
+            ```
+
+            SEVERITY levels: `HIGH` (correctness or security bug that can break prod or expose data),
+            `MEDIUM` (bug or security gap in non-critical path, or significant perf issue),
+            `LOW` (simplification, minor perf, style that affects readability).
+
+            RULES:
+            - Post findings ONLY as inline PR comments or a single summary review comment.
+            - Do NOT approve or request changes on the PR — comment only.
+            - Do NOT modify any files, create commits, or open branches.
+            - Do NOT comment on test-only changes unless there is a clear testing anti-pattern.
+            - Do NOT comment on auto-generated files (migrations output, lock files, generated protos).
+            - Skip findings below LOW. Zero findings is a valid and correct outcome.
+            - If the diff is empty or only touches docs/config, post one summary comment:
+              "No code changes found — skipping review."
+</content>
+</invoke>
