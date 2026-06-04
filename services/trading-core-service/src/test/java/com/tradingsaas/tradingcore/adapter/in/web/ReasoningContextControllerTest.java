@@ -1,7 +1,9 @@
 package com.tradingsaas.tradingcore.adapter.in.web;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -10,7 +12,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse;
+import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse.AnalystConsensus;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.EnrichmentServiceAdapter;
+import com.tradingsaas.tradingcore.adapter.out.marketdata.EnrichmentServiceAdapter.AnalystRecommendationResponse;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.EnrichmentServiceAdapter.NewsItemResponse;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter.InsufficientHistoryUpstreamException;
@@ -19,6 +23,7 @@ import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapt
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
@@ -142,6 +147,54 @@ class ReasoningContextControllerTest {
                 controller.getReasoningContext("aapl", 48, 8);
 
         assertEquals("AAPL", response.getBody().ticker());
+    }
+
+    @Test
+    void returnsAnalystConsensusFromLatestPeriod() {
+        when(marketData.fetchPriceFacts("AAPL")).thenReturn(Optional.of(sampleFacts()));
+        when(enrichment.fetchAggregatedTickerNews(eq("AAPL"), any(Instant.class), any(Instant.class), anyInt()))
+                .thenReturn(List.of());
+        when(enrichment.fetchRecommendations("AAPL")).thenReturn(List.of(
+                rec("2026-04-01", 10, 8, 4, 1, 0),
+                rec("2026-05-01", 12, 9, 3, 1, 1))); // latest period
+
+        ResponseEntity<ReasoningContextResponse> response =
+                controller.getReasoningContext("AAPL", 48, 8);
+
+        AnalystConsensus consensus = response.getBody().analystConsensus();
+        assertNotNull(consensus);
+        assertEquals("2026-05-01", consensus.period());
+        assertEquals(12, consensus.strongBuy());
+        assertEquals(9, consensus.buy());
+        assertEquals(3, consensus.hold());
+        assertEquals(1, consensus.sell());
+        assertEquals(1, consensus.strongSell());
+        assertEquals(26, consensus.total());
+        // An empty news result alone tags news_aggregator_empty; analyst data
+        // present means no analyst error tag.
+        assertFalse(response.getBody().errors().contains("analyst_recs_unavailable"));
+    }
+
+    @Test
+    void returns200WithAnalystErrorTagWhenRecsThrow() {
+        when(marketData.fetchPriceFacts("AAPL")).thenReturn(Optional.of(sampleFacts()));
+        when(enrichment.fetchAggregatedTickerNews(eq("AAPL"), any(Instant.class), any(Instant.class), anyInt()))
+                .thenReturn(List.of(sampleNews()));
+        when(enrichment.fetchRecommendations("AAPL"))
+                .thenThrow(new RuntimeException("recs downstream timeout"));
+
+        ResponseEntity<ReasoningContextResponse> response =
+                controller.getReasoningContext("AAPL", 48, 8);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNull(response.getBody().analystConsensus());
+        assertTrue(response.getBody().errors().contains("analyst_recs_unavailable"));
+    }
+
+    private static AnalystRecommendationResponse rec(
+            String period, int strongBuy, int buy, int hold, int sell, int strongSell) {
+        return new AnalystRecommendationResponse(
+                "AAPL", LocalDate.parse(period), buy, hold, sell, strongBuy, strongSell);
     }
 
     private static PriceFactsResponse sampleFacts() {

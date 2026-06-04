@@ -23,6 +23,7 @@ import httpx
 
 from ai_engine.core.domain.reasoning_context import (
     SCHEMA_VERSION,
+    AnalystConsensus,
     ContextResult,
     NewsItem,
     PriceFacts,
@@ -47,9 +48,7 @@ class TradingCoreClient:
         news_limit: int = 8,
     ) -> ContextResult:
         if not self._internal_secret:
-            logger.error(
-                "event=trading_core.reasoning_context.no_secret ticker=%s", ticker
-            )
+            logger.error("event=trading_core.reasoning_context.no_secret ticker=%s", ticker)
             return ContextResult.upstream_failed(ticker, "internal_secret_not_configured")
 
         url = f"{self._base_url}/api/v1/internal/reasoning-context/{ticker}"
@@ -96,9 +95,7 @@ class TradingCoreClient:
             )
             return ContextResult.upstream_failed(ticker, f"http_{status}")
         if status == 401:
-            logger.error(
-                "event=trading_core.reasoning_context.unauthorized ticker=%s", ticker
-            )
+            logger.error("event=trading_core.reasoning_context.unauthorized ticker=%s", ticker)
             return ContextResult.upstream_failed(ticker, "unauthorized")
 
         logger.warning(
@@ -158,6 +155,21 @@ class TradingCoreClient:
         errors_raw = payload.get("errors") or []
         errors = tuple(str(err) for err in errors_raw if isinstance(err, str))
 
+        # Additive enrichment: parse only when present so older trading-core
+        # builds (no analystConsensus key) keep producing a valid context.
+        analyst_raw = payload.get("analystConsensus")
+        analyst_consensus = None
+        if isinstance(analyst_raw, dict):
+            analyst_consensus = AnalystConsensus(
+                period=str(analyst_raw["period"]) if analyst_raw.get("period") else None,
+                strong_buy=int(analyst_raw.get("strongBuy", 0)),
+                buy=int(analyst_raw.get("buy", 0)),
+                hold=int(analyst_raw.get("hold", 0)),
+                sell=int(analyst_raw.get("sell", 0)),
+                strong_sell=int(analyst_raw.get("strongSell", 0)),
+                total=int(analyst_raw.get("total", 0)),
+            )
+
         generated_at_raw = payload.get("generatedAt")
         if not generated_at_raw:
             raise ValueError("generatedAt is missing")
@@ -170,6 +182,7 @@ class TradingCoreClient:
             price_facts=price_facts,
             news=news,
             errors=errors,
+            analyst_consensus=analyst_consensus,
         )
         return ContextResult.available(ctx)
 
