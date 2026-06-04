@@ -49,45 +49,42 @@ function pickStatusBadgeClass(status: "NEW" | "LIVE" | "ACTIVE") {
   return "border-border bg-bg-2 text-text-2";
 }
 
-function pickOutcomeBadgeClass(outcome: "WIN" | "LOSS" | "OPEN") {
-  if (outcome === "WIN") return "border-green/40 bg-green/[0.10] text-green";
-  if (outcome === "LOSS") return "border-red/40 bg-red/[0.10] text-red";
-  return "border-border bg-bg-2 text-text-2";
-}
-
 function formatSignedPct(value: number | null | undefined) {
   if (value == null || Number.isNaN(value)) return null;
   const pct = value * 100;
   return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
 }
 
-function ResultCell({
-  outcome,
-  maxProfit,
-  maxDrawdown,
+// Color the latest close against the signal's take-profit target:
+// a hit target is green, a miss is red. HOLD (and any missing input)
+// has no directional target, so it stays neutral.
+function pickCloseColor(signalType: string, close: number | null, takeProfit: number | null) {
+  if (close == null || takeProfit == null) return "text-text-1";
+  if (signalType === "BUY") return close >= takeProfit ? "text-green" : "text-red";
+  if (signalType === "SELL") return close <= takeProfit ? "text-green" : "text-red";
+  return "text-text-1";
+}
+
+function CloseCell({
+  signalType,
+  close,
+  takeProfit,
 }: {
-  outcome: "WIN" | "LOSS" | "OPEN" | null | undefined;
-  maxProfit: number | null | undefined;
-  maxDrawdown: number | null | undefined;
+  signalType: string;
+  close: number | null;
+  takeProfit: number | null;
 }) {
-  if (!outcome) {
-    return <span className="text-text-3" title="No outcome (HOLD or not yet evaluated)">—</span>;
+  if (close == null || Number.isNaN(close)) {
+    return <span className="text-text-3" title="Awaiting market data">—</span>;
   }
-  const up = formatSignedPct(maxProfit);
-  const down = formatSignedPct(maxDrawdown);
   return (
-    <div className="flex flex-col gap-1">
-      <span className={cn("w-fit rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.22em]", pickOutcomeBadgeClass(outcome))}>
-        {outcome}
-      </span>
-      {(up || down) && (
-        <span className="font-mono text-[11px] text-text-3">
-          {up && <span className="text-green">{up}</span>}
-          {up && down && " / "}
-          {down && <span className="text-red">{down}</span>}
-        </span>
-      )}
-    </div>
+    <span className={cn("font-mono", pickCloseColor(signalType, close, takeProfit))}>
+      {close.toLocaleString("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 2,
+      })}
+    </span>
   );
 }
 
@@ -241,7 +238,7 @@ function SignalsContent() {
                       <th className="px-4 py-3 text-left">Stop Loss</th>
                       <th className="px-4 py-3 text-left">Confidence</th>
                       <th className="px-4 py-3 text-left">Status</th>
-                      <th className="px-4 py-3 text-left">Result</th>
+                      <th className="px-4 py-3 text-left">Close</th>
                       <th className="px-4 py-3 text-left">Reasoning</th>
                       <th className="px-4 py-3 text-left">Time</th>
                     </tr>
@@ -309,10 +306,10 @@ function SignalsContent() {
                           </span>
                         </td>
                         <td className="border-t border-border px-4 py-4">
-                          <ResultCell
-                            outcome={signal.outcome}
-                            maxProfit={signal.maxProfit}
-                            maxDrawdown={signal.maxDrawdown}
+                          <CloseCell
+                            signalType={signal.type}
+                            close={signal.latestPrice}
+                            takeProfit={signal.takeProfit}
                           />
                         </td>
                         <td className="border-t border-border px-4 py-4 text-sm leading-6 text-text-2">
