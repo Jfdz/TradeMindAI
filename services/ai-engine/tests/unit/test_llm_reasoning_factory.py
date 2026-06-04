@@ -24,11 +24,17 @@ class _StubSettings:
         claude_code_oauth_token: str = "",
         anthropic_api_key: str = "",
         anthropic_model: str = "claude-haiku-4-5",
+        minimax_oauth_token: str = "",
+        minimax_base_url: str = "https://api.minimax.io/anthropic",
+        minimax_model: str = "MiniMax-M3",
     ):
         self.llm_provider = llm_provider
         self.claude_code_oauth_token = claude_code_oauth_token
         self.anthropic_api_key = anthropic_api_key
         self.anthropic_model = anthropic_model
+        self.minimax_oauth_token = minimax_oauth_token
+        self.minimax_base_url = minimax_base_url
+        self.minimax_model = minimax_model
 
 
 def test_default_stub_provider_returns_stub_client():
@@ -108,3 +114,52 @@ def test_oauth_factory_emits_warning_log(caplog):
 
     # The OAuth mode WARN log is part of the audit trail — must be present.
     assert any("oauth_mode_active" in rec.message for rec in caplog.records)
+
+
+def test_minimax_oauth_without_token_falls_back_to_stub():
+    client = create_llm_reasoning_client(
+        _StubSettings(llm_provider="minimax_oauth", minimax_oauth_token="")
+    )
+    assert isinstance(client, StubLlmReasoningClient)
+
+
+def test_minimax_oauth_with_token_builds_anthropic_client_pointed_at_minimax():
+    fake_sdk = MagicMock()
+    with patch("anthropic.Anthropic") as anthropic_ctor:
+        anthropic_ctor.return_value = fake_sdk
+        client = create_llm_reasoning_client(
+            _StubSettings(
+                llm_provider="minimax_oauth",
+                minimax_oauth_token="sk-cp-minimax-xyz",
+                minimax_base_url="https://api.minimax.io/anthropic",
+                minimax_model="MiniMax-M3",
+            )
+        )
+
+    # Route A: the Anthropic SDK is pointed at MiniMax's Anthropic-compatible
+    # endpoint with the OAuth token supplied as a Bearer auth_token.
+    anthropic_ctor.assert_called_once_with(
+        auth_token="sk-cp-minimax-xyz",
+        base_url="https://api.minimax.io/anthropic",
+    )
+    assert not isinstance(client, StubLlmReasoningClient)
+    assert getattr(client, "_client", None) is fake_sdk
+    assert getattr(client, "_model", None) == "MiniMax-M3"
+
+
+def test_minimax_oauth_factory_emits_warning_log(caplog):
+    import logging
+
+    fake_sdk = MagicMock()
+    factory_logger = "ai_engine.adapters.out.llm_reasoning_factory"
+    with patch("anthropic.Anthropic", return_value=fake_sdk):
+        with caplog.at_level(logging.WARNING, logger=factory_logger):
+            create_llm_reasoning_client(
+                _StubSettings(
+                    llm_provider="minimax_oauth",
+                    minimax_oauth_token="sk-cp-minimax-xyz",
+                )
+            )
+
+    # The MiniMax-OAuth ToS-risk WARN is part of the audit trail — must be present.
+    assert any("minimax_oauth_mode_active" in rec.message for rec in caplog.records)
