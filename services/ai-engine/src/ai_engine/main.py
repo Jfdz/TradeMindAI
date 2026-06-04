@@ -10,6 +10,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from ai_engine.adapters.in_.deep_analysis import router as deep_analysis_router
 from ai_engine.adapters.in_.health import router as health_router
 from ai_engine.adapters.in_.models import router as models_router
 from ai_engine.adapters.in_.prediction import router as prediction_router
@@ -323,6 +324,7 @@ def create_app() -> FastAPI:
     app.include_router(training_router)
     app.include_router(models_router)
     app.include_router(prediction_router)
+    app.include_router(deep_analysis_router)
 
     return app
 
