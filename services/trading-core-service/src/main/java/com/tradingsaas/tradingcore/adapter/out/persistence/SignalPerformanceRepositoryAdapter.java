@@ -1,6 +1,7 @@
 package com.tradingsaas.tradingcore.adapter.out.persistence;
 
 import com.tradingsaas.tradingcore.adapter.out.persistence.entity.SignalPerformanceJpaEntity;
+import com.tradingsaas.tradingcore.domain.model.RecentTickerPerformance;
 import com.tradingsaas.tradingcore.domain.model.SignalOutcome;
 import com.tradingsaas.tradingcore.domain.model.SignalPerformance;
 import com.tradingsaas.tradingcore.domain.model.SignalPerformanceStat;
@@ -88,6 +89,19 @@ class SignalPerformanceRepositoryAdapter implements SignalPerformanceRepository 
                             row.getAvgMaxDrawdown());
                 })
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RecentTickerPerformance recentPerformanceForTicker(String ticker, int limit) {
+        SignalPerformanceJpaRepository.RecentPerfRow row =
+                repository.recentPerformanceForTicker(ticker, Math.max(1, limit));
+        if (row == null) {
+            return new RecentTickerPerformance(0, 0, 0);
+        }
+        int wins = (int) row.getWins();
+        int losses = (int) row.getLosses();
+        return new RecentTickerPerformance(wins, losses, wins + losses);
     }
 
     private SignalPerformance toDomain(SignalPerformanceJpaEntity e) {

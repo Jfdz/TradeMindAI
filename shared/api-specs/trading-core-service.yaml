@@ -110,12 +110,20 @@ components:
             Null when the provider returned nothing or failed. All counts are
             integers, so the downstream reasoning validator (which grounds only
             decimal tokens) lets the LLM cite them verbatim.
+        recentPerformance:
+          allOf:
+            - $ref: '#/components/schemas/RecentPerformance'
+          nullable: true
+          description: |
+            The ticker's recent resolved win/loss track record (best-effort
+            deterministic reflection). Null when there is no resolved history.
+            Integer counts only, so they are validator-safe to cite.
         errors:
           type: array
           description: |
             Non-fatal degradation tags surfaced to the caller for logging.
             Examples: `news_aggregator_unavailable`, `news_aggregator_empty`,
-            `analyst_recs_unavailable`.
+            `analyst_recs_unavailable`, `recent_performance_unavailable`.
           items:
             type: string
     AnalystConsensus:
@@ -148,3 +156,20 @@ components:
           type: integer
           description: Sum of the five buckets.
           example: 26
+    RecentPerformance:
+      type: object
+      required: [wins, losses, resolvedCount]
+      description: |
+        The ticker's recent resolved win/loss track record over the most
+        recently evaluated signals (deterministic reflection). Integer counts.
+      properties:
+        wins:
+          type: integer
+          example: 7
+        losses:
+          type: integer
+          example: 3
+        resolvedCount:
+          type: integer
+          description: wins + losses (OPEN signals excluded).
+          example: 10

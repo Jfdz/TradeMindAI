@@ -6,7 +6,11 @@ import dataclasses
 import json
 from datetime import datetime, timezone
 
-from ai_engine.core.domain.reasoning_context import AnalystConsensus, ReasoningContext
+from ai_engine.core.domain.reasoning_context import (
+    AnalystConsensus,
+    ReasoningContext,
+    RecentPerformance,
+)
 from ai_engine.core.domain.reasoning_output import SignalInput
 from ai_engine.core.domain.reasoning_prompts import (
     REASONING_TOOL_SCHEMA,
@@ -160,3 +164,24 @@ def test_user_prompt_includes_analyst_consensus_block():
 def test_user_prompt_handles_absent_analyst_with_placeholder():
     prompt = build_user_prompt(build_signal_input(), build_reasoning_context())
     assert "(no analyst coverage)" in prompt
+
+
+def test_system_prompt_mentions_track_record_rule():
+    # Rule 10 — the LLM must be told it can cite the integer outcome counts.
+    assert "TRACK RECORD:" in SYSTEM_PROMPT
+
+
+def test_user_prompt_includes_track_record_block():
+    ctx = dataclasses.replace(
+        _context_with_news(),
+        recent_performance=RecentPerformance(wins=7, losses=3, resolved_count=10),
+    )
+    prompt = build_user_prompt(build_signal_input(), ctx)
+    assert "wins: 7" in prompt
+    assert "losses: 3" in prompt
+    assert "resolved: 10" in prompt
+
+
+def test_user_prompt_handles_absent_track_record_with_placeholder():
+    prompt = build_user_prompt(build_signal_input(), build_reasoning_context())
+    assert "(no resolved track record)" in prompt

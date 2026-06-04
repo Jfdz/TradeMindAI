@@ -2,6 +2,7 @@ package com.tradingsaas.tradingcore.adapter.in.web;
 
 import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse;
 import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse.AnalystConsensus;
+import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse.RecentPerformance;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.EnrichmentServiceAdapter;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.EnrichmentServiceAdapter.AnalystRecommendationResponse;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.EnrichmentServiceAdapter.NewsItemResponse;
@@ -9,6 +10,8 @@ import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapt
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter.InsufficientHistoryUpstreamException;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter.MarketDataUpstreamException;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter.PriceFactsResponse;
+import com.tradingsaas.tradingcore.domain.model.RecentTickerPerformance;
+import com.tradingsaas.tradingcore.domain.port.out.SignalPerformanceRepository;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -47,17 +50,24 @@ public class ReasoningContextController {
     static final int DEFAULT_NEWS_HOURS = 24;
     static final int DEFAULT_NEWS_LIMIT = 4;
     static final int MAX_NEWS_LIMIT = 4;
+    // Window of most-recent resolved same-ticker signals summarised into the
+    // reasoning context as the deterministic "reflection" track record.
+    static final int RECENT_PERFORMANCE_LIMIT = 20;
 
     private final MarketDataServiceAdapter marketDataAdapter;
     private final EnrichmentServiceAdapter enrichmentAdapter;
+    private final SignalPerformanceRepository performanceRepository;
     private final Clock clock;
 
     public ReasoningContextController(
             MarketDataServiceAdapter marketDataAdapter,
             EnrichmentServiceAdapter enrichmentAdapter,
+            SignalPerformanceRepository performanceRepository,
             Clock clock) {
         this.marketDataAdapter = Objects.requireNonNull(marketDataAdapter, "marketDataAdapter must not be null");
         this.enrichmentAdapter = Objects.requireNonNull(enrichmentAdapter, "enrichmentAdapter must not be null");
+        this.performanceRepository =
+                Objects.requireNonNull(performanceRepository, "performanceRepository must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 
@@ -111,12 +121,32 @@ public class ReasoningContextController {
             errors.add("analyst_recs_unavailable");
         }
 
+        // Best-effort recent-performance reflection: the ticker's recent resolved
+        // win/loss track record. Same fail-soft posture — an empty history is not
+        // a degradation; only a query failure tags an error.
+        RecentPerformance recentPerformance = null;
+        try {
+            RecentTickerPerformance perf = performanceRepository.recentPerformanceForTicker(
+                    ticker.toUpperCase(), RECENT_PERFORMANCE_LIMIT);
+            if (perf.hasHistory()) {
+                recentPerformance =
+                        new RecentPerformance(perf.wins(), perf.losses(), perf.resolvedCount());
+            }
+        } catch (RuntimeException e) {
+            log.warn(
+                    "event=reasoning_context.recent_performance_failed ticker={} message={}",
+                    ticker,
+                    e.getMessage());
+            errors.add("recent_performance_unavailable");
+        }
+
         return ResponseEntity.ok(new ReasoningContextResponse(
                 ticker.toUpperCase(),
                 now,
                 priceFacts.get(),
                 news,
                 analystConsensus,
+                recentPerformance,
                 List.copyOf(errors)));
     }
 
