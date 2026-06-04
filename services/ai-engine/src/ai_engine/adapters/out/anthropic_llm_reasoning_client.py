@@ -56,9 +56,20 @@ class AnthropicLlmReasoningClient:
     TEMPERATURE = 0.2
     MAX_TOKENS = 350
 
-    def __init__(self, client: "Anthropic", model: str = DEFAULT_MODEL):
+    def __init__(
+        self,
+        client: "Anthropic",
+        model: str = DEFAULT_MODEL,
+        max_tokens: int = MAX_TOKENS,
+    ):
         self._client = client
         self._model = model
+        # max_tokens is configurable because MiniMax M-series are reasoning
+        # models that spend output budget on a hidden <think> pass before the
+        # tool call. At the Haiku-tuned 350 cap they hit stop_reason=max_tokens
+        # with no tool_use block and every call degrades to ERROR. The factory
+        # raises this for the MiniMax route (settings.minimax_max_tokens).
+        self._max_tokens = max_tokens
 
     def generate(
         self,
@@ -86,7 +97,7 @@ class AnthropicLlmReasoningClient:
             # shape against the live API.
             response = self._client.messages.create(
                 model=self._model,
-                max_tokens=self.MAX_TOKENS,
+                max_tokens=self._max_tokens,
                 temperature=self.TEMPERATURE,
                 system=SYSTEM_PROMPT,
                 tools=[REASONING_TOOL_SCHEMA],
@@ -122,9 +133,7 @@ class AnthropicLlmReasoningClient:
                 {
                     "input_tokens": getattr(usage, "input_tokens", None),
                     "output_tokens": getattr(usage, "output_tokens", None),
-                    "cache_read_input_tokens": getattr(
-                        usage, "cache_read_input_tokens", None
-                    ),
+                    "cache_read_input_tokens": getattr(usage, "cache_read_input_tokens", None),
                     "cache_creation_input_tokens": getattr(
                         usage, "cache_creation_input_tokens", None
                     ),
@@ -154,9 +163,7 @@ class AnthropicLlmReasoningClient:
 
         price_refs = tuple(payload_raw.get("price_refs") or ())
         news_refs = tuple(payload_raw.get("news_refs") or ())
-        payload = ReasoningPayload(
-            text=text, price_refs=price_refs, news_refs=news_refs
-        )
+        payload = ReasoningPayload(text=text, price_refs=price_refs, news_refs=news_refs)
         logger.info(
             "event=llm_reasoning.generated ticker=%s len=%d price_refs=%d news_refs=%d",
             signal.ticker,
