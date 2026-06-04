@@ -24,6 +24,8 @@ public record ReasoningContextResponse(
         AnalystConsensus analystConsensus,
         RecentPerformance recentPerformance,
         InsiderActivity insiderActivity,
+        SocialSentiment socialSentiment,
+        MacroContext macroContext,
         List<String> errors) {
 
     /**
@@ -57,4 +59,19 @@ public record ReasoningContextResponse(
      * sum of share changes; null when the provider had no coverage or failed.
      */
     public record InsiderActivity(int buyCount, int sellCount, long netShares) {}
+
+    /**
+     * Aggregated recent social-media sentiment (Fase 4). Integer MENTION counts
+     * only — not decimal scores — so they are validator-safe to cite. Null when
+     * the provider had no coverage or failed.
+     */
+    public record SocialSentiment(int positiveMentions, int negativeMentions, int totalMentions) {}
+
+    /**
+     * Coarse market-wide macro context (Fase 4). The same snapshot attaches to
+     * every ticker. {@code recentMarketNewsCount} is the integer count of
+     * general market-news items in the last 24h (validator-safe). Null when the
+     * provider had no coverage or failed.
+     */
+    public record MacroContext(int recentMarketNewsCount) {}
 }

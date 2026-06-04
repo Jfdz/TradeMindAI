@@ -6,17 +6,22 @@ import com.tradingsaas.marketdata.enrichment.adapter.out.external.FinnhubDtos.In
 import com.tradingsaas.marketdata.enrichment.adapter.out.external.FinnhubDtos.NewsDto;
 import com.tradingsaas.marketdata.enrichment.adapter.out.external.FinnhubDtos.ProfileDto;
 import com.tradingsaas.marketdata.enrichment.adapter.out.external.FinnhubDtos.RecommendationDto;
+import com.tradingsaas.marketdata.enrichment.adapter.out.external.FinnhubDtos.SocialSentimentDto;
+import com.tradingsaas.marketdata.enrichment.adapter.out.external.FinnhubDtos.SocialSentimentEntryDto;
 import com.tradingsaas.marketdata.enrichment.domain.exception.EnrichmentUnavailableException;
 import com.tradingsaas.marketdata.enrichment.domain.model.AnalystRecommendation;
 import com.tradingsaas.marketdata.enrichment.domain.model.CompanyProfile;
 import com.tradingsaas.marketdata.enrichment.domain.model.EarningsEvent;
 import com.tradingsaas.marketdata.enrichment.domain.model.InsiderActivity;
+import com.tradingsaas.marketdata.enrichment.domain.model.MacroContext;
 import com.tradingsaas.marketdata.enrichment.domain.model.NewsItem;
+import com.tradingsaas.marketdata.enrichment.domain.model.SocialSentiment;
 import com.tradingsaas.marketdata.enrichment.domain.port.out.MarketEnrichmentProvider;
 import com.tradingsaas.marketdata.enrichment.domain.port.out.NewsProviderPort;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -312,6 +317,83 @@ public class FinnhubAdapter implements MarketEnrichmentProvider, NewsProviderPor
             net += change;
         }
         return new InsiderActivity(upper, buys, sells, net);
+    }
+
+    @Override
+    public SocialSentiment fetchSocialSentiment(String ticker) {
+        try {
+            SocialSentimentDto dto = webClient.get()
+                    .uri(b -> b.path("/stock/social-sentiment").queryParam("symbol", ticker).build())
+                    .header(TOKEN_HEADER, apiKey)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .bodyToMono(SocialSentimentDto.class)
+                    .block();
+
+            record("sentiment", "ok");
+            return aggregateSentiment(ticker, dto);
+        } catch (WebClientResponseException.Unauthorized e) {
+            record("sentiment", "unauthorized");
+            log.error("event=finnhub.sentiment.unauthorized ticker={} key_present={}", ticker, !apiKey.isBlank());
+            throw new EnrichmentUnavailableException(ticker, "unauthorized", e);
+        } catch (WebClientResponseException.TooManyRequests e) {
+            record("sentiment", "rate_limited");
+            log.warn("event=finnhub.sentiment.rate_limited ticker={} retryAfter={}",
+                    ticker, e.getHeaders().getFirst("Retry-After"));
+            throw new EnrichmentUnavailableException(ticker, "rate_limited", e);
+        } catch (WebClientResponseException e) {
+            record("sentiment", "upstream_error");
+            log.warn("event=finnhub.sentiment.upstream_error ticker={} status={}", ticker, e.getStatusCode().value());
+            throw new EnrichmentUnavailableException(ticker, "upstream_" + e.getStatusCode().value(), e);
+        }
+    }
+
+    private static SocialSentiment aggregateSentiment(String ticker, SocialSentimentDto dto) {
+        String upper = ticker.toUpperCase();
+        if (dto == null || dto.data() == null || dto.data().isEmpty()) {
+            return new SocialSentiment(upper, 0, 0, 0);
+        }
+        int positive = 0;
+        int negative = 0;
+        int total = 0;
+        for (SocialSentimentEntryDto entry : dto.data()) {
+            positive += entry.positiveMention() != null ? entry.positiveMention() : 0;
+            negative += entry.negativeMention() != null ? entry.negativeMention() : 0;
+            total += entry.mention() != null ? entry.mention() : 0;
+        }
+        return new SocialSentiment(upper, positive, negative, total);
+    }
+
+    @Override
+    public MacroContext fetchMacroContext() {
+        try {
+            List<NewsDto> dtos = webClient.get()
+                    .uri(b -> b.path("/news").queryParam("category", "general").build())
+                    .header(TOKEN_HEADER, apiKey)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<List<NewsDto>>() {})
+                    .block();
+
+            record("macro", "ok");
+            long cutoff = Instant.now().minus(Duration.ofHours(24)).getEpochSecond();
+            int recent = dtos == null
+                    ? 0
+                    : (int) dtos.stream().filter(n -> n.datetime() >= cutoff).count();
+            return new MacroContext(recent);
+        } catch (WebClientResponseException.Unauthorized e) {
+            record("macro", "unauthorized");
+            log.error("event=finnhub.macro.unauthorized key_present={}", !apiKey.isBlank());
+            throw new EnrichmentUnavailableException("general", "unauthorized", e);
+        } catch (WebClientResponseException.TooManyRequests e) {
+            record("macro", "rate_limited");
+            log.warn("event=finnhub.macro.rate_limited retryAfter={}", e.getHeaders().getFirst("Retry-After"));
+            throw new EnrichmentUnavailableException("general", "rate_limited", e);
+        } catch (WebClientResponseException e) {
+            record("macro", "upstream_error");
+            log.warn("event=finnhub.macro.upstream_error status={}", e.getStatusCode().value());
+            throw new EnrichmentUnavailableException("general", "upstream_" + e.getStatusCode().value(), e);
+        }
     }
 
     public boolean isApiKeyPresent() {

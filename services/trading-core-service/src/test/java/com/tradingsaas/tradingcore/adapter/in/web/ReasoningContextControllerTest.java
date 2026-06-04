@@ -255,6 +255,43 @@ class ReasoningContextControllerTest {
     }
 
     @Test
+    void returnsSocialSentimentMentionCounts() {
+        when(marketData.fetchPriceFacts("AAPL")).thenReturn(Optional.of(sampleFacts()));
+        when(enrichment.fetchAggregatedTickerNews(eq("AAPL"), any(Instant.class), any(Instant.class), anyInt()))
+                .thenReturn(List.of());
+        when(enrichment.fetchSocialSentiment("AAPL"))
+                .thenReturn(Optional.of(
+                        new EnrichmentServiceAdapter.SocialSentimentResponse("AAPL", 120, 35, 180)));
+
+        ResponseEntity<ReasoningContextResponse> response =
+                controller.getReasoningContext("AAPL", 48, 8);
+
+        var sentiment = response.getBody().socialSentiment();
+        assertNotNull(sentiment);
+        assertEquals(120, sentiment.positiveMentions());
+        assertEquals(35, sentiment.negativeMentions());
+        assertEquals(180, sentiment.totalMentions());
+        assertFalse(response.getBody().errors().contains("sentiment_unavailable"));
+    }
+
+    @Test
+    void returnsMacroContextNewsCount() {
+        when(marketData.fetchPriceFacts("AAPL")).thenReturn(Optional.of(sampleFacts()));
+        when(enrichment.fetchAggregatedTickerNews(eq("AAPL"), any(Instant.class), any(Instant.class), anyInt()))
+                .thenReturn(List.of());
+        when(enrichment.fetchMacroContext())
+                .thenReturn(Optional.of(new EnrichmentServiceAdapter.MacroContextResponse(42)));
+
+        ResponseEntity<ReasoningContextResponse> response =
+                controller.getReasoningContext("AAPL", 48, 8);
+
+        var macro = response.getBody().macroContext();
+        assertNotNull(macro);
+        assertEquals(42, macro.recentMarketNewsCount());
+        assertFalse(response.getBody().errors().contains("macro_unavailable"));
+    }
+
+    @Test
     void returnsRecentPerformanceWinLossCounts() {
         when(marketData.fetchPriceFacts("AAPL")).thenReturn(Optional.of(sampleFacts()));
         when(enrichment.fetchAggregatedTickerNews(eq("AAPL"), any(Instant.class), any(Instant.class), anyInt()))
