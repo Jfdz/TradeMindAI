@@ -16,5 +16,7 @@ public record FinnhubProperties(
             Duration earningsTtl,
             Duration recommendationsTtl,
             Duration peersTtl,
-            Duration insiderTtl) {}
+            Duration insiderTtl,
+            Duration sentimentTtl,
+            Duration macroTtl) {}
 }
