@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useMemo } from "react";
 
+import { DeepAnalysisCard } from "@/components/dashboard/deep-analysis-card";
 import { SignalChart } from "@/components/dashboard/signal-chart";
 import { apiClient } from "@/lib/api-client";
 import { ArrowRightIcon } from "@/components/site/icons";
@@ -63,6 +64,13 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
   const signal = data?.signal ?? null;
   const latestPrice = data?.latestPrice ?? null;
   const candles = data?.candles ?? EMPTY_CANDLES;
+
+  const { data: user } = useQuery({
+    queryKey: ["me"],
+    queryFn: () => apiClient.getCurrentUser(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const isPremium = (user?.plan ?? "").toUpperCase() === "PREMIUM";
 
   const { data: logoData } = useQuery<Record<string, string | null>>({
     queryKey: ["logos", signal?.symbol ? [signal.symbol] : []],
@@ -295,6 +303,8 @@ export function SignalDetailClient({ signalId }: SignalDetailClientProps) {
           })()}
         </article>
       </section>
+
+      <DeepAnalysisCard signalId={signalId} isPremium={isPremium} />
     </div>
   );
 }
