@@ -110,6 +110,7 @@ market-data:
       peers-ttl: ${FINNHUB_PEERS_TTL:PT24H}
       insider-ttl: ${FINNHUB_INSIDER_TTL:PT12H}
       sentiment-ttl: ${FINNHUB_SENTIMENT_TTL:PT6H}
+      macro-ttl: ${FINNHUB_MACRO_TTL:PT1H}
   yahoo:
     base-url: https://query1.finance.yahoo.com
     timeout-seconds: 10

@@ -25,6 +25,7 @@ public record ReasoningContextResponse(
         RecentPerformance recentPerformance,
         InsiderActivity insiderActivity,
         SocialSentiment socialSentiment,
+        MacroContext macroContext,
         List<String> errors) {
 
     /**
@@ -65,4 +66,12 @@ public record ReasoningContextResponse(
      * the provider had no coverage or failed.
      */
     public record SocialSentiment(int positiveMentions, int negativeMentions, int totalMentions) {}
+
+    /**
+     * Coarse market-wide macro context (Fase 4). The same snapshot attaches to
+     * every ticker. {@code recentMarketNewsCount} is the integer count of
+     * general market-news items in the last 24h (validator-safe). Null when the
+     * provider had no coverage or failed.
+     */
+    public record MacroContext(int recentMarketNewsCount) {}
 }

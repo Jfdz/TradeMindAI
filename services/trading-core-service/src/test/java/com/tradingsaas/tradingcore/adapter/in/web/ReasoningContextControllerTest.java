@@ -275,6 +275,23 @@ class ReasoningContextControllerTest {
     }
 
     @Test
+    void returnsMacroContextNewsCount() {
+        when(marketData.fetchPriceFacts("AAPL")).thenReturn(Optional.of(sampleFacts()));
+        when(enrichment.fetchAggregatedTickerNews(eq("AAPL"), any(Instant.class), any(Instant.class), anyInt()))
+                .thenReturn(List.of());
+        when(enrichment.fetchMacroContext())
+                .thenReturn(Optional.of(new EnrichmentServiceAdapter.MacroContextResponse(42)));
+
+        ResponseEntity<ReasoningContextResponse> response =
+                controller.getReasoningContext("AAPL", 48, 8);
+
+        var macro = response.getBody().macroContext();
+        assertNotNull(macro);
+        assertEquals(42, macro.recentMarketNewsCount());
+        assertFalse(response.getBody().errors().contains("macro_unavailable"));
+    }
+
+    @Test
     void returnsRecentPerformanceWinLossCounts() {
         when(marketData.fetchPriceFacts("AAPL")).thenReturn(Optional.of(sampleFacts()));
         when(enrichment.fetchAggregatedTickerNews(eq("AAPL"), any(Instant.class), any(Instant.class), anyInt()))

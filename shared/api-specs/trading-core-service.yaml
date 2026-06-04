@@ -193,13 +193,21 @@ components:
             enrichment). Null when there were no mentions or the provider failed.
             Integer mention counts only (not decimal scores), so they are
             validator-safe to cite.
+        macroContext:
+          allOf:
+            - $ref: '#/components/schemas/MacroContext'
+          nullable: true
+          description: |
+            Coarse market-wide macro context (best-effort Fase 4 enrichment).
+            Not ticker-specific — the same snapshot attaches to every context.
+            Integer count only, so it is validator-safe to cite.
         errors:
           type: array
           description: |
             Non-fatal degradation tags surfaced to the caller for logging.
             Examples: `news_aggregator_unavailable`, `news_aggregator_empty`,
             `analyst_recs_unavailable`, `recent_performance_unavailable`,
-            `insider_unavailable`, `sentiment_unavailable`.
+            `insider_unavailable`, `sentiment_unavailable`, `macro_unavailable`.
           items:
             type: string
     AnalystConsensus:
@@ -284,6 +292,17 @@ components:
         totalMentions:
           type: integer
           example: 180
+    MacroContext:
+      type: object
+      required: [recentMarketNewsCount]
+      description: |
+        Coarse market-wide macro context: integer count of general market-news
+        items in the last 24h. Not ticker-specific. Richer macro (rates,
+        indices) is a future enhancement needing a different provider.
+      properties:
+        recentMarketNewsCount:
+          type: integer
+          example: 42
     DeepAnalysisResponse:
       type: object
       required:

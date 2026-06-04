@@ -4,6 +4,7 @@ import com.tradingsaas.marketdata.enrichment.domain.model.AnalystRecommendation;
 import com.tradingsaas.marketdata.enrichment.domain.model.CompanyProfile;
 import com.tradingsaas.marketdata.enrichment.domain.model.EarningsEvent;
 import com.tradingsaas.marketdata.enrichment.domain.model.InsiderActivity;
+import com.tradingsaas.marketdata.enrichment.domain.model.MacroContext;
 import com.tradingsaas.marketdata.enrichment.domain.model.NewsItem;
 import com.tradingsaas.marketdata.enrichment.domain.model.SocialSentiment;
 import java.time.Instant;
@@ -26,4 +27,6 @@ public interface MarketEnrichmentProvider {
     InsiderActivity fetchInsiderActivity(String ticker);
 
     SocialSentiment fetchSocialSentiment(String ticker);
+
+    MacroContext fetchMacroContext();
 }

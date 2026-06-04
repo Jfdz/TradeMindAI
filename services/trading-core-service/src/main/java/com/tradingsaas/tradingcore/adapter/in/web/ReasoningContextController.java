@@ -3,6 +3,7 @@ package com.tradingsaas.tradingcore.adapter.in.web;
 import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse;
 import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse.AnalystConsensus;
 import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse.InsiderActivity;
+import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse.MacroContext;
 import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse.RecentPerformance;
 import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse.SocialSentiment;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.EnrichmentServiceAdapter;
@@ -176,6 +177,22 @@ public class ReasoningContextController {
             errors.add("sentiment_unavailable");
         }
 
+        // Best-effort market-wide macro context (Fase 4). Not ticker-specific;
+        // the same snapshot attaches to every context. Fail-soft, integer count.
+        MacroContext macroContext = null;
+        try {
+            macroContext = enrichmentAdapter.fetchMacroContext()
+                    .filter(r -> r.recentMarketNewsCount() > 0)
+                    .map(r -> new MacroContext(r.recentMarketNewsCount()))
+                    .orElse(null);
+        } catch (RuntimeException e) {
+            log.warn(
+                    "event=reasoning_context.macro_failed ticker={} message={}",
+                    ticker,
+                    e.getMessage());
+            errors.add("macro_unavailable");
+        }
+
         return ResponseEntity.ok(new ReasoningContextResponse(
                 ticker.toUpperCase(),
                 now,
@@ -185,6 +202,7 @@ public class ReasoningContextController {
                 recentPerformance,
                 insiderActivity,
                 socialSentiment,
+                macroContext,
                 List.copyOf(errors)));
     }
 

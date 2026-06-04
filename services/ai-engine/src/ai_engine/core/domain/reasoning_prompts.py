@@ -53,6 +53,8 @@ SYSTEM_PROMPT = (
     "net_shares) may be cited verbatim; never invent them.\n"
     "12 SENTIMENT: integer mention counts in <sentiment> (positive_mentions/"
     "negative_mentions/total_mentions) may be cited verbatim; never invent them.\n"
+    "13 MACRO: integer count in <macro> (recent_market_news_count) may be cited "
+    "verbatim; it is market-wide context, not specific to this ticker.\n"
     "\n"
     "Call emit_reasoning exactly once. No free text."
 )
@@ -157,6 +159,12 @@ def render_context_block(signal: SignalInput, context: ReasoningContext) -> str:
     else:
         sentiment_lines = "(no social sentiment)"
 
+    mac = context.macro_context
+    if mac is not None:
+        macro_lines = f"recent_market_news_count: {mac.recent_market_news_count}"
+    else:
+        macro_lines = "(no macro context)"
+
     pct = signal.predicted_change_pct
     pct_str = "null" if pct is None else f"{pct}"
     target_str = "null" if signal.target_price is None else f"{signal.target_price}"
@@ -199,5 +207,6 @@ def render_context_block(signal: SignalInput, context: ReasoningContext) -> str:
         f"<track_record>\n{perf_lines}\n</track_record>\n"
         f"<insider>\n{insider_lines}\n</insider>\n"
         f"<sentiment>\n{sentiment_lines}\n</sentiment>\n"
+        f"<macro>\n{macro_lines}\n</macro>\n"
         "</context>\n\n"
     )

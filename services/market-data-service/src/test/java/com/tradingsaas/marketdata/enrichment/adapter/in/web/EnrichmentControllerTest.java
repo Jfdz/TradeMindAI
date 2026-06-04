@@ -9,18 +9,21 @@ import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.AnalystRecommend
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.CompanyProfileResponse;
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.EarningsEventResponse;
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.InsiderActivityResponse;
+import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.MacroContextResponse;
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.NewsItemResponse;
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.SocialSentimentResponse;
 import com.tradingsaas.marketdata.enrichment.domain.model.AnalystRecommendation;
 import com.tradingsaas.marketdata.enrichment.domain.model.CompanyProfile;
 import com.tradingsaas.marketdata.enrichment.domain.model.EarningsEvent;
 import com.tradingsaas.marketdata.enrichment.domain.model.InsiderActivity;
+import com.tradingsaas.marketdata.enrichment.domain.model.MacroContext;
 import com.tradingsaas.marketdata.enrichment.domain.model.NewsItem;
 import com.tradingsaas.marketdata.enrichment.domain.model.SocialSentiment;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetCompanyNewsUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetCompanyProfileUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetEarningsUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetInsiderActivityUseCase;
+import com.tradingsaas.marketdata.enrichment.domain.port.in.GetMacroContextUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetPeersUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetRecommendationsUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetSocialSentimentUseCase;
@@ -41,10 +44,11 @@ class EnrichmentControllerTest {
     private final GetPeersUseCase peersUseCase = mock(GetPeersUseCase.class);
     private final GetInsiderActivityUseCase insiderUseCase = mock(GetInsiderActivityUseCase.class);
     private final GetSocialSentimentUseCase sentimentUseCase = mock(GetSocialSentimentUseCase.class);
+    private final GetMacroContextUseCase macroUseCase = mock(GetMacroContextUseCase.class);
 
     private final EnrichmentController controller = new EnrichmentController(
             profileUseCase, newsUseCase, earningsUseCase, recommendationsUseCase, peersUseCase,
-            insiderUseCase, sentimentUseCase);
+            insiderUseCase, sentimentUseCase, macroUseCase);
 
     @Test
     void getProfileReturnsProfileResponse() {
@@ -157,5 +161,16 @@ class EnrichmentControllerTest {
         assertEquals(120, response.getBody().positiveMentions());
         assertEquals(35, response.getBody().negativeMentions());
         assertEquals(180, response.getBody().totalMentions());
+    }
+
+    @Test
+    void getMacroReturnsRecentNewsCount() {
+        when(macroUseCase.getMacroContext()).thenReturn(new MacroContext(42));
+
+        ResponseEntity<MacroContextResponse> response = controller.getMacro();
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(42, response.getBody().recentMarketNewsCount());
     }
 }
