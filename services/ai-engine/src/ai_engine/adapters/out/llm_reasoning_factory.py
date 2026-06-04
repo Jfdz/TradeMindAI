@@ -131,4 +131,8 @@ def _build_minimax_oauth(settings: Settings) -> LlmReasoningPort:
         auth_token=settings.minimax_oauth_token,
         base_url=settings.minimax_base_url,
     )
-    return AnthropicLlmReasoningClient(client, model=settings.minimax_model)
+    return AnthropicLlmReasoningClient(
+        client,
+        model=settings.minimax_model,
+        max_tokens=settings.minimax_max_tokens,
+    )

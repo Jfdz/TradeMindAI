@@ -88,10 +88,24 @@ REASONING_TOOL_SCHEMA = {
 
 
 def build_user_prompt(signal: SignalInput, context: ReasoningContext) -> str:
-    """Render the per-request user message containing the grounded context.
+    """Render the per-request user message for grounded reasoning generation.
 
     Volatile content — never cache this. The order and labels here must
     stay aligned with the field references the system prompt uses.
+    """
+    return render_context_block(signal, context) + (
+        "Generate the reasoning by calling emit_reasoning exactly once."
+    )
+
+
+def render_context_block(signal: SignalInput, context: ReasoningContext) -> str:
+    """Render the grounded `<context>...</context>` block shared by every
+    prompt that needs the same facts.
+
+    Extracted from `build_user_prompt` so the Fase 3 deep-analysis roles
+    (bull / bear / judge / risk) ground in byte-identical facts and the C5
+    validator checks every section against the same numbers. The trailing
+    task instruction is appended by each caller, not here.
     """
     pf = context.price_facts
     if context.news:
@@ -161,5 +175,4 @@ def build_user_prompt(signal: SignalInput, context: ReasoningContext) -> str:
         f"<analyst>\n{analyst_lines}\n</analyst>\n"
         f"<track_record>\n{perf_lines}\n</track_record>\n"
         "</context>\n\n"
-        "Generate the reasoning by calling emit_reasoning exactly once."
     )

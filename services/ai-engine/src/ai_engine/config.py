@@ -39,13 +39,22 @@ class Settings(BaseSettings):
         default="https://api.minimax.io/anthropic",
         validation_alias="MINIMAX_REASONING_BASE_URL",
     )
-    # MiniMax-M3 is a reasoning model (largely ignores temperature → less
-    # run-to-run repeatable than Haiku@0.2). Acceptable for now; switch to a
-    # non-reasoning MiniMax model here if tighter determinism is needed and it
-    # is confirmed to support tools on the /anthropic endpoint.
+    # MiniMax-M2.5-highspeed: the cheap/fast tier chosen after M3 burned the
+    # 5h subscription token quota during eval. M-series are reasoning models
+    # (largely ignore temperature → less run-to-run repeatable than Haiku@0.2),
+    # acceptable for the grounded path because the validator is the real
+    # determinism guard. Live forced-tool_choice on /anthropic is verified for
+    # M3; re-confirm for M2.5-highspeed once the quota resets (eval script).
     minimax_model: str = Field(
-        default="MiniMax-M3",
+        default="MiniMax-M2.5-highspeed",
         validation_alias="MINIMAX_REASONING_MODEL",
+    )
+    # Output-token cap for the MiniMax route. Must clear the hidden <think>
+    # pass M-series emit before the tool call; at the Haiku-tuned 350 they
+    # return stop_reason=max_tokens with no tool_use and every call ERRORs.
+    minimax_max_tokens: int = Field(
+        default=4096,
+        validation_alias="MINIMAX_REASONING_MAX_TOKENS",
     )
     # C9 — RabbitMQ queue ai-engine consumes for signal reasoning requests.
     # Defaults to the trading-core publisher's queue name; override in tests.
