@@ -24,7 +24,8 @@ class GetCompanyProfileUseCaseImplTest {
             "https://finnhub.io/api/v1", "test-key", 10,
             new FinnhubProperties.Cache(
                     Duration.ofHours(6), Duration.ofMinutes(30),
-                    Duration.ofHours(24), Duration.ofHours(24), Duration.ofHours(24)));
+                    Duration.ofHours(24), Duration.ofHours(24), Duration.ofHours(24),
+                    Duration.ofHours(12)));
 
     private final MarketEnrichmentProvider provider = mock(MarketEnrichmentProvider.class);
     private final EnrichmentCache cache = mock(EnrichmentCache.class);

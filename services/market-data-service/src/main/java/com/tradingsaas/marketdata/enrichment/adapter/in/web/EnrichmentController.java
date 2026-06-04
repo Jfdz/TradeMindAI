@@ -3,10 +3,12 @@ package com.tradingsaas.marketdata.enrichment.adapter.in.web;
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.AnalystRecommendationResponse;
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.CompanyProfileResponse;
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.EarningsEventResponse;
+import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.InsiderActivityResponse;
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.NewsItemResponse;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetCompanyNewsUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetCompanyProfileUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetEarningsUseCase;
+import com.tradingsaas.marketdata.enrichment.domain.port.in.GetInsiderActivityUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetPeersUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetRecommendationsUseCase;
 import java.time.Instant;
@@ -27,18 +29,21 @@ public class EnrichmentController {
     private final GetEarningsUseCase earningsUseCase;
     private final GetRecommendationsUseCase recommendationsUseCase;
     private final GetPeersUseCase peersUseCase;
+    private final GetInsiderActivityUseCase insiderUseCase;
 
     public EnrichmentController(
             GetCompanyProfileUseCase profileUseCase,
             GetCompanyNewsUseCase newsUseCase,
             GetEarningsUseCase earningsUseCase,
             GetRecommendationsUseCase recommendationsUseCase,
-            GetPeersUseCase peersUseCase) {
+            GetPeersUseCase peersUseCase,
+            GetInsiderActivityUseCase insiderUseCase) {
         this.profileUseCase = profileUseCase;
         this.newsUseCase = newsUseCase;
         this.earningsUseCase = earningsUseCase;
         this.recommendationsUseCase = recommendationsUseCase;
         this.peersUseCase = peersUseCase;
+        this.insiderUseCase = insiderUseCase;
     }
 
     @GetMapping("/profile/{ticker}")
@@ -84,5 +89,10 @@ public class EnrichmentController {
     @GetMapping("/peers/{ticker}")
     public ResponseEntity<List<String>> getPeers(@PathVariable String ticker) {
         return ResponseEntity.ok(peersUseCase.getPeers(ticker));
+    }
+
+    @GetMapping("/insider/{ticker}")
+    public ResponseEntity<InsiderActivityResponse> getInsider(@PathVariable String ticker) {
+        return ResponseEntity.ok(InsiderActivityResponse.from(insiderUseCase.getInsiderActivity(ticker)));
     }
 }

@@ -176,12 +176,21 @@ components:
             The ticker's recent resolved win/loss track record (best-effort
             deterministic reflection). Null when there is no resolved history.
             Integer counts only, so they are validator-safe to cite.
+        insiderActivity:
+          allOf:
+            - $ref: '#/components/schemas/InsiderActivity'
+          nullable: true
+          description: |
+            Aggregated recent insider-transaction activity (best-effort Fase 4
+            enrichment). Null when there were no transactions or the provider
+            failed. Integer counts only, so they are validator-safe to cite.
         errors:
           type: array
           description: |
             Non-fatal degradation tags surfaced to the caller for logging.
             Examples: `news_aggregator_unavailable`, `news_aggregator_empty`,
-            `analyst_recs_unavailable`, `recent_performance_unavailable`.
+            `analyst_recs_unavailable`, `recent_performance_unavailable`,
+            `insider_unavailable`.
           items:
             type: string
     AnalystConsensus:
@@ -231,6 +240,24 @@ components:
           type: integer
           description: wins + losses (OPEN signals excluded).
           example: 10
+    InsiderActivity:
+      type: object
+      required: [buyCount, sellCount, netShares]
+      description: |
+        Aggregated recent insider-transaction activity. Integer counts only
+        (validator-safe). `buyCount` / `sellCount` count filings with a positive
+        / negative share change; `netShares` is the signed sum.
+      properties:
+        buyCount:
+          type: integer
+          example: 7
+        sellCount:
+          type: integer
+          example: 3
+        netShares:
+          type: integer
+          format: int64
+          example: 12345
     DeepAnalysisResponse:
       type: object
       required:
