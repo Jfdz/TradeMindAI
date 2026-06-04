@@ -1,0 +1,37 @@
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+# Update hooks: pre-commit autoupdate
+
+repos:
+  # ── Standard utility hooks ─────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '(\.md|\.lock|node_modules|target/)'
+      - id: end-of-file-fixer
+        exclude: '(node_modules|\.lock$|target/|\.png$|\.jpg$|\.ico$)'
+      - id: check-yaml
+        args: ['--unsafe']   # allow custom YAML tags (Spring profiles)
+        exclude: 'node_modules'
+      - id: check-json
+        exclude: '(node_modules|tsconfig.*\.json)'
+      - id: check-merge-conflict
+      - id: no-commit-to-branch
+        args: ['--branch', 'main', '--branch', 'develop']
+      - id: check-added-large-files
+        args: ['--maxkb=2048']
+      - id: detect-private-key
+
+  # ── TypeScript / Next.js lint (web-app only) ───────────────────────────────
+  - repo: local
+    hooks:
+      - id: nextjs-lint
+        name: Next.js ESLint (web-app)
+        entry: bash -c 'cd services/web-app && npm run lint --if-present'
+        language: system
+        pass_filenames: false
+        files: 'services/web-app/.*\.(ts|tsx|js|jsx)$'
+        stages: [pre-commit]
+</content>
+</invoke>
