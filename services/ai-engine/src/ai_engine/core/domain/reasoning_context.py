@@ -71,6 +71,25 @@ class NewsItem:
 
 
 @dataclass(frozen=True, slots=True)
+class AnalystConsensus:
+    """Latest analyst-recommendation snapshot from the enrichment provider.
+
+    All fields are integer counts, so the C5 validator — which only grounds
+    decimal tokens — lets the LLM cite them verbatim without an
+    `ungrounded_number` violation. `period` is the ISO date of the snapshot.
+    Absent when the provider returned nothing or failed.
+    """
+
+    period: str | None
+    strong_buy: int
+    buy: int
+    hold: int
+    sell: int
+    strong_sell: int
+    total: int
+
+
+@dataclass(frozen=True, slots=True)
 class ReasoningContext:
     """Full payload assembled for one reasoning generation."""
 
@@ -80,6 +99,10 @@ class ReasoningContext:
     price_facts: PriceFacts
     news: tuple[NewsItem, ...]
     errors: tuple[str, ...]
+    # Best-effort enrichment; None when the provider had no coverage. Defaulted
+    # so existing constructions (and the JSON parser's additive evolution) stay
+    # backward-compatible.
+    analyst_consensus: AnalystConsensus | None = None
 
 
 @dataclass(frozen=True, slots=True)

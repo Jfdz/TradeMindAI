@@ -1,7 +1,9 @@
 package com.tradingsaas.tradingcore.adapter.in.web;
 
 import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse;
+import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse.AnalystConsensus;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.EnrichmentServiceAdapter;
+import com.tradingsaas.tradingcore.adapter.out.marketdata.EnrichmentServiceAdapter.AnalystRecommendationResponse;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.EnrichmentServiceAdapter.NewsItemResponse;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter.InsufficientHistoryUpstreamException;
@@ -11,6 +13,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -93,12 +96,53 @@ public class ReasoningContextController {
             errors.add("news_aggregator_empty");
         }
 
+        // Best-effort analyst-consensus enrichment. Fail-soft like news, but an
+        // empty result is NOT a degradation (no error tag) — it is supplementary,
+        // not part of the grounded numeric core, so its absence must not pollute
+        // the partial-outcome signal the caller logs.
+        AnalystConsensus analystConsensus = null;
+        try {
+            analystConsensus = latestConsensus(enrichmentAdapter.fetchRecommendations(ticker));
+        } catch (RuntimeException e) {
+            log.warn(
+                    "event=reasoning_context.analyst_recs_failed ticker={} message={}",
+                    ticker,
+                    e.getMessage());
+            errors.add("analyst_recs_unavailable");
+        }
+
         return ResponseEntity.ok(new ReasoningContextResponse(
                 ticker.toUpperCase(),
                 now,
                 priceFacts.get(),
                 news,
+                analystConsensus,
                 List.copyOf(errors)));
+    }
+
+    /**
+     * Reduce the provider's recommendation history to the latest snapshot.
+     * Picks the entry with the most recent {@code period}; returns null when
+     * there is nothing to summarise.
+     */
+    private static AnalystConsensus latestConsensus(List<AnalystRecommendationResponse> recs) {
+        if (recs == null || recs.isEmpty()) {
+            return null;
+        }
+        AnalystRecommendationResponse latest = recs.stream()
+                .filter(r -> r.period() != null)
+                .max(Comparator.comparing(AnalystRecommendationResponse::period))
+                .orElse(recs.get(0));
+        int total =
+                latest.strongBuy() + latest.buy() + latest.hold() + latest.sell() + latest.strongSell();
+        return new AnalystConsensus(
+                latest.period() == null ? null : latest.period().toString(),
+                latest.strongBuy(),
+                latest.buy(),
+                latest.hold(),
+                latest.sell(),
+                latest.strongSell(),
+                total);
     }
 
     @ExceptionHandler(InsufficientHistoryUpstreamException.class)
