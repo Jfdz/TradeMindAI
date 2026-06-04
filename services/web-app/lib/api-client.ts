@@ -54,6 +54,36 @@ export type SignalResponse = {
 
 export type SignalOutcome = "WIN" | "LOSS" | "OPEN";
 
+export type DeepAnalysisSection = {
+  role: "BULL" | "BEAR" | "JUDGE" | "RISK";
+  text: string;
+  priceRefs: string[];
+  newsRefs: string[];
+  refused: boolean;
+  refusalReason: string | null;
+  validatorViolations: Array<Record<string, unknown>>;
+};
+
+/**
+ * Premium multi-agent deep-analysis artifact (Fase 3). Analysis, never an
+ * authoritative signal: `conviction === "CONTRADICTS"` is the soft
+ * low-conviction flag — the signal value is never changed. A `refused` section
+ * carries empty `text` (the model declined or it failed grounding).
+ */
+export type DeepAnalysisResponse = {
+  schemaVersion: string;
+  outcome: "GENERATED" | "PARTIAL";
+  ticker: string;
+  signalType: "BUY" | "SELL" | "HOLD";
+  generatedAt: string;
+  verdictDirection: "BULLISH" | "BEARISH" | "NEUTRAL";
+  conviction: "AGREES" | "CONTRADICTS" | "UNCERTAIN";
+  verdict: DeepAnalysisSection;
+  sections: DeepAnalysisSection[];
+  provider: string;
+  modelVersion: string;
+};
+
 export type SignalPerformanceStat = {
   signalType: "BUY" | "SELL" | "HOLD";
   confidenceBand: "HIGH" | "STANDARD";
@@ -310,6 +340,31 @@ export const apiClient = {
 
   async getSignal(signalId: string): Promise<SignalResponse> {
     return requestJson<SignalResponse>(`/api/v1/signals/${signalId}`);
+  },
+
+  /**
+   * Stored premium deep analysis for a signal, or null when none has been
+   * generated yet (trading-core returns 404). PREMIUM-gated server-side.
+   */
+  async getDeepAnalysis(signalId: string): Promise<DeepAnalysisResponse | null> {
+    try {
+      return await requestJson<DeepAnalysisResponse>(`/api/v1/signals/${signalId}/deep-analysis`);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        return null;
+      }
+      throw err;
+    }
+  },
+
+  /**
+   * Generate (and persist) the deep analysis for a signal. Expensive — four
+   * sequential LLM calls — so it is only ever triggered explicitly by the user.
+   */
+  async generateDeepAnalysis(signalId: string): Promise<DeepAnalysisResponse> {
+    return requestJson<DeepAnalysisResponse>(`/api/v1/signals/${signalId}/deep-analysis`, {
+      method: "POST",
+    });
   },
 
   async getSignalPerformanceStats(): Promise<SignalPerformanceStat[]> {

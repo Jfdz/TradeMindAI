@@ -17,6 +17,10 @@ vi.mock("@/components/dashboard/signal-chart", () => ({
   SignalChart: () => React.createElement("div", { "data-testid": "signal-chart" }),
 }));
 
+vi.mock("@/components/dashboard/deep-analysis-card", () => ({
+  DeepAnalysisCard: () => React.createElement("div", { "data-testid": "deep-analysis-card" }),
+}));
+
 vi.mock("@/components/site/icons", () => ({
   ArrowRightIcon: () => React.createElement("span"),
 }));
