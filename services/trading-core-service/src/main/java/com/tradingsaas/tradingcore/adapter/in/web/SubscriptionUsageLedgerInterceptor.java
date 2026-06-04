@@ -53,6 +53,12 @@ class SubscriptionUsageLedgerInterceptor implements HandlerInterceptor {
         if ("PUT".equals(method) && PATH_MATCHER.match("/api/v1/strategies/*", path)) {
             return "strategy_update";
         }
+        // Deep analysis is the most expensive user action (a four-call LLM
+        // debate); meter the generate (POST) so the premium tier's cost is
+        // accounted for. The GET read is cheap and intentionally not metered.
+        if ("POST".equals(method) && PATH_MATCHER.match("/api/v1/signals/*/deep-analysis", path)) {
+            return "deep_analysis_generate";
+        }
         return null;
     }
 }
