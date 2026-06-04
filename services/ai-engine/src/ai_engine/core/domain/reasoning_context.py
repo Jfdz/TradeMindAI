@@ -131,6 +131,17 @@ class SocialSentiment:
 
 
 @dataclass(frozen=True, slots=True)
+class MacroContext:
+    """Coarse market-wide macro context (Fase 4 enrichment). Not ticker-specific.
+
+    `recent_market_news_count` is the integer count of general market-news items
+    in the last 24h — validator-safe. Absent when the provider had no coverage.
+    """
+
+    recent_market_news_count: int
+
+
+@dataclass(frozen=True, slots=True)
 class ReasoningContext:
     """Full payload assembled for one reasoning generation."""
 
@@ -147,6 +158,7 @@ class ReasoningContext:
     recent_performance: RecentPerformance | None = None
     insider_activity: InsiderActivity | None = None
     social_sentiment: SocialSentiment | None = None
+    macro_context: MacroContext | None = None
 
 
 @dataclass(frozen=True, slots=True)

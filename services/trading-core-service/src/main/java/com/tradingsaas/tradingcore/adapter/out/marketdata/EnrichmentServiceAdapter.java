@@ -165,6 +165,16 @@ public class EnrichmentServiceAdapter {
                 .block());
     }
 
+    public Optional<MacroContextResponse> fetchMacroContext() {
+        return Optional.ofNullable(webClient.get()
+                .uri("/api/v1/enrichment/macro")
+                .headers(this::addInternalSecret)
+                .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), res -> Mono.empty())
+                .bodyToMono(MacroContextResponse.class)
+                .block());
+    }
+
     private void addInternalSecret(org.springframework.http.HttpHeaders headers) {
         if (internalSecret != null && !internalSecret.isBlank()) {
             headers.set(INTERNAL_SECRET_HEADER, internalSecret);
@@ -230,4 +240,7 @@ public class EnrichmentServiceAdapter {
             int positiveMentions,
             int negativeMentions,
             int totalMentions) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record MacroContextResponse(int recentMarketNewsCount) {}
 }

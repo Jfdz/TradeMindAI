@@ -26,6 +26,7 @@ from ai_engine.core.domain.reasoning_context import (
     AnalystConsensus,
     ContextResult,
     InsiderActivity,
+    MacroContext,
     NewsItem,
     PriceFacts,
     ReasoningContext,
@@ -200,6 +201,13 @@ class TradingCoreClient:
                 total_mentions=int(sentiment_raw.get("totalMentions", 0)),
             )
 
+        macro_raw = payload.get("macroContext")
+        macro_context = None
+        if isinstance(macro_raw, dict):
+            macro_context = MacroContext(
+                recent_market_news_count=int(macro_raw.get("recentMarketNewsCount", 0)),
+            )
+
         generated_at_raw = payload.get("generatedAt")
         if not generated_at_raw:
             raise ValueError("generatedAt is missing")
@@ -216,6 +224,7 @@ class TradingCoreClient:
             recent_performance=recent_performance,
             insider_activity=insider_activity,
             social_sentiment=social_sentiment,
+            macro_context=macro_context,
         )
         return ContextResult.available(ctx)
 

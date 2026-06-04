@@ -319,3 +319,24 @@ def test_fetch_social_sentiment_is_none_when_absent(monkeypatch):
 
     assert result.context is not None
     assert result.context.social_sentiment is None
+
+
+def test_fetch_parses_macro_context_when_present(monkeypatch):
+    payload = _full_payload()
+    payload["macroContext"] = {"recentMarketNewsCount": 42}
+    monkeypatch.setattr(module.httpx, "get", lambda *a, **kw: _FakeResponse(200, payload))
+
+    result = _make_client().fetch_reasoning_context("AAPL")
+
+    macro = result.context.macro_context
+    assert macro is not None
+    assert macro.recent_market_news_count == 42
+
+
+def test_fetch_macro_context_is_none_when_absent(monkeypatch):
+    monkeypatch.setattr(module.httpx, "get", lambda *a, **kw: _FakeResponse(200, _full_payload()))
+
+    result = _make_client().fetch_reasoning_context("AAPL")
+
+    assert result.context is not None
+    assert result.context.macro_context is None

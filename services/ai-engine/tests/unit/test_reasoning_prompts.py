@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from ai_engine.core.domain.reasoning_context import (
     AnalystConsensus,
     InsiderActivity,
+    MacroContext,
     ReasoningContext,
     RecentPerformance,
     SocialSentiment,
@@ -67,10 +68,10 @@ def test_refusal_reason_uses_type_union_not_anyof():
 def test_prompt_and_schema_stay_within_token_budget():
     # C1.7 — drift guard. Caveman-terse prompt + compacted schema must
     # not creep back toward the verbose originals (~88 / ~488 tokens).
-    # Bound raised to 1800 chars (~450 tokens) to accommodate the grounded
-    # enrichment rules (9 analyst, 10 track record, 11 insider); still far
-    # below Haiku's 4096-token cacheable-prefix ceiling.
-    assert len(SYSTEM_PROMPT) < 1800
+    # Bound raised to 2000 chars (~500 tokens) to accommodate the five grounded
+    # enrichment rules (9 analyst, 10 track record, 11 insider, 12 sentiment,
+    # 13 macro); still far below Haiku's 4096-token cacheable-prefix ceiling.
+    assert len(SYSTEM_PROMPT) < 2000
     assert len(json.dumps(REASONING_TOOL_SCHEMA)) < 1200
 
 
@@ -234,3 +235,22 @@ def test_user_prompt_includes_sentiment_block():
 def test_user_prompt_handles_absent_sentiment_with_placeholder():
     prompt = build_user_prompt(build_signal_input(), build_reasoning_context())
     assert "(no social sentiment)" in prompt
+
+
+def test_system_prompt_mentions_macro_rule():
+    # Rule 13 — the LLM may cite the integer macro count verbatim.
+    assert "MACRO:" in SYSTEM_PROMPT
+
+
+def test_user_prompt_includes_macro_block():
+    ctx = dataclasses.replace(
+        _context_with_news(),
+        macro_context=MacroContext(recent_market_news_count=42),
+    )
+    prompt = build_user_prompt(build_signal_input(), ctx)
+    assert "recent_market_news_count: 42" in prompt
+
+
+def test_user_prompt_handles_absent_macro_with_placeholder():
+    prompt = build_user_prompt(build_signal_input(), build_reasoning_context())
+    assert "(no macro context)" in prompt
