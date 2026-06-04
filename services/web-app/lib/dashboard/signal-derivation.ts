@@ -71,6 +71,34 @@ function calculateStopLoss(
   }
 }
 
+// Best price the trade reached since generation: highest daily high for a
+// LONG (BUY), lowest daily low for a SHORT (SELL), derived from the evaluator's
+// max-favorable-excursion fraction (maxProfit). Null when not yet evaluated or HOLD.
+export function computePeakPrice(
+  signalType: string,
+  entryPrice: number | null | undefined,
+  maxProfit: number | null | undefined
+): number | null {
+  if (entryPrice == null || maxProfit == null) return null;
+  if (signalType === "BUY") return entryPrice * (1 + maxProfit);
+  if (signalType === "SELL") return entryPrice * (1 - maxProfit);
+  return null; // HOLD has no directional target
+}
+
+// Color shares the value's basis (peak-vs-target), NOT the stop-aware outcome:
+// a green number must always be at/through the target. BUY beats when the peak
+// reaches the target; SELL beats when the trough drops to it.
+export function pickPeakColor(
+  signalType: string,
+  peak: number | null,
+  takeProfit: number | null
+): string {
+  if (peak == null || takeProfit == null) return "text-text-1";
+  if (signalType === "BUY") return peak >= takeProfit ? "text-green" : "text-red";
+  if (signalType === "SELL") return peak <= takeProfit ? "text-green" : "text-red";
+  return "text-text-1";
+}
+
 function isLiveSignal(generatedAt: string): boolean {
   const ageMs = Date.now() - new Date(generatedAt).getTime();
   return ageMs < 1000 * 60 * 60 * 24;

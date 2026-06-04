@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildSignalMarker, deriveSignal, hasValidReasoningNews } from "../signal-derivation";
+import {
+  buildSignalMarker,
+  computePeakPrice,
+  deriveSignal,
+  hasValidReasoningNews,
+  pickPeakColor,
+} from "../signal-derivation";
 import type { DashboardCandle, FilteredSignal } from "../dashboard-api";
 import type { SignalResponse } from "@/lib/api-client";
 
@@ -170,5 +176,52 @@ describe("hasValidReasoningNews", () => {
       reasoningNews: makeReasoningNews({ imageUrl: "data:image/png;base64,iVBORw0KGgo=" }),
     });
     expect(hasValidReasoningNews(signal)).toBe(false);
+  });
+});
+
+describe("computePeakPrice", () => {
+  it("BUY peak is entry scaled up by the favorable fraction", () => {
+    expect(computePeakPrice("BUY", 100, 0.05)).toBeCloseTo(105);
+  });
+
+  it("SELL trough is entry scaled down by the favorable fraction", () => {
+    expect(computePeakPrice("SELL", 100, 0.05)).toBeCloseTo(95);
+  });
+
+  it("handles a negative maxProfit (price never moved favorably)", () => {
+    // BUY that never rose: peak sits below entry.
+    expect(computePeakPrice("BUY", 100, -0.02)).toBeCloseTo(98);
+    // SELL that never fell: trough sits above entry.
+    expect(computePeakPrice("SELL", 100, -0.02)).toBeCloseTo(102);
+  });
+
+  it("returns null for HOLD", () => {
+    expect(computePeakPrice("HOLD", 100, 0.05)).toBeNull();
+  });
+
+  it("returns null when entryPrice or maxProfit is missing", () => {
+    expect(computePeakPrice("BUY", null, 0.05)).toBeNull();
+    expect(computePeakPrice("BUY", 100, null)).toBeNull();
+    expect(computePeakPrice("BUY", undefined, undefined)).toBeNull();
+  });
+});
+
+describe("pickPeakColor", () => {
+  it("BUY is green when the peak reaches the target, red otherwise", () => {
+    expect(pickPeakColor("BUY", 110, 105)).toBe("text-green");
+    expect(pickPeakColor("BUY", 105, 105)).toBe("text-green"); // equality counts
+    expect(pickPeakColor("BUY", 104, 105)).toBe("text-red");
+  });
+
+  it("SELL is green when the trough drops to the target, red otherwise", () => {
+    expect(pickPeakColor("SELL", 95, 95)).toBe("text-green"); // equality counts
+    expect(pickPeakColor("SELL", 94, 95)).toBe("text-green");
+    expect(pickPeakColor("SELL", 96, 95)).toBe("text-red");
+  });
+
+  it("is neutral for HOLD and for missing inputs", () => {
+    expect(pickPeakColor("HOLD", 110, 105)).toBe("text-text-1");
+    expect(pickPeakColor("BUY", null, 105)).toBe("text-text-1");
+    expect(pickPeakColor("BUY", 110, null)).toBe("text-text-1");
   });
 });
