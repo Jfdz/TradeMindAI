@@ -26,7 +26,8 @@ class _StubSettings:
         anthropic_model: str = "claude-haiku-4-5",
         minimax_oauth_token: str = "",
         minimax_base_url: str = "https://api.minimax.io/anthropic",
-        minimax_model: str = "MiniMax-M3",
+        minimax_model: str = "MiniMax-M2.5-highspeed",
+        minimax_max_tokens: int = 4096,
     ):
         self.llm_provider = llm_provider
         self.claude_code_oauth_token = claude_code_oauth_token
@@ -35,6 +36,7 @@ class _StubSettings:
         self.minimax_oauth_token = minimax_oauth_token
         self.minimax_base_url = minimax_base_url
         self.minimax_model = minimax_model
+        self.minimax_max_tokens = minimax_max_tokens
 
 
 def test_default_stub_provider_returns_stub_client():
@@ -132,7 +134,8 @@ def test_minimax_oauth_with_token_builds_anthropic_client_pointed_at_minimax():
                 llm_provider="minimax_oauth",
                 minimax_oauth_token="sk-cp-minimax-xyz",
                 minimax_base_url="https://api.minimax.io/anthropic",
-                minimax_model="MiniMax-M3",
+                minimax_model="MiniMax-M2.5-highspeed",
+                minimax_max_tokens=4096,
             )
         )
 
@@ -144,7 +147,9 @@ def test_minimax_oauth_with_token_builds_anthropic_client_pointed_at_minimax():
     )
     assert not isinstance(client, StubLlmReasoningClient)
     assert getattr(client, "_client", None) is fake_sdk
-    assert getattr(client, "_model", None) == "MiniMax-M3"
+    assert getattr(client, "_model", None) == "MiniMax-M2.5-highspeed"
+    # The raised cap is what unblocks M-series (the 350 default ERRORs them).
+    assert getattr(client, "_max_tokens", None) == 4096
 
 
 def test_minimax_oauth_factory_emits_warning_log(caplog):

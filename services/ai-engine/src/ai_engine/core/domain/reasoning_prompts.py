@@ -46,6 +46,9 @@ SYSTEM_PROMPT = (
     "refusal_reason='insufficient_facts'.\n"
     "9 ANALYST: integer counts in <analyst> (strong_buy/buy/hold/sell/"
     "strong_sell/total) may be cited verbatim; never invent analyst numbers.\n"
+    "10 TRACK RECORD: integer counts in <track_record> (wins/losses/resolved) "
+    "may be cited verbatim; never invent them. They are past outcomes, not a "
+    "forecast.\n"
     "\n"
     "Call emit_reasoning exactly once. No free text."
 )
@@ -85,10 +88,24 @@ REASONING_TOOL_SCHEMA = {
 
 
 def build_user_prompt(signal: SignalInput, context: ReasoningContext) -> str:
-    """Render the per-request user message containing the grounded context.
+    """Render the per-request user message for grounded reasoning generation.
 
     Volatile content — never cache this. The order and labels here must
     stay aligned with the field references the system prompt uses.
+    """
+    return render_context_block(signal, context) + (
+        "Generate the reasoning by calling emit_reasoning exactly once."
+    )
+
+
+def render_context_block(signal: SignalInput, context: ReasoningContext) -> str:
+    """Render the grounded `<context>...</context>` block shared by every
+    prompt that needs the same facts.
+
+    Extracted from `build_user_prompt` so the Fase 3 deep-analysis roles
+    (bull / bear / judge / risk) ground in byte-identical facts and the C5
+    validator checks every section against the same numbers. The trailing
+    task instruction is appended by each caller, not here.
     """
     pf = context.price_facts
     if context.news:
@@ -110,6 +127,12 @@ def build_user_prompt(signal: SignalInput, context: ReasoningContext) -> str:
         )
     else:
         analyst_lines = "(no analyst coverage)"
+
+    rp = context.recent_performance
+    if rp is not None:
+        perf_lines = f"wins: {rp.wins}  losses: {rp.losses}  resolved: {rp.resolved_count}"
+    else:
+        perf_lines = "(no resolved track record)"
 
     pct = signal.predicted_change_pct
     pct_str = "null" if pct is None else f"{pct}"
@@ -150,6 +173,6 @@ def build_user_prompt(signal: SignalInput, context: ReasoningContext) -> str:
         "</price_facts>\n\n"
         f"<news>\n{news_lines}\n</news>\n"
         f"<analyst>\n{analyst_lines}\n</analyst>\n"
+        f"<track_record>\n{perf_lines}\n</track_record>\n"
         "</context>\n\n"
-        "Generate the reasoning by calling emit_reasoning exactly once."
     )

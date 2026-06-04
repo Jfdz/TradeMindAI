@@ -246,3 +246,26 @@ def test_fetch_analyst_consensus_is_none_when_absent(monkeypatch):
 
     assert result.context is not None
     assert result.context.analyst_consensus is None
+
+
+def test_fetch_parses_recent_performance_when_present(monkeypatch):
+    payload = _full_payload()
+    payload["recentPerformance"] = {"wins": 7, "losses": 3, "resolvedCount": 10}
+    monkeypatch.setattr(module.httpx, "get", lambda *a, **kw: _FakeResponse(200, payload))
+
+    result = _make_client().fetch_reasoning_context("AAPL")
+
+    rp = result.context.recent_performance
+    assert rp is not None
+    assert rp.wins == 7
+    assert rp.losses == 3
+    assert rp.resolved_count == 10
+
+
+def test_fetch_recent_performance_is_none_when_absent(monkeypatch):
+    monkeypatch.setattr(module.httpx, "get", lambda *a, **kw: _FakeResponse(200, _full_payload()))
+
+    result = _make_client().fetch_reasoning_context("AAPL")
+
+    assert result.context is not None
+    assert result.context.recent_performance is None

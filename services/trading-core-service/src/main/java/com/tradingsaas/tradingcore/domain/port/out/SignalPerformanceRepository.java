@@ -1,5 +1,6 @@
 package com.tradingsaas.tradingcore.domain.port.out;
 
+import com.tradingsaas.tradingcore.domain.model.RecentTickerPerformance;
 import com.tradingsaas.tradingcore.domain.model.SignalPerformance;
 import com.tradingsaas.tradingcore.domain.model.SignalPerformanceStat;
 import java.util.Collection;
@@ -24,4 +25,11 @@ public interface SignalPerformanceRepository {
      * Joins {@code trading_signals} in the same schema (no cross-schema read).
      */
     List<SignalPerformanceStat> aggregateStats();
+
+    /**
+     * Recent resolved (non-OPEN) win/loss counts for one ticker, over at most
+     * {@code limit} most-recently-evaluated signals. Same-schema only. Used to
+     * ground the reasoning context in the ticker's recent track record.
+     */
+    RecentTickerPerformance recentPerformanceForTicker(String ticker, int limit);
 }

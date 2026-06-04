@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface SignalPerformanceJpaRepository extends JpaRepository<SignalPerformanceJpaEntity, UUID> {
 
@@ -47,5 +48,31 @@ public interface SignalPerformanceJpaRepository extends JpaRepository<SignalPerf
         long getWins();
         BigDecimal getAvgMaxProfit();
         BigDecimal getAvgMaxDrawdown();
+    }
+
+    /**
+     * Recent resolved (non-OPEN) win/loss counts for one ticker over the most
+     * recently evaluated signals. The inner LIMIT bounds the window; the outer
+     * aggregate counts outcomes. COALESCE keeps the counts 0 (never null) when
+     * the ticker has no resolved history. Same schema only — no cross-schema read.
+     */
+    @Query(value = """
+            SELECT
+                COALESCE(SUM(CASE WHEN recent.outcome = 'WIN' THEN 1 ELSE 0 END), 0) AS "wins",
+                COALESCE(SUM(CASE WHEN recent.outcome = 'LOSS' THEN 1 ELSE 0 END), 0) AS "losses"
+            FROM (
+                SELECT p.outcome AS outcome
+                FROM trading_core.signal_performance p
+                WHERE p.ticker = :ticker AND p.outcome <> 'OPEN'
+                ORDER BY p.evaluated_at DESC
+                LIMIT :limit
+            ) recent
+            """, nativeQuery = true)
+    RecentPerfRow recentPerformanceForTicker(@Param("ticker") String ticker, @Param("limit") int limit);
+
+    /** Native projection for {@link #recentPerformanceForTicker(String, int)}. */
+    interface RecentPerfRow {
+        long getWins();
+        long getLosses();
     }
 }

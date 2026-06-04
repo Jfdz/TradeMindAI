@@ -82,6 +82,64 @@ paths:
         '503':
           description: market-data upstream unavailable.
 
+  /api/v1/signals/{signalId}/deep-analysis:
+    post:
+      tags: [deep-analysis]
+      operationId: generateDeepAnalysis
+      summary: Generate and persist a premium multi-agent deep analysis for a signal.
+      description: |
+        PREMIUM-gated. Runs ai-engine's grounded bull/bear/judge/risk debate for
+        the signal, persists the artifact (one per signal — regenerate replaces),
+        and returns it. The debate is non-deterministic and explicitly *analysis,
+        not an authoritative signal*: it never mutates the signal, but a verdict
+        that contradicts the signal sets `conviction = CONTRADICTS` as a soft
+        low-conviction review flag. Expensive (four sequential LLM calls) — on
+        demand only, never auto-run per signal, never on read.
+      parameters:
+        - name: signalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Deep analysis generated and persisted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeepAnalysisResponse'
+        '403':
+          description: PREMIUM subscription required.
+        '404':
+          description: Signal not found.
+        '503':
+          description: |
+            Deep analysis temporarily unavailable (no grounded facts, no verdict,
+            or ai-engine unreachable). Nothing is persisted; retry later.
+    get:
+      tags: [deep-analysis]
+      operationId: getDeepAnalysis
+      summary: Return the stored deep analysis for a signal.
+      parameters:
+        - name: signalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The stored deep-analysis artifact.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeepAnalysisResponse'
+        '403':
+          description: PREMIUM subscription required.
+        '404':
+          description: No deep analysis stored for this signal.
+
 components:
   schemas:
     ReasoningContextResponse:
@@ -110,12 +168,20 @@ components:
             Null when the provider returned nothing or failed. All counts are
             integers, so the downstream reasoning validator (which grounds only
             decimal tokens) lets the LLM cite them verbatim.
+        recentPerformance:
+          allOf:
+            - $ref: '#/components/schemas/RecentPerformance'
+          nullable: true
+          description: |
+            The ticker's recent resolved win/loss track record (best-effort
+            deterministic reflection). Null when there is no resolved history.
+            Integer counts only, so they are validator-safe to cite.
         errors:
           type: array
           description: |
             Non-fatal degradation tags surfaced to the caller for logging.
             Examples: `news_aggregator_unavailable`, `news_aggregator_empty`,
-            `analyst_recs_unavailable`.
+            `analyst_recs_unavailable`, `recent_performance_unavailable`.
           items:
             type: string
     AnalystConsensus:
@@ -148,3 +214,96 @@ components:
           type: integer
           description: Sum of the five buckets.
           example: 26
+    RecentPerformance:
+      type: object
+      required: [wins, losses, resolvedCount]
+      description: |
+        The ticker's recent resolved win/loss track record over the most
+        recently evaluated signals (deterministic reflection). Integer counts.
+      properties:
+        wins:
+          type: integer
+          example: 7
+        losses:
+          type: integer
+          example: 3
+        resolvedCount:
+          type: integer
+          description: wins + losses (OPEN signals excluded).
+          example: 10
+    DeepAnalysisResponse:
+      type: object
+      required:
+        [schemaVersion, outcome, ticker, signalType, generatedAt,
+         verdictDirection, conviction, verdict, sections, provider, modelVersion]
+      description: A grounded multi-agent deep-analysis artifact (analysis, not a signal).
+      properties:
+        schemaVersion:
+          type: string
+          example: v1.0
+        outcome:
+          type: string
+          enum: [GENERATED, PARTIAL]
+          description: PARTIAL = a verdict stands but at least one section was refused/withheld.
+        ticker:
+          type: string
+          example: META
+        signalType:
+          type: string
+          enum: [BUY, SELL, HOLD]
+        generatedAt:
+          type: string
+          format: date-time
+        verdictDirection:
+          type: string
+          enum: [BULLISH, BEARISH, NEUTRAL]
+        conviction:
+          type: string
+          enum: [AGREES, CONTRADICTS, UNCERTAIN]
+          description: |
+            How the debate verdict relates to the deterministic signal.
+            CONTRADICTS is the soft low-conviction review flag; the signal is
+            never mutated.
+        verdict:
+          $ref: '#/components/schemas/DeepAnalysisSection'
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeepAnalysisSection'
+        provider:
+          type: string
+          example: minimax_oauth
+        modelVersion:
+          type: string
+          example: MiniMax-M2.5-highspeed
+    DeepAnalysisSection:
+      type: object
+      required: [role, text, priceRefs, newsRefs, refused]
+      description: |
+        One debate role's contribution. `text` is empty when `refused` (the
+        model declined or the section failed grounding validation); the grounded
+        numbers/URLs it cited are in priceRefs/newsRefs.
+      properties:
+        role:
+          type: string
+          enum: [BULL, BEAR, JUDGE, RISK]
+        text:
+          type: string
+        priceRefs:
+          type: array
+          items:
+            type: string
+        newsRefs:
+          type: array
+          items:
+            type: string
+        refused:
+          type: boolean
+        refusalReason:
+          type: string
+          nullable: true
+        validatorViolations:
+          type: array
+          items:
+            type: object
+            additionalProperties: true

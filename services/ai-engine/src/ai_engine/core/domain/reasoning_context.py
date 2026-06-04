@@ -90,6 +90,20 @@ class AnalystConsensus:
 
 
 @dataclass(frozen=True, slots=True)
+class RecentPerformance:
+    """The ticker's recent resolved win/loss track record (deterministic
+    reflection injected so the reasoning learns from past same-ticker signals).
+
+    Integer counts only → validator-safe, same as `AnalystConsensus`. Absent
+    when there is no resolved history. `resolved_count` is `wins + losses`.
+    """
+
+    wins: int
+    losses: int
+    resolved_count: int
+
+
+@dataclass(frozen=True, slots=True)
 class ReasoningContext:
     """Full payload assembled for one reasoning generation."""
 
@@ -103,6 +117,7 @@ class ReasoningContext:
     # so existing constructions (and the JSON parser's additive evolution) stay
     # backward-compatible.
     analyst_consensus: AnalystConsensus | None = None
+    recent_performance: RecentPerformance | None = None
 
 
 @dataclass(frozen=True, slots=True)
