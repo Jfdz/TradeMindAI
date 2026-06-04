@@ -56,6 +56,15 @@ def create_llm_reasoning_client(settings: Settings) -> LlmReasoningPort:
             return StubLlmReasoningClient()
         return _build_anthropic_api_key(settings)
 
+    if provider == "minimax_oauth":
+        if not settings.minimax_oauth_token:
+            logger.warning(
+                "event=llm_factory.missing_credential provider=minimax_oauth "
+                "fallback=stub reason=minimax_oauth_token_empty"
+            )
+            return StubLlmReasoningClient()
+        return _build_minimax_oauth(settings)
+
     if provider != "stub":
         logger.warning(
             "event=llm_factory.unknown_provider provider=%r fallback=stub",
@@ -97,3 +106,29 @@ def _build_anthropic_api_key(settings: Settings) -> LlmReasoningPort:
     )
     client = Anthropic(api_key=settings.anthropic_api_key)
     return AnthropicLlmReasoningClient(client, model=settings.anthropic_model)
+
+
+def _build_minimax_oauth(settings: Settings) -> LlmReasoningPort:
+    # Route A (spike 2026-06-04): MiniMax's Anthropic-compatible endpoint honours
+    # forced tool_choice, so the production AnthropicLlmReasoningClient works
+    # verbatim with the Anthropic SDK pointed at api.minimax.io/anthropic and the
+    # subscription OAuth token supplied as a Bearer auth_token.
+    from anthropic import Anthropic
+
+    from ai_engine.adapters.out.anthropic_llm_reasoning_client import (
+        AnthropicLlmReasoningClient,
+    )
+
+    logger.warning(
+        "event=llm_factory.minimax_oauth_mode_active model=%s base_url=%s "
+        "WARNING: using a MiniMax subscription OAuth token as an API backend. "
+        "This may violate MiniMax consumer terms and rate-limit the account. "
+        "Obtain a platform MINIMAX_API_KEY before exposing reasonings to real users.",
+        settings.minimax_model,
+        settings.minimax_base_url,
+    )
+    client = Anthropic(
+        auth_token=settings.minimax_oauth_token,
+        base_url=settings.minimax_base_url,
+    )
+    return AnthropicLlmReasoningClient(client, model=settings.minimax_model)

@@ -37,7 +37,19 @@ spec:
                   name: anthropic-credentials
                   key: ANTHROPIC_API_KEY
             - name: LLM_PROVIDER
-              value: anthropic_api_key
+              # MiniMax via its Anthropic-compatible endpoint (Route A; spike
+              # 2026-06-04 confirmed forced tool_choice works). The subscription
+              # OAuth token is NOT a platform API key — accepted ToS/rate-limit
+              # risk; the factory WARN-logs it on every init. Roll back by setting
+              # this back to anthropic_api_key (ANTHROPIC_API_KEY above is kept
+              # for exactly that). base_url + model use config defaults
+              # (https://api.minimax.io/anthropic, MiniMax-M3).
+              value: minimax_oauth
+            - name: MINIMAX_OAUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: minimax-credentials
+                  key: MINIMAX_OAUTH_TOKEN
             - name: TRADING_CORE_SERVICE_URL
               value: http://trading-core-service.trading-saas.svc.cluster.local:8082
             # Must match trading-core's INTERNAL_API_SECRET source so the
