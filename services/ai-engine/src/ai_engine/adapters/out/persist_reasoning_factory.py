@@ -54,9 +54,16 @@ def create_persist_reasoning_use_case(
         internal_secret=secret,
     )
 
+    # Record the model actually used so the C6 audit (`reasoning_model_version`)
+    # is accurate per provider, not always the Anthropic default.
+    if settings.llm_provider == "minimax_oauth":
+        model_version = settings.minimax_model
+    else:
+        model_version = settings.anthropic_model
+
     return PersistValidatedReasoningUseCase(
         generator=generator,
         sink=sink,
         provider=settings.llm_provider,
-        model_version=settings.anthropic_model,
+        model_version=model_version,
     )
