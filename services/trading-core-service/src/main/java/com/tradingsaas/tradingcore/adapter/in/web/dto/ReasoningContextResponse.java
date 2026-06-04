@@ -22,6 +22,7 @@ public record ReasoningContextResponse(
         PriceFactsResponse priceFacts,
         List<NewsItemResponse> news,
         AnalystConsensus analystConsensus,
+        RecentPerformance recentPerformance,
         List<String> errors) {
 
     /**
@@ -40,4 +41,12 @@ public record ReasoningContextResponse(
             int sell,
             int strongSell,
             int total) {}
+
+    /**
+     * The ticker's recent resolved win/loss track record — the deterministic
+     * "reflection" the reasoning grounds in. Integer counts only (validator-safe,
+     * like {@link AnalystConsensus}); null when there is no resolved history.
+     * {@code resolvedCount} is {@code wins + losses}.
+     */
+    public record RecentPerformance(int wins, int losses, int resolvedCount) {}
 }

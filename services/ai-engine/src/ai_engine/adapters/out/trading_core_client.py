@@ -28,6 +28,7 @@ from ai_engine.core.domain.reasoning_context import (
     NewsItem,
     PriceFacts,
     ReasoningContext,
+    RecentPerformance,
 )
 
 logger = logging.getLogger(__name__)
@@ -170,6 +171,15 @@ class TradingCoreClient:
                 total=int(analyst_raw.get("total", 0)),
             )
 
+        perf_raw = payload.get("recentPerformance")
+        recent_performance = None
+        if isinstance(perf_raw, dict):
+            recent_performance = RecentPerformance(
+                wins=int(perf_raw.get("wins", 0)),
+                losses=int(perf_raw.get("losses", 0)),
+                resolved_count=int(perf_raw.get("resolvedCount", 0)),
+            )
+
         generated_at_raw = payload.get("generatedAt")
         if not generated_at_raw:
             raise ValueError("generatedAt is missing")
@@ -183,6 +193,7 @@ class TradingCoreClient:
             news=news,
             errors=errors,
             analyst_consensus=analyst_consensus,
+            recent_performance=recent_performance,
         )
         return ContextResult.available(ctx)
 

@@ -46,6 +46,9 @@ SYSTEM_PROMPT = (
     "refusal_reason='insufficient_facts'.\n"
     "9 ANALYST: integer counts in <analyst> (strong_buy/buy/hold/sell/"
     "strong_sell/total) may be cited verbatim; never invent analyst numbers.\n"
+    "10 TRACK RECORD: integer counts in <track_record> (wins/losses/resolved) "
+    "may be cited verbatim; never invent them. They are past outcomes, not a "
+    "forecast.\n"
     "\n"
     "Call emit_reasoning exactly once. No free text."
 )
@@ -111,6 +114,12 @@ def build_user_prompt(signal: SignalInput, context: ReasoningContext) -> str:
     else:
         analyst_lines = "(no analyst coverage)"
 
+    rp = context.recent_performance
+    if rp is not None:
+        perf_lines = f"wins: {rp.wins}  losses: {rp.losses}  resolved: {rp.resolved_count}"
+    else:
+        perf_lines = "(no resolved track record)"
+
     pct = signal.predicted_change_pct
     pct_str = "null" if pct is None else f"{pct}"
     target_str = "null" if signal.target_price is None else f"{signal.target_price}"
@@ -150,6 +159,7 @@ def build_user_prompt(signal: SignalInput, context: ReasoningContext) -> str:
         "</price_facts>\n\n"
         f"<news>\n{news_lines}\n</news>\n"
         f"<analyst>\n{analyst_lines}\n</analyst>\n"
+        f"<track_record>\n{perf_lines}\n</track_record>\n"
         "</context>\n\n"
         "Generate the reasoning by calling emit_reasoning exactly once."
     )

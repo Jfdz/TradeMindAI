@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse;
 import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse.AnalystConsensus;
+import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse.RecentPerformance;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.EnrichmentServiceAdapter;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.EnrichmentServiceAdapter.AnalystRecommendationResponse;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.EnrichmentServiceAdapter.NewsItemResponse;
@@ -20,6 +21,8 @@ import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapt
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter.InsufficientHistoryUpstreamException;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter.MarketDataUpstreamException;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.MarketDataServiceAdapter.PriceFactsResponse;
+import com.tradingsaas.tradingcore.domain.model.RecentTickerPerformance;
+import com.tradingsaas.tradingcore.domain.port.out.SignalPerformanceRepository;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -28,6 +31,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -38,9 +42,18 @@ class ReasoningContextControllerTest {
 
     private final MarketDataServiceAdapter marketData = mock(MarketDataServiceAdapter.class);
     private final EnrichmentServiceAdapter enrichment = mock(EnrichmentServiceAdapter.class);
+    private final SignalPerformanceRepository performance = mock(SignalPerformanceRepository.class);
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
     private final ReasoningContextController controller =
-            new ReasoningContextController(marketData, enrichment, clock);
+            new ReasoningContextController(marketData, enrichment, performance, clock);
+
+    @BeforeEach
+    void defaultNoHistory() {
+        // Default: no resolved track record → null recentPerformance, no error tag.
+        // Mockito would otherwise return null and the controller would NPE.
+        when(performance.recentPerformanceForTicker(any(), anyInt()))
+                .thenReturn(new RecentTickerPerformance(0, 0, 0));
+    }
 
     @Test
     void returnsCombinedContextOn200() {
@@ -189,6 +202,55 @@ class ReasoningContextControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNull(response.getBody().analystConsensus());
         assertTrue(response.getBody().errors().contains("analyst_recs_unavailable"));
+    }
+
+    @Test
+    void returnsRecentPerformanceWinLossCounts() {
+        when(marketData.fetchPriceFacts("AAPL")).thenReturn(Optional.of(sampleFacts()));
+        when(enrichment.fetchAggregatedTickerNews(eq("AAPL"), any(Instant.class), any(Instant.class), anyInt()))
+                .thenReturn(List.of());
+        when(performance.recentPerformanceForTicker("AAPL", ReasoningContextController.RECENT_PERFORMANCE_LIMIT))
+                .thenReturn(new RecentTickerPerformance(7, 3, 10));
+
+        ResponseEntity<ReasoningContextResponse> response =
+                controller.getReasoningContext("AAPL", 48, 8);
+
+        RecentPerformance rp = response.getBody().recentPerformance();
+        assertNotNull(rp);
+        assertEquals(7, rp.wins());
+        assertEquals(3, rp.losses());
+        assertEquals(10, rp.resolvedCount());
+        assertFalse(response.getBody().errors().contains("recent_performance_unavailable"));
+    }
+
+    @Test
+    void recentPerformanceIsNullWhenNoHistory() {
+        when(marketData.fetchPriceFacts("AAPL")).thenReturn(Optional.of(sampleFacts()));
+        when(enrichment.fetchAggregatedTickerNews(eq("AAPL"), any(Instant.class), any(Instant.class), anyInt()))
+                .thenReturn(List.of());
+        // @BeforeEach already stubs an empty (no-history) record.
+
+        ResponseEntity<ReasoningContextResponse> response =
+                controller.getReasoningContext("AAPL", 48, 8);
+
+        assertNull(response.getBody().recentPerformance());
+        assertFalse(response.getBody().errors().contains("recent_performance_unavailable"));
+    }
+
+    @Test
+    void returns200WithRecentPerformanceErrorTagWhenQueryThrows() {
+        when(marketData.fetchPriceFacts("AAPL")).thenReturn(Optional.of(sampleFacts()));
+        when(enrichment.fetchAggregatedTickerNews(eq("AAPL"), any(Instant.class), any(Instant.class), anyInt()))
+                .thenReturn(List.of(sampleNews()));
+        when(performance.recentPerformanceForTicker(eq("AAPL"), anyInt()))
+                .thenThrow(new RuntimeException("db down"));
+
+        ResponseEntity<ReasoningContextResponse> response =
+                controller.getReasoningContext("AAPL", 48, 8);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNull(response.getBody().recentPerformance());
+        assertTrue(response.getBody().errors().contains("recent_performance_unavailable"));
     }
 
     private static AnalystRecommendationResponse rec(
