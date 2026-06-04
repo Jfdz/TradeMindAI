@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from datetime import datetime, timezone
 
-from ai_engine.core.domain.reasoning_context import ReasoningContext
+from ai_engine.core.domain.reasoning_context import AnalystConsensus, ReasoningContext
 from ai_engine.core.domain.reasoning_output import SignalInput
 from ai_engine.core.domain.reasoning_prompts import (
     REASONING_TOOL_SCHEMA,
@@ -129,3 +130,33 @@ def test_user_prompt_renders_null_derived_prices_when_absent():
     assert "target_price: null" in prompt
     assert "stop_loss: null" in prompt
     assert "expected_move_pct: null" in prompt
+
+
+def test_system_prompt_mentions_analyst_rule():
+    # Rule 9 — the LLM must be told analyst integer counts are citable.
+    assert "ANALYST:" in SYSTEM_PROMPT
+
+
+def test_user_prompt_includes_analyst_consensus_block():
+    ctx = dataclasses.replace(
+        _context_with_news(),
+        analyst_consensus=AnalystConsensus(
+            period="2026-05-01",
+            strong_buy=12,
+            buy=9,
+            hold=3,
+            sell=1,
+            strong_sell=1,
+            total=26,
+        ),
+    )
+    prompt = build_user_prompt(build_signal_input(), ctx)
+    assert "period: 2026-05-01" in prompt
+    assert "strong_buy: 12" in prompt
+    assert "sell: 1" in prompt
+    assert "total: 26" in prompt
+
+
+def test_user_prompt_handles_absent_analyst_with_placeholder():
+    prompt = build_user_prompt(build_signal_input(), build_reasoning_context())
+    assert "(no analyst coverage)" in prompt

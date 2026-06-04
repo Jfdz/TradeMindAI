@@ -44,6 +44,8 @@ SYSTEM_PROMPT = (
     "rsi_14, confidence). news_refs = exact URLs from the <news> news_urls list.\n"
     "8 INSUFFICIENT FACTS: close or sma_200 null -> refusal=true, "
     "refusal_reason='insufficient_facts'.\n"
+    "9 ANALYST: integer counts in <analyst> (strong_buy/buy/hold/sell/"
+    "strong_sell/total) may be cited verbatim; never invent analyst numbers.\n"
     "\n"
     "Call emit_reasoning exactly once. No free text."
 )
@@ -94,12 +96,20 @@ def build_user_prompt(signal: SignalInput, context: ReasoningContext) -> str:
             f"[{i}] {n.headline} ({n.source or 'unknown'}, {n.published_at[:10]})"
             for i, n in enumerate(context.news, start=1)
         )
-        urls = "  ".join(
-            f"[{i}] {n.url}" for i, n in enumerate(context.news, start=1)
-        )
+        urls = "  ".join(f"[{i}] {n.url}" for i, n in enumerate(context.news, start=1))
         news_lines = f"{items}\nnews_urls: {urls}"
     else:
         news_lines = "(no recent news in window)"
+
+    ac = context.analyst_consensus
+    if ac is not None:
+        analyst_lines = (
+            f"period: {ac.period}\n"
+            f"strong_buy: {ac.strong_buy}  buy: {ac.buy}  hold: {ac.hold}  "
+            f"sell: {ac.sell}  strong_sell: {ac.strong_sell}  total: {ac.total}"
+        )
+    else:
+        analyst_lines = "(no analyst coverage)"
 
     pct = signal.predicted_change_pct
     pct_str = "null" if pct is None else f"{pct}"
@@ -139,6 +149,7 @@ def build_user_prompt(signal: SignalInput, context: ReasoningContext) -> str:
         f"volume_avg_20d: {pf.volume_avg_20d}\n"
         "</price_facts>\n\n"
         f"<news>\n{news_lines}\n</news>\n"
+        f"<analyst>\n{analyst_lines}\n</analyst>\n"
         "</context>\n\n"
         "Generate the reasoning by calling emit_reasoning exactly once."
     )

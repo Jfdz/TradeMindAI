@@ -212,3 +212,37 @@ def test_fetch_propagates_errors_field_as_degradation(monkeypatch):
 
     assert result.outcome == ContextOutcome.AVAILABLE
     assert result.degradation == ("news_aggregator_unavailable",)
+
+
+def test_fetch_parses_analyst_consensus_when_present(monkeypatch):
+    payload = _full_payload()
+    payload["analystConsensus"] = {
+        "period": "2026-05-01",
+        "strongBuy": 12,
+        "buy": 9,
+        "hold": 3,
+        "sell": 1,
+        "strongSell": 1,
+        "total": 26,
+    }
+    monkeypatch.setattr(module.httpx, "get", lambda *a, **kw: _FakeResponse(200, payload))
+
+    result = _make_client().fetch_reasoning_context("AAPL")
+
+    ac = result.context.analyst_consensus
+    assert ac is not None
+    assert ac.period == "2026-05-01"
+    assert ac.strong_buy == 12
+    assert ac.sell == 1
+    assert ac.total == 26
+
+
+def test_fetch_analyst_consensus_is_none_when_absent(monkeypatch):
+    # _full_payload() carries no analystConsensus key — older trading-core
+    # builds and the additive parser must yield None, not raise.
+    monkeypatch.setattr(module.httpx, "get", lambda *a, **kw: _FakeResponse(200, _full_payload()))
+
+    result = _make_client().fetch_reasoning_context("AAPL")
+
+    assert result.context is not None
+    assert result.context.analyst_consensus is None

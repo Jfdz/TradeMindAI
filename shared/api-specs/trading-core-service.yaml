@@ -101,10 +101,50 @@ components:
           type: array
           items:
             $ref: 'market-data-service.yaml#/components/schemas/NewsItemResponse'
+        analystConsensus:
+          allOf:
+            - $ref: '#/components/schemas/AnalystConsensus'
+          nullable: true
+          description: |
+            Latest analyst-recommendation snapshot (best-effort enrichment).
+            Null when the provider returned nothing or failed. All counts are
+            integers, so the downstream reasoning validator (which grounds only
+            decimal tokens) lets the LLM cite them verbatim.
         errors:
           type: array
           description: |
             Non-fatal degradation tags surfaced to the caller for logging.
-            Examples: `news_aggregator_unavailable`, `news_aggregator_empty`.
+            Examples: `news_aggregator_unavailable`, `news_aggregator_empty`,
+            `analyst_recs_unavailable`.
           items:
             type: string
+    AnalystConsensus:
+      type: object
+      required: [strongBuy, buy, hold, sell, strongSell, total]
+      description: Latest analyst-recommendation counts from the enrichment provider.
+      properties:
+        period:
+          type: string
+          format: date
+          nullable: true
+          description: ISO date of the recommendation snapshot.
+          example: 2026-05-01
+        strongBuy:
+          type: integer
+          example: 12
+        buy:
+          type: integer
+          example: 9
+        hold:
+          type: integer
+          example: 3
+        sell:
+          type: integer
+          example: 1
+        strongSell:
+          type: integer
+          example: 1
+        total:
+          type: integer
+          description: Sum of the five buckets.
+          example: 26

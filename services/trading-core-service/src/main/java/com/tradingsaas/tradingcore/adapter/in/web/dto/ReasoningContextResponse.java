@@ -12,11 +12,32 @@ import java.util.List;
  * the deterministic source of numeric truth for the downstream reasoning.
  * {@code news} can be empty without that being a failure; the entry in
  * {@code errors} explains which provider degraded so the caller can log
- * the partial outcome.
+ * the partial outcome. {@code analystConsensus} is best-effort enrichment:
+ * null when the provider returned nothing or failed, and never adds an
+ * {@code errors} entry on a plain empty result.
  */
 public record ReasoningContextResponse(
         String ticker,
         Instant generatedAt,
         PriceFactsResponse priceFacts,
         List<NewsItemResponse> news,
-        List<String> errors) {}
+        AnalystConsensus analystConsensus,
+        List<String> errors) {
+
+    /**
+     * Latest analyst-recommendation snapshot from the enrichment provider.
+     *
+     * <p>All counts are integers, so the downstream reasoning validator —
+     * which only grounds decimal tokens — lets the LLM cite these verbatim
+     * without an {@code ungrounded_number} violation. {@code period} is the
+     * ISO date of the snapshot; {@code total} is the sum of the five buckets.
+     */
+    public record AnalystConsensus(
+            String period,
+            int strongBuy,
+            int buy,
+            int hold,
+            int sell,
+            int strongSell,
+            int total) {}
+}
