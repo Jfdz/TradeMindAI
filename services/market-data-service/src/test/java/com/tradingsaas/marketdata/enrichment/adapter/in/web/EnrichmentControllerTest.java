@@ -10,17 +10,20 @@ import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.CompanyProfileRe
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.EarningsEventResponse;
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.InsiderActivityResponse;
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.NewsItemResponse;
+import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.SocialSentimentResponse;
 import com.tradingsaas.marketdata.enrichment.domain.model.AnalystRecommendation;
 import com.tradingsaas.marketdata.enrichment.domain.model.CompanyProfile;
 import com.tradingsaas.marketdata.enrichment.domain.model.EarningsEvent;
 import com.tradingsaas.marketdata.enrichment.domain.model.InsiderActivity;
 import com.tradingsaas.marketdata.enrichment.domain.model.NewsItem;
+import com.tradingsaas.marketdata.enrichment.domain.model.SocialSentiment;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetCompanyNewsUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetCompanyProfileUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetEarningsUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetInsiderActivityUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetPeersUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetRecommendationsUseCase;
+import com.tradingsaas.marketdata.enrichment.domain.port.in.GetSocialSentimentUseCase;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -37,9 +40,11 @@ class EnrichmentControllerTest {
     private final GetRecommendationsUseCase recommendationsUseCase = mock(GetRecommendationsUseCase.class);
     private final GetPeersUseCase peersUseCase = mock(GetPeersUseCase.class);
     private final GetInsiderActivityUseCase insiderUseCase = mock(GetInsiderActivityUseCase.class);
+    private final GetSocialSentimentUseCase sentimentUseCase = mock(GetSocialSentimentUseCase.class);
 
     private final EnrichmentController controller = new EnrichmentController(
-            profileUseCase, newsUseCase, earningsUseCase, recommendationsUseCase, peersUseCase, insiderUseCase);
+            profileUseCase, newsUseCase, earningsUseCase, recommendationsUseCase, peersUseCase,
+            insiderUseCase, sentimentUseCase);
 
     @Test
     void getProfileReturnsProfileResponse() {
@@ -137,5 +142,20 @@ class EnrichmentControllerTest {
         assertEquals(7, response.getBody().buyCount());
         assertEquals(3, response.getBody().sellCount());
         assertEquals(12345L, response.getBody().netShares());
+    }
+
+    @Test
+    void getSentimentReturnsMentionCounts() {
+        when(sentimentUseCase.getSocialSentiment("AAPL"))
+                .thenReturn(new SocialSentiment("AAPL", 120, 35, 180));
+
+        ResponseEntity<SocialSentimentResponse> response = controller.getSentiment("AAPL");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("AAPL", response.getBody().ticker());
+        assertEquals(120, response.getBody().positiveMentions());
+        assertEquals(35, response.getBody().negativeMentions());
+        assertEquals(180, response.getBody().totalMentions());
     }
 }

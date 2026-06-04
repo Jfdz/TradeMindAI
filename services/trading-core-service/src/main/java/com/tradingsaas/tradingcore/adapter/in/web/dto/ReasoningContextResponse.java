@@ -24,6 +24,7 @@ public record ReasoningContextResponse(
         AnalystConsensus analystConsensus,
         RecentPerformance recentPerformance,
         InsiderActivity insiderActivity,
+        SocialSentiment socialSentiment,
         List<String> errors) {
 
     /**
@@ -57,4 +58,11 @@ public record ReasoningContextResponse(
      * sum of share changes; null when the provider had no coverage or failed.
      */
     public record InsiderActivity(int buyCount, int sellCount, long netShares) {}
+
+    /**
+     * Aggregated recent social-media sentiment (Fase 4). Integer MENTION counts
+     * only — not decimal scores — so they are validator-safe to cite. Null when
+     * the provider had no coverage or failed.
+     */
+    public record SocialSentiment(int positiveMentions, int negativeMentions, int totalMentions) {}
 }

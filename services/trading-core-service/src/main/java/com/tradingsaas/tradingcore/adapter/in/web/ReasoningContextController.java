@@ -4,6 +4,7 @@ import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse;
 import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse.AnalystConsensus;
 import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse.InsiderActivity;
 import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse.RecentPerformance;
+import com.tradingsaas.tradingcore.adapter.in.web.dto.ReasoningContextResponse.SocialSentiment;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.EnrichmentServiceAdapter;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.EnrichmentServiceAdapter.AnalystRecommendationResponse;
 import com.tradingsaas.tradingcore.adapter.out.marketdata.EnrichmentServiceAdapter.NewsItemResponse;
@@ -158,6 +159,23 @@ public class ReasoningContextController {
             errors.add("insider_unavailable");
         }
 
+        // Best-effort social-sentiment enrichment (Fase 4). Same fail-soft
+        // posture; integer mention counts are validator-safe downstream.
+        SocialSentiment socialSentiment = null;
+        try {
+            socialSentiment = enrichmentAdapter.fetchSocialSentiment(ticker)
+                    .filter(r -> r.totalMentions() > 0)
+                    .map(r -> new SocialSentiment(
+                            r.positiveMentions(), r.negativeMentions(), r.totalMentions()))
+                    .orElse(null);
+        } catch (RuntimeException e) {
+            log.warn(
+                    "event=reasoning_context.sentiment_failed ticker={} message={}",
+                    ticker,
+                    e.getMessage());
+            errors.add("sentiment_unavailable");
+        }
+
         return ResponseEntity.ok(new ReasoningContextResponse(
                 ticker.toUpperCase(),
                 now,
@@ -166,6 +184,7 @@ public class ReasoningContextController {
                 analystConsensus,
                 recentPerformance,
                 insiderActivity,
+                socialSentiment,
                 List.copyOf(errors)));
     }
 

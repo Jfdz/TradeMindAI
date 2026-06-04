@@ -292,3 +292,30 @@ def test_fetch_insider_activity_is_none_when_absent(monkeypatch):
 
     assert result.context is not None
     assert result.context.insider_activity is None
+
+
+def test_fetch_parses_social_sentiment_when_present(monkeypatch):
+    payload = _full_payload()
+    payload["socialSentiment"] = {
+        "positiveMentions": 120,
+        "negativeMentions": 35,
+        "totalMentions": 180,
+    }
+    monkeypatch.setattr(module.httpx, "get", lambda *a, **kw: _FakeResponse(200, payload))
+
+    result = _make_client().fetch_reasoning_context("AAPL")
+
+    sentiment = result.context.social_sentiment
+    assert sentiment is not None
+    assert sentiment.positive_mentions == 120
+    assert sentiment.negative_mentions == 35
+    assert sentiment.total_mentions == 180
+
+
+def test_fetch_social_sentiment_is_none_when_absent(monkeypatch):
+    monkeypatch.setattr(module.httpx, "get", lambda *a, **kw: _FakeResponse(200, _full_payload()))
+
+    result = _make_client().fetch_reasoning_context("AAPL")
+
+    assert result.context is not None
+    assert result.context.social_sentiment is None

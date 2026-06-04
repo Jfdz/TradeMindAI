@@ -118,6 +118,19 @@ class InsiderActivity:
 
 
 @dataclass(frozen=True, slots=True)
+class SocialSentiment:
+    """Aggregated recent social-media sentiment (Fase 4 enrichment).
+
+    Integer MENTION counts only — not decimal scores — so they are validator-safe
+    to cite verbatim, like `InsiderActivity`. Absent when no coverage.
+    """
+
+    positive_mentions: int
+    negative_mentions: int
+    total_mentions: int
+
+
+@dataclass(frozen=True, slots=True)
 class ReasoningContext:
     """Full payload assembled for one reasoning generation."""
 
@@ -133,6 +146,7 @@ class ReasoningContext:
     analyst_consensus: AnalystConsensus | None = None
     recent_performance: RecentPerformance | None = None
     insider_activity: InsiderActivity | None = None
+    social_sentiment: SocialSentiment | None = None
 
 
 @dataclass(frozen=True, slots=True)

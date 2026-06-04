@@ -5,6 +5,7 @@ import com.tradingsaas.marketdata.enrichment.domain.model.CompanyProfile;
 import com.tradingsaas.marketdata.enrichment.domain.model.EarningsEvent;
 import com.tradingsaas.marketdata.enrichment.domain.model.InsiderActivity;
 import com.tradingsaas.marketdata.enrichment.domain.model.NewsItem;
+import com.tradingsaas.marketdata.enrichment.domain.model.SocialSentiment;
 import java.time.Instant;
 import java.util.List;
 
@@ -23,4 +24,6 @@ public interface MarketEnrichmentProvider {
     List<String> fetchPeers(String ticker);
 
     InsiderActivity fetchInsiderActivity(String ticker);
+
+    SocialSentiment fetchSocialSentiment(String ticker);
 }
