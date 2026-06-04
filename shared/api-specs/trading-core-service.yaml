@@ -184,13 +184,22 @@ components:
             Aggregated recent insider-transaction activity (best-effort Fase 4
             enrichment). Null when there were no transactions or the provider
             failed. Integer counts only, so they are validator-safe to cite.
+        socialSentiment:
+          allOf:
+            - $ref: '#/components/schemas/SocialSentiment'
+          nullable: true
+          description: |
+            Aggregated recent social-media sentiment (best-effort Fase 4
+            enrichment). Null when there were no mentions or the provider failed.
+            Integer mention counts only (not decimal scores), so they are
+            validator-safe to cite.
         errors:
           type: array
           description: |
             Non-fatal degradation tags surfaced to the caller for logging.
             Examples: `news_aggregator_unavailable`, `news_aggregator_empty`,
             `analyst_recs_unavailable`, `recent_performance_unavailable`,
-            `insider_unavailable`.
+            `insider_unavailable`, `sentiment_unavailable`.
           items:
             type: string
     AnalystConsensus:
@@ -258,6 +267,23 @@ components:
           type: integer
           format: int64
           example: 12345
+    SocialSentiment:
+      type: object
+      required: [positiveMentions, negativeMentions, totalMentions]
+      description: |
+        Aggregated recent social-media sentiment as integer MENTION counts
+        (deliberately not decimal scores, which the reasoning validator would
+        reject as ungrounded numbers).
+      properties:
+        positiveMentions:
+          type: integer
+          example: 120
+        negativeMentions:
+          type: integer
+          example: 35
+        totalMentions:
+          type: integer
+          example: 180
     DeepAnalysisResponse:
       type: object
       required:

@@ -11,6 +11,7 @@ from ai_engine.core.domain.reasoning_context import (
     InsiderActivity,
     ReasoningContext,
     RecentPerformance,
+    SocialSentiment,
 )
 from ai_engine.core.domain.reasoning_output import SignalInput
 from ai_engine.core.domain.reasoning_prompts import (
@@ -210,3 +211,26 @@ def test_user_prompt_includes_insider_block():
 def test_user_prompt_handles_absent_insider_with_placeholder():
     prompt = build_user_prompt(build_signal_input(), build_reasoning_context())
     assert "(no insider activity)" in prompt
+
+
+def test_system_prompt_mentions_sentiment_rule():
+    # Rule 12 — the LLM may cite the integer mention counts verbatim.
+    assert "SENTIMENT:" in SYSTEM_PROMPT
+
+
+def test_user_prompt_includes_sentiment_block():
+    ctx = dataclasses.replace(
+        _context_with_news(),
+        social_sentiment=SocialSentiment(
+            positive_mentions=120, negative_mentions=35, total_mentions=180
+        ),
+    )
+    prompt = build_user_prompt(build_signal_input(), ctx)
+    assert "positive_mentions: 120" in prompt
+    assert "negative_mentions: 35" in prompt
+    assert "total_mentions: 180" in prompt
+
+
+def test_user_prompt_handles_absent_sentiment_with_placeholder():
+    prompt = build_user_prompt(build_signal_input(), build_reasoning_context())
+    assert "(no social sentiment)" in prompt

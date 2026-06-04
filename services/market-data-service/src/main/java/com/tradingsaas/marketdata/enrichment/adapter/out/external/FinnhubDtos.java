@@ -68,4 +68,17 @@ final class FinnhubDtos {
             @JsonProperty("change") Long change,
             @JsonProperty("transactionCode") String transactionCode,
             @JsonProperty("transactionDate") String transactionDate) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record SocialSentimentDto(
+            @JsonProperty("symbol") String ticker,
+            List<SocialSentimentEntryDto> data) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record SocialSentimentEntryDto(
+            // Integer mention counts only; the decimal *score* fields are
+            // deliberately ignored (not validator-safe downstream).
+            @JsonProperty("mention") Integer mention,
+            @JsonProperty("positiveMention") Integer positiveMention,
+            @JsonProperty("negativeMention") Integer negativeMention) {}
 }

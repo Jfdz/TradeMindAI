@@ -30,6 +30,7 @@ from ai_engine.core.domain.reasoning_context import (
     PriceFacts,
     ReasoningContext,
     RecentPerformance,
+    SocialSentiment,
 )
 
 logger = logging.getLogger(__name__)
@@ -190,6 +191,15 @@ class TradingCoreClient:
                 net_shares=int(insider_raw.get("netShares", 0)),
             )
 
+        sentiment_raw = payload.get("socialSentiment")
+        social_sentiment = None
+        if isinstance(sentiment_raw, dict):
+            social_sentiment = SocialSentiment(
+                positive_mentions=int(sentiment_raw.get("positiveMentions", 0)),
+                negative_mentions=int(sentiment_raw.get("negativeMentions", 0)),
+                total_mentions=int(sentiment_raw.get("totalMentions", 0)),
+            )
+
         generated_at_raw = payload.get("generatedAt")
         if not generated_at_raw:
             raise ValueError("generatedAt is missing")
@@ -205,6 +215,7 @@ class TradingCoreClient:
             analyst_consensus=analyst_consensus,
             recent_performance=recent_performance,
             insider_activity=insider_activity,
+            social_sentiment=social_sentiment,
         )
         return ContextResult.available(ctx)
 

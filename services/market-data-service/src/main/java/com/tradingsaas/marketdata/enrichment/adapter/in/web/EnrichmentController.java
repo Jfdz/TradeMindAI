@@ -5,12 +5,14 @@ import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.CompanyProfileRe
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.EarningsEventResponse;
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.InsiderActivityResponse;
 import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.NewsItemResponse;
+import com.tradingsaas.marketdata.enrichment.adapter.in.web.dto.SocialSentimentResponse;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetCompanyNewsUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetCompanyProfileUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetEarningsUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetInsiderActivityUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetPeersUseCase;
 import com.tradingsaas.marketdata.enrichment.domain.port.in.GetRecommendationsUseCase;
+import com.tradingsaas.marketdata.enrichment.domain.port.in.GetSocialSentimentUseCase;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +32,7 @@ public class EnrichmentController {
     private final GetRecommendationsUseCase recommendationsUseCase;
     private final GetPeersUseCase peersUseCase;
     private final GetInsiderActivityUseCase insiderUseCase;
+    private final GetSocialSentimentUseCase sentimentUseCase;
 
     public EnrichmentController(
             GetCompanyProfileUseCase profileUseCase,
@@ -37,13 +40,15 @@ public class EnrichmentController {
             GetEarningsUseCase earningsUseCase,
             GetRecommendationsUseCase recommendationsUseCase,
             GetPeersUseCase peersUseCase,
-            GetInsiderActivityUseCase insiderUseCase) {
+            GetInsiderActivityUseCase insiderUseCase,
+            GetSocialSentimentUseCase sentimentUseCase) {
         this.profileUseCase = profileUseCase;
         this.newsUseCase = newsUseCase;
         this.earningsUseCase = earningsUseCase;
         this.recommendationsUseCase = recommendationsUseCase;
         this.peersUseCase = peersUseCase;
         this.insiderUseCase = insiderUseCase;
+        this.sentimentUseCase = sentimentUseCase;
     }
 
     @GetMapping("/profile/{ticker}")
@@ -94,5 +99,10 @@ public class EnrichmentController {
     @GetMapping("/insider/{ticker}")
     public ResponseEntity<InsiderActivityResponse> getInsider(@PathVariable String ticker) {
         return ResponseEntity.ok(InsiderActivityResponse.from(insiderUseCase.getInsiderActivity(ticker)));
+    }
+
+    @GetMapping("/sentiment/{ticker}")
+    public ResponseEntity<SocialSentimentResponse> getSentiment(@PathVariable String ticker) {
+        return ResponseEntity.ok(SocialSentimentResponse.from(sentimentUseCase.getSocialSentiment(ticker)));
     }
 }

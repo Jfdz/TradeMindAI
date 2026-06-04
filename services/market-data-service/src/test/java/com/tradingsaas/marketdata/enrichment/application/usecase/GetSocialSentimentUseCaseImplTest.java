@@ -8,14 +8,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.tradingsaas.marketdata.enrichment.config.FinnhubProperties;
-import com.tradingsaas.marketdata.enrichment.domain.model.InsiderActivity;
+import com.tradingsaas.marketdata.enrichment.domain.model.SocialSentiment;
 import com.tradingsaas.marketdata.enrichment.domain.port.out.EnrichmentCache;
 import com.tradingsaas.marketdata.enrichment.domain.port.out.MarketEnrichmentProvider;
 import java.time.Duration;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-class GetInsiderActivityUseCaseImplTest {
+class GetSocialSentimentUseCaseImplTest {
 
     private static final FinnhubProperties PROPS = new FinnhubProperties(
             "https://finnhub.io/api/v1", "test-key", 10,
@@ -26,27 +26,27 @@ class GetInsiderActivityUseCaseImplTest {
 
     private final MarketEnrichmentProvider provider = mock(MarketEnrichmentProvider.class);
     private final EnrichmentCache cache = mock(EnrichmentCache.class);
-    private final GetInsiderActivityUseCaseImpl useCase =
-            new GetInsiderActivityUseCaseImpl(provider, cache, PROPS);
+    private final GetSocialSentimentUseCaseImpl useCase =
+            new GetSocialSentimentUseCaseImpl(provider, cache, PROPS);
 
     @Test
-    void returnsCachedActivityWithoutCallingProvider() {
-        InsiderActivity cached = new InsiderActivity("AAPL", 5, 2, 100L);
-        when(cache.get("enrichment:insider:AAPL", InsiderActivity.class)).thenReturn(Optional.of(cached));
+    void returnsCachedSentimentWithoutCallingProvider() {
+        SocialSentiment cached = new SocialSentiment("AAPL", 100, 20, 130);
+        when(cache.get("enrichment:sentiment:AAPL", SocialSentiment.class)).thenReturn(Optional.of(cached));
 
-        assertEquals(cached, useCase.getInsiderActivity("AAPL"));
+        assertEquals(cached, useCase.getSocialSentiment("AAPL"));
 
-        verify(provider, never()).fetchInsiderActivity(anyString());
+        verify(provider, never()).fetchSocialSentiment(anyString());
     }
 
     @Test
     void fetchesAndCachesOnMiss() {
-        when(cache.get("enrichment:insider:AAPL", InsiderActivity.class)).thenReturn(Optional.empty());
-        InsiderActivity fresh = new InsiderActivity("AAPL", 7, 3, 12345L);
-        when(provider.fetchInsiderActivity("AAPL")).thenReturn(fresh);
+        when(cache.get("enrichment:sentiment:AAPL", SocialSentiment.class)).thenReturn(Optional.empty());
+        SocialSentiment fresh = new SocialSentiment("AAPL", 120, 35, 180);
+        when(provider.fetchSocialSentiment("AAPL")).thenReturn(fresh);
 
-        assertEquals(fresh, useCase.getInsiderActivity("AAPL"));
+        assertEquals(fresh, useCase.getSocialSentiment("AAPL"));
 
-        verify(cache).put("enrichment:insider:AAPL", fresh, Duration.ofHours(12));
+        verify(cache).put("enrichment:sentiment:AAPL", fresh, Duration.ofHours(6));
     }
 }
