@@ -37,7 +37,7 @@ class DeepAnalysisRequest(BaseModel):
 
     signal_type: str = Field(alias="signalType")
     confidence: float = 0.0
-    entry_price: float = Field(default=0.0, alias="entryPrice")
+    entry_price: float | None = Field(default=0.0, alias="entryPrice")
     predicted_change_pct: float | None = Field(default=None, alias="predictedChangePct")
     generated_at: datetime | None = Field(default=None, alias="generatedAt")
     target_price: float | None = Field(default=None, alias="targetPrice")
