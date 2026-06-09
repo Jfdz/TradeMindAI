@@ -11,6 +11,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -35,6 +37,7 @@ import reactor.netty.http.client.HttpClient;
 public class AiEngineDeepAnalysisAdapter implements DeepAnalysisEnginePort {
 
     private static final String INTERNAL_SECRET_HEADER = "X-Internal-Secret";
+    private static final Logger log = LoggerFactory.getLogger(AiEngineDeepAnalysisAdapter.class);
 
     private final WebClient webClient;
     private final String internalSecret;
@@ -78,8 +81,15 @@ public class AiEngineDeepAnalysisAdapter implements DeepAnalysisEnginePort {
                     .retrieve()
                     .onStatus(
                             status -> !status.is2xxSuccessful(),
-                            res -> Mono.error(new DeepAnalysisUnavailableException(
-                                    "ai-engine deep-analysis returned " + res.statusCode())))
+                            res -> res.bodyToMono(String.class)
+                                    .defaultIfEmpty("<empty>")
+                                    .flatMap(body -> {
+                                        log.warn("event=deep_analysis.engine_error status={} body={}",
+                                                res.statusCode(), body);
+                                        return Mono.error(new DeepAnalysisUnavailableException(
+                                                "ai-engine deep-analysis returned " + res.statusCode()
+                                                        + " body=" + body));
+                                    }))
                     .bodyToMono(DeepAnalysisResponse.class)
                     .block();
 
