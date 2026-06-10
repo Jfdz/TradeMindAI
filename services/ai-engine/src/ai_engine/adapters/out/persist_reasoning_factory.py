@@ -32,7 +32,7 @@ def create_persist_reasoning_use_case(
     settings: Settings,
 ) -> PersistValidatedReasoningUseCase:
     """Compose every layer from Settings. Pure function over Settings."""
-    secret = settings.trading_core_internal_secret or settings.internal_secret
+    secret = settings.internal_secret
 
     trading_core_client = TradingCoreClient(
         base_url=settings.trading_core_service_url,

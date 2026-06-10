@@ -90,10 +90,9 @@ async def test_make_market_data_trigger_fetches_predictions_and_publishes(monkey
     published_messages = []
     service = _FakePredictionService()
     settings = SimpleNamespace(
-        rabbitmq_url="amqp://guest:guest@localhost",
+        rabbitmq_url="amqp://guest:***@localhost",
         market_data_service_url="http://market-data-service:8081",
-        market_data_internal_secret="market-secret",
-        internal_secret="internal-secret",
+        internal_secret="the-canonical-secret",
     )
     ai_main.app.state.prediction_service = service
     ai_main.app.state.model_loaded = True

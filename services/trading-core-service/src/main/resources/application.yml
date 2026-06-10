@@ -101,7 +101,14 @@ management:
       enabled: false
 
 trading-core:
-  internal-secret: ${INTERNAL_API_SECRET:${TRADING_CORE_INTERNAL_SECRET:}}
+  # C16 — single canonical secret source. INTERNAL_API_SECRET is the
+  # only env var name mounted by the k8s deployment
+  # (infrastructure/k8s/base/trading-core-service.yml) and is hydrated
+  # into Settings.internal_secret by pydantic-settings on the python
+  # side. Previously this field fell back to TRADING_CORE_INTERNAL_SECRET,
+  # which is no longer mounted anywhere — keeping the fallback would
+  # only mask misconfiguration.
+  internal-secret: ${INTERNAL_API_SECRET:}
   admin-emails: ${TRADING_CORE_ADMIN_EMAILS:}
   reasoning:
     # C9 cutover flag. When `true` (default), the legacy in-process
@@ -141,12 +148,18 @@ subscriptions:
 services:
   market-data:
     url: ${MARKET_DATA_SERVICE_URL:http://localhost:8081}
-    internal-secret: ${INTERNAL_API_SECRET:${MARKET_DATA_INTERNAL_SECRET:}}
+    # C16 — single canonical secret. See trading-core.internal-secret
+    # above. The previous MARKET_DATA_INTERNAL_SECRET fallback is gone
+    # because k8s no longer mounts that name.
+    internal-secret: ${INTERNAL_API_SECRET:}
     connect-timeout-ms: ${MARKET_DATA_CONNECT_TIMEOUT_MS:5000}
     response-timeout-seconds: ${MARKET_DATA_RESPONSE_TIMEOUT_SECONDS:10}
   ai-engine:
     url: ${AI_ENGINE_SERVICE_URL:http://localhost:8000}
-    internal-secret: ${INTERNAL_API_SECRET:${AI_ENGINE_INTERNAL_SECRET:}}
+    # C16 — single canonical secret. See trading-core.internal-secret
+    # above. The previous AI_ENGINE_INTERNAL_SECRET fallback is gone
+    # because k8s no longer mounts that name.
+    internal-secret: ${INTERNAL_API_SECRET:}
     connect-timeout-ms: ${AI_ENGINE_CONNECT_TIMEOUT_MS:5000}
     # Deep analysis runs four sequential LLM calls — allow a generous window.
     response-timeout-seconds: ${AI_ENGINE_RESPONSE_TIMEOUT_SECONDS:120}

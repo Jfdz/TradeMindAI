@@ -16,7 +16,11 @@ from ai_engine.adapters.out.trading_core_reasoning_sink import (
 class _StubSettings:
     def __init__(self, **overrides):
         self.trading_core_service_url = "https://trading-core:8082"
-        self.trading_core_internal_secret = "tc-secret"
+        # C16 — single canonical secret field. k8s mounts
+        # internal-service-secret/market-data as INTERNAL_API_SECRET, which
+        # pydantic-settings hydrates into `internal_secret`. The per-service
+        # *_internal_secret fields were removed to eliminate the two-Secret
+        # drift that 401d the reasoning pipeline.
         self.internal_secret = "shared-secret"
         self.llm_provider = "stub"
         self.claude_code_oauth_token = ""
@@ -36,23 +40,20 @@ def test_factory_builds_with_stub_provider_and_sink_pointing_at_trading_core():
     assert use_case._model_version == "claude-haiku-4-5"
 
 
-def test_factory_prefers_trading_core_internal_secret_over_generic():
-    settings = _StubSettings(
-        trading_core_internal_secret="specific-tc-secret",
-        internal_secret="other-secret",
-    )
-    use_case = create_persist_reasoning_use_case(settings)
-    # The sink ends up with the specific secret, not the generic one.
-    assert use_case._sink._internal_secret == "specific-tc-secret"
+def test_factory_uses_internal_secret_for_trading_core_sink():
+    # Single-secret contract: the factory forwards Settings.internal_secret
+    # verbatim to the sink. Replaces the old "prefer TC, fall back to
+    # generic" two-Secret logic that was the source of the prod 401s.
+    use_case = create_persist_reasoning_use_case(_StubSettings(internal_secret="the-canonical-secret"))
+    assert use_case._sink._internal_secret == "the-canonical-secret"
 
 
-def test_factory_falls_back_to_internal_secret_when_specific_missing():
-    settings = _StubSettings(
-        trading_core_internal_secret="",
-        internal_secret="shared-secret",
-    )
-    use_case = create_persist_reasoning_use_case(settings)
-    assert use_case._sink._internal_secret == "shared-secret"
+def test_factory_propagates_unset_internal_secret_to_sink():
+    # If k8s forgot to mount INTERNAL_API_SECRET the sink ships with an
+    # empty secret and the trading-core filter will reject with 401. The
+    # factory should not silently invent a fallback value.
+    use_case = create_persist_reasoning_use_case(_StubSettings(internal_secret=""))
+    assert use_case._sink._internal_secret == ""
 
 
 def test_factory_wires_anthropic_oauth_when_provider_is_anthropic_oauth():

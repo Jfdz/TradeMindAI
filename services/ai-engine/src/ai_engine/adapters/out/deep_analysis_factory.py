@@ -22,7 +22,7 @@ from ai_engine.core.use_cases.generate_deep_analysis import (
 
 
 def create_deep_analysis_use_case(settings: Settings) -> GenerateDeepAnalysisUseCase:
-    secret = settings.trading_core_internal_secret or settings.internal_secret
+    secret = settings.internal_secret
 
     trading_core_client = TradingCoreClient(
         base_url=settings.trading_core_service_url,
