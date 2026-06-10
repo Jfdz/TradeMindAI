@@ -25,7 +25,7 @@
         <testcontainers.version>1.19.8</testcontainers.version>
         <bucket4j.version>8.10.1</bucket4j.version>
         <postgresql.version>42.7.11</postgresql.version>
-        <netty.version>4.1.133.Final</netty.version>
+        <netty.version>4.1.135.Final</netty.version>
         <tomcat.version>10.1.55</tomcat.version>
         <spring.security.version>6.5.9</spring.security.version>
         <spring.framework.version>6.2.11</spring.framework.version>
