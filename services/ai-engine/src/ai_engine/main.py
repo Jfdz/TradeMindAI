@@ -169,6 +169,16 @@ async def _start_consumers(app: FastAPI) -> None:
 
         settings = get_settings()
 
+        # Guard: empty secret → all internal HTTP calls will 401 silently.
+        # Raising here fails the readiness probe (consumers_ready stays False)
+        # so k8s withholds traffic until the operator fixes the config.
+        if not settings.internal_secret:
+            raise RuntimeError(
+                "INTERNAL_API_SECRET is not set — ai-engine cannot authenticate to "
+                "trading-core or market-data. Mount internal-service-secret/market-data "
+                "as INTERNAL_API_SECRET before starting."
+            )
+
         registry = ModelRegistry(settings.model_path)
         app.state.model_registry = registry
         svc = PredictionService(registry)
