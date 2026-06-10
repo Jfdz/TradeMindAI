@@ -92,7 +92,8 @@ services:
       RABBITMQ_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
-      MARKET_DATA_INTERNAL_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
+      # C16 — MARKET_DATA_INTERNAL_SECRET removed: the single canonical
+      # name INTERNAL_API_SECRET is the only secret k8s/compose mounts.
       FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
     depends_on:
       postgres:
@@ -138,7 +139,11 @@ services:
       AI_ENGINE_SERVICE_URL: http://ai-engine:8000
       MARKET_DATA_SERVICE_URL: http://market-data-service:8081
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
-      MARKET_DATA_INTERNAL_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
+      # C16 — MARKET_DATA_INTERNAL_SECRET removed: the single canonical name
+      # INTERNAL_API_SECRET (above) is the only secret k8s/compose mounts,
+      # and the trading-core application.yml fallback to MARKET_DATA_INTERNAL_SECRET
+      # was eliminated in C16. Keeping a second env var would just re-introduce
+      # the drift that 401d the reasoning pipeline.
       CLERK_ISSUER_URI: ${CLERK_ISSUER_URI:-}
       CLERK_AUDIENCE: ${CLERK_AUDIENCE:-https://api.trademind.es}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
@@ -175,8 +180,15 @@ services:
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/${RABBITMQ_VHOST:-/}
       MODEL_PATH: /app/models/
       ENABLE_GPU: ${ENABLE_GPU:-false}
-      INTERNAL_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
-      MARKET_DATA_INTERNAL_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
+      # C16 — single canonical secret name across all services. Replaces the
+      # previous INTERNAL_SECRET + MARKET_DATA_INTERNAL_SECRET pair, which was
+      # the source of the two-Secret drift that 401d the reasoning pipeline
+      # when a secret rotation hit only some deployments. Compose was missing
+      # this env var entirely (only MARKET_DATA_INTERNAL_SECRET was set, and
+      # ai-engine's code ignored it), so the prod ai-engine container ran with
+      # settings.internal_secret="" and the trading-core filter rejected every
+      # internal call.
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
       MARKET_DATA_SERVICE_URL: http://market-data-service:8081
     depends_on:
       postgres:
@@ -206,7 +218,11 @@ services:
     environment:
       API_BASE_URL: http://trading-core-service:8082
       AI_ENGINE_SERVICE_URL: http://ai-engine:8000
-      INTERNAL_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
+      # C16 — INTERNAL_API_SECRET is the single canonical name. The web-app
+      # only needs this if it proxies through trading-core's internal API
+      # (it doesn't currently, but keeping the name consistent across all
+      # four services means future migrations have nothing to change).
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-change-me-in-prod}
       NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-TradeMindAI}
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}

@@ -97,7 +97,11 @@ management:
 market-data:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
-  internal-secret: ${INTERNAL_API_SECRET:${MARKET_DATA_INTERNAL_SECRET:}}
+  # C16 — single canonical secret. See trading-core.internal-secret
+  # (services/trading-core-service/src/main/resources/application.yml)
+  # for the full rationale. The previous MARKET_DATA_INTERNAL_SECRET
+  # fallback is gone because k8s no longer mounts that name.
+  internal-secret: ${INTERNAL_API_SECRET:}
   finnhub:
     base-url: ${FINNHUB_BASE_URL:https://finnhub.io/api/v1}
     api-key: ${FINNHUB_API_KEY:}

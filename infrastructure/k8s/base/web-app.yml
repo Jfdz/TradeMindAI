@@ -81,7 +81,7 @@ spec:
                 configMapKeyRef:
                   name: web-app-config
                   key: MARKET_DATA_SERVICE_URL
-            - name: MARKET_DATA_INTERNAL_SECRET
+            - name: INTERNAL_API_SECRET
               valueFrom:
                 secretKeyRef:
                   name: internal-service-secret
