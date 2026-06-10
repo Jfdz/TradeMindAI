@@ -21,7 +21,8 @@ RUN mvn -B package -DskipTests
 # Stage 2: Runtime
 FROM eclipse-temurin:21.0.5_11-jre-noble
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser && \
-    apt-get update && apt-get install -y curl --no-install-recommends && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends curl libssl3t64 openssl && \
     rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
