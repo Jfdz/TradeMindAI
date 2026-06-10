@@ -82,11 +82,6 @@ spec:
                 secretKeyRef:
                   name: rabbitmq-credentials
                   key: password
-            - name: MARKET_DATA_INTERNAL_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: internal-service-secret
-                  key: market-data
             - name: INTERNAL_API_SECRET
               valueFrom:
                 secretKeyRef:

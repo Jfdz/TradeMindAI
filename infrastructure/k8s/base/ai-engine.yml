@@ -52,13 +52,15 @@ spec:
                   key: MINIMAX_OAUTH_TOKEN
             - name: TRADING_CORE_SERVICE_URL
               value: http://trading-core-service.trading-saas.svc.cluster.local:8082
-            # Must match trading-core's INTERNAL_API_SECRET source so the
-            # X-Internal-Secret header sent on /api/v1/internal/** calls
-            # validates. trading-core mounts INTERNAL_API_SECRET from
-            # internal-service-secret/market-data, so ai-engine sources
-            # the same Secret/key here. Standardizing on this Secret avoids
-            # the two-Secret drift that 401s the reasoning pipeline.
-            - name: TRADING_CORE_INTERNAL_SECRET
+            # C16 — single canonical env var name across all three services.
+            # k8s mounts the `internal-service-secret/market-data` key as
+            # INTERNAL_API_SECRET; pydantic-settings hydrates it into
+            # Settings.internal_secret. Replacing the three per-service
+            # *_INTERNAL_SECRET vars (TRADING_CORE_INTERNAL_SECRET,
+            # MARKET_DATA_INTERNAL_SECRET, INTERNAL_SECRET) with this one
+            # removes the two-Secret drift that 401d the reasoning pipeline
+            # when a secret rotation hit only some deployments.
+            - name: INTERNAL_API_SECRET
               valueFrom:
                 secretKeyRef:
                   name: internal-service-secret
@@ -106,16 +108,6 @@ spec:
               value: /app/models
             - name: CORS_ALLOWED_ORIGINS
               value: https://trademind.es
-            - name: INTERNAL_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: internal-service-secret
-                  key: market-data
-            - name: MARKET_DATA_INTERNAL_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: internal-service-secret
-                  key: market-data
           resources:
             requests:
               cpu: 500m

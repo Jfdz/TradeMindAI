@@ -129,7 +129,7 @@ def _fetch_ohlcv(ticker: str):
     from ai_engine.config import get_settings
 
     settings = get_settings()
-    internal_secret = settings.market_data_internal_secret or settings.internal_secret
+    internal_secret = settings.internal_secret
     client = MarketDataClient(
         settings.market_data_service_url,
         internal_secret=internal_secret,

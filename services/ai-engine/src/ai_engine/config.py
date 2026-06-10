@@ -11,10 +11,16 @@ class Settings(BaseSettings):
     enable_gpu: bool = False
     cors_allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     market_data_service_url: str = "http://market-data-service:8081"
+    # C16 — single canonical env var name across all three services
+    # (trading-core, market-data, ai-engine). k8s mounts the
+    # `internal-service-secret/market-data` key under the name
+    # INTERNAL_API_SECRET in every pod; pydantic-settings hydrates the
+    # `internal_secret` attribute from that env var by default. Replacing
+    # the per-service *_internal_secret fields with this one removes the
+    # two-Secret drift that previously 401d the reasoning pipeline when
+    # a secret rotation hit only some deployments.
     internal_secret: str = ""
-    market_data_internal_secret: str = ""
     trading_core_service_url: str = "https://trading-core-service:8082"
-    trading_core_internal_secret: str = ""
     # C4 — LLM reasoning provider selection.
     #   "stub" (default): no LLM, every call returns REFUSED_LLM_DISABLED.
     #   "anthropic_oauth": uses CLAUDE_CODE_OAUTH_TOKEN (Claude Max). Temporary.
